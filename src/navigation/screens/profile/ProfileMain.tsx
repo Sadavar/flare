@@ -1,32 +1,30 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Button, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useSession } from '@/context/SessionContext';
 import { Layout } from '@/components/Layout';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ProfileStackParamList } from '@/navigation/types';
 
+type ProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
+
 interface Post {
     uuid: string;
     image_url: string;
-    description: string;
 }
-
-type ProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
 
 export function ProfileMain() {
     const navigation = useNavigation<ProfileNavigationProp>();
-    const { user, username, signOut } = useSession();
-    const queryClient = useQueryClient();
+    const { user, username } = useSession();
 
     const { data: posts, isLoading } = useQuery({
         queryKey: ['userPosts', user?.id],
         queryFn: async () => {
-            console.log('Fetching posts for user:', user?.id);
             const { data, error } = await supabase
                 .from('posts')
                 .select('*')
@@ -44,34 +42,6 @@ export function ProfileMain() {
         },
     });
 
-    useEffect(() => {
-        if (!user?.id) return;
-
-        // Subscribe to real-time changes
-        const subscription = supabase
-            .channel('posts')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'posts',
-                    filter: `user_uuid=eq.${user.id}` // Only listen for this user's posts
-                },
-                (payload) => {
-                    console.log('New post detected:', payload);
-                    // Invalidate and refetch
-                    queryClient.invalidateQueries({ queryKey: ['userPosts', user.id] });
-                }
-            )
-            .subscribe();
-
-        // Cleanup subscription
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [user?.id, queryClient]);
-
     const renderPost = ({ item }: { item: Post }) => (
         <TouchableOpacity
             style={styles.postItem}
@@ -88,18 +58,46 @@ export function ProfileMain() {
     return (
         <Layout>
             <View style={styles.container}>
-                <Text style={styles.username}>@{username}</Text>
+                <View style={styles.header}>
+                    <View style={styles.profileSection}>
+                        <View style={styles.userIcon}>
+                            <MaterialIcons name="person" size={40} color="black" />
+                        </View>
+                        <View style={styles.userInfo}>
+                            <Text style={styles.username}>@{username}</Text>
+                            <Text style={styles.bio}>professional frollicker | NYC 📍</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.statsContainer}>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>{posts?.length || 0}</Text>
+                            <Text style={styles.statLabel}>Posts</Text>
+                        </View>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>1.2K</Text>
+                            <Text style={styles.statLabel}>Followers</Text>
+                        </View>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>45</Text>
+                            <Text style={styles.statLabel}>Brands</Text>
+                        </View>
+                    </View>
+                </View>
+
                 {isLoading ? (
-                    <Text>Loading...</Text>
+                    <Text style={styles.loadingText}>Loading...</Text>
                 ) : (
                     <FlashList
                         data={posts}
                         renderItem={renderPost}
                         numColumns={3}
                         estimatedItemSize={124}
+                        ListEmptyComponent={
+                            <Text style={styles.emptyText}>No posts yet</Text>
+                        }
                     />
                 )}
-                <Button title="Sign Out" onPress={signOut} color="#FF3B30" />
             </View>
         </Layout>
     );
@@ -110,10 +108,54 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
     },
-    username: {
-        fontSize: 24,
-        fontWeight: 'bold',
+    header: {
         padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    profileSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    userIcon: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+    },
+    userInfo: {
+        flex: 1,
+    },
+    username: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 5,
+    },
+    bio: {
+        fontSize: 14,
+        color: '#666',
+        lineHeight: 20,
+    },
+    statsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingVertical: 10,
+    },
+    statItem: {
+        alignItems: 'center',
+    },
+    statNumber: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    statLabel: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 4,
     },
     postItem: {
         flex: 1,
@@ -123,5 +165,15 @@ const styles = StyleSheet.create({
     image: {
         width: '100%',
         height: '100%',
+    },
+    loadingText: {
+        textAlign: 'center',
+        marginTop: 20,
+        color: '#666',
+    },
+    emptyText: {
+        textAlign: 'center',
+        marginTop: 20,
+        color: '#666',
     },
 }); 

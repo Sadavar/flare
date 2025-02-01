@@ -36,6 +36,7 @@ export type DiscoverTabParamList = {
 export type BrandsStackParamList = {
     BrandsList: undefined;
     BrandDetails: { brandId: number; brandName: string };
+    PostDetails: { postId: string };
 };
 
 export type ProfileStackParamList = {

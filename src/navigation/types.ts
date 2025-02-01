@@ -16,8 +16,16 @@ export type MainTabParamList = {
     };
 };
 
+export type GlobalStackParamList = {
+    GlobalFeed: undefined;
+    UserProfile: { username: string };
+};
+
 export type DiscoverTabParamList = {
-    Global: undefined;
+    Global: {
+        screen?: keyof GlobalStackParamList;
+        params?: GlobalStackParamList[keyof GlobalStackParamList];
+    };
     Friends: undefined;
     Brands: {
         screen?: keyof BrandsStackParamList;
@@ -33,4 +41,5 @@ export type BrandsStackParamList = {
 export type ProfileStackParamList = {
     ProfileMain: undefined;
     PostDetails: { postId: string };
+    UserProfile: { userId: string; username: string };
 }; 

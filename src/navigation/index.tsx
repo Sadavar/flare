@@ -19,6 +19,7 @@ import { Global } from './screens/discover/Global';
 import { Friends } from './screens/discover/Friends';
 import { Brands } from './screens/discover/Brands';
 import { Layout } from '@/components/Layout';
+import { UserProfile } from './screens/discover/UserProfile';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const BottomTab = createBottomTabNavigator<MainTabParamList>();
@@ -37,27 +38,37 @@ function TopTabNavigator() {
           tabBarActiveTintColor: '#000',
           tabBarInactiveTintColor: '#666',
           swipeEnabled: true,
+          tabBarItemStyle: { paddingBottom: 0 }
         }}
       >
         <TopTab.Screen
           name="Global"
           component={Global}
           options={{
-            tabBarLabel: 'Global',
+            tabBarLabel: '',
+            tabBarIcon: ({ color }) => (
+              <MaterialIcons name="public" size={30} color={color} />
+            ),
           }}
         />
         <TopTab.Screen
           name="Friends"
           component={Friends}
           options={{
-            tabBarLabel: 'Friends',
+            tabBarLabel: '',
+            tabBarIcon: ({ color }) => (
+              <MaterialIcons name="group" size={30} color={color} />
+            ),
           }}
         />
         <TopTab.Screen
           name="Brands"
           component={Brands}
           options={{
-            tabBarLabel: 'Brands',
+            tabBarLabel: '',
+            tabBarIcon: ({ color }) => (
+              <MaterialIcons name="sell" size={30} color={color} />
+            ),
           }}
         />
       </TopTab.Navigator>

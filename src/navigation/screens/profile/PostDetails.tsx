@@ -107,7 +107,6 @@ export function PostDetails() {
             </Layout>
         );
     }
-
     if (!post) {
         return (
             <Layout>

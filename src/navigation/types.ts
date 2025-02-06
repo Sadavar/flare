@@ -42,5 +42,4 @@ export type BrandsStackParamList = {
 export type ProfileStackParamList = {
     ProfileMain: undefined;
     PostDetails: { postId: string };
-    UserProfile: { userId: string; username: string };
 }; 

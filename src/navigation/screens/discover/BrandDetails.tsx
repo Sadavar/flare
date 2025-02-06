@@ -98,85 +98,83 @@ export function BrandDetails() {
     );
 
     return (
-        <Layout>
-            <View style={styles.container}>
-                <View style={styles.header}>
-                    <View style={styles.profileSection}>
-                        <View style={styles.brandIcon}>
-                            <MaterialIcons name="store" size={40} color="black" />
-                        </View>
-                        <View style={styles.brandInfo}>
-                            <Text style={styles.brandName}>{brandName}</Text>
-                            <Text style={styles.bio}>Premium fashion brand | Est. 2023</Text>
-                        </View>
+        <View style={styles.container}>
+            <View style={styles.header}>
+                <View style={styles.profileSection}>
+                    <View style={styles.brandIcon}>
+                        <MaterialIcons name="store" size={40} color="black" />
                     </View>
-
-                    <View style={styles.statsContainer}>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statNumber}>{products?.length || 0}</Text>
-                            <Text style={styles.statLabel}>Products</Text>
-                        </View>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statNumber}>2.5K</Text>
-                            <Text style={styles.statLabel}>Followers</Text>
-                        </View>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statNumber}>{posts?.length || 0}</Text>
-                            <Text style={styles.statLabel}>Tags</Text>
-                        </View>
-                    </View>
-
-                    <TouchableOpacity style={styles.followButton}>
-                        <Text style={styles.followButtonText}>Follow</Text>
-                    </TouchableOpacity>
-
-                    <View style={styles.tabContainer}>
-                        <Pressable
-                            style={[styles.tab, activeTab === 'products' && styles.activeTab]}
-                            onPress={() => setActiveTab('products')}
-                        >
-                            <Text style={[styles.tabText, activeTab === 'products' && styles.activeTabText]}>Products</Text>
-                        </Pressable>
-                        <Pressable
-                            style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
-                            onPress={() => setActiveTab('posts')}
-                        >
-                            <Text style={[styles.tabText, activeTab === 'posts' && styles.activeTabText]}>Tagged Posts</Text>
-                        </Pressable>
+                    <View style={styles.brandInfo}>
+                        <Text style={styles.brandName}>{brandName}</Text>
+                        <Text style={styles.bio}>Premium fashion brand | Est. 2023</Text>
                     </View>
                 </View>
 
-                {activeTab === 'products' ? (
-                    productsLoading ? (
-                        <Text style={styles.loadingText}>Loading products...</Text>
-                    ) : (
-                        <FlashList
-                            data={products}
-                            renderItem={renderProduct}
-                            numColumns={3}
-                            estimatedItemSize={124}
-                            ListEmptyComponent={
-                                <Text style={styles.emptyText}>No products yet</Text>
-                            }
-                        />
-                    )
-                ) : (
-                    postsLoading ? (
-                        <Text style={styles.loadingText}>Loading posts...</Text>
-                    ) : (
-                        <FlashList
-                            data={posts}
-                            renderItem={renderPost}
-                            numColumns={3}
-                            estimatedItemSize={124}
-                            ListEmptyComponent={
-                                <Text style={styles.emptyText}>No posts yet</Text>
-                            }
-                        />
-                    )
-                )}
+                <View style={styles.statsContainer}>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>{products?.length || 0}</Text>
+                        <Text style={styles.statLabel}>Products</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>2.5K</Text>
+                        <Text style={styles.statLabel}>Followers</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>{posts?.length || 0}</Text>
+                        <Text style={styles.statLabel}>Tags</Text>
+                    </View>
+                </View>
+
+                <TouchableOpacity style={styles.followButton}>
+                    <Text style={styles.followButtonText}>Follow</Text>
+                </TouchableOpacity>
+
+                <View style={styles.tabContainer}>
+                    <Pressable
+                        style={[styles.tab, activeTab === 'products' && styles.activeTab]}
+                        onPress={() => setActiveTab('products')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'products' && styles.activeTabText]}>Products</Text>
+                    </Pressable>
+                    <Pressable
+                        style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
+                        onPress={() => setActiveTab('posts')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'posts' && styles.activeTabText]}>Tagged Posts</Text>
+                    </Pressable>
+                </View>
             </View>
-        </Layout>
+
+            {activeTab === 'products' ? (
+                productsLoading ? (
+                    <Text style={styles.loadingText}>Loading products...</Text>
+                ) : (
+                    <FlashList
+                        data={products}
+                        renderItem={renderProduct}
+                        numColumns={3}
+                        estimatedItemSize={124}
+                        ListEmptyComponent={
+                            <Text style={styles.emptyText}>No products yet</Text>
+                        }
+                    />
+                )
+            ) : (
+                postsLoading ? (
+                    <Text style={styles.loadingText}>Loading posts...</Text>
+                ) : (
+                    <FlashList
+                        data={posts}
+                        renderItem={renderPost}
+                        numColumns={3}
+                        estimatedItemSize={124}
+                        ListEmptyComponent={
+                            <Text style={styles.emptyText}>No posts yet</Text>
+                        }
+                    />
+                )
+            )}
+        </View>
     );
 }
 

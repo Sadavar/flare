@@ -54,7 +54,7 @@ export function GlobalFeed() {
 
             return data.map(post => ({
                 ...post,
-                user: post.profiles,
+                user: { username: post.profiles[0]?.username },
                 brands: post.post_brands.map((pb: any) => pb.brands),
                 image_url: supabase.storage
                     .from('outfits')
@@ -209,4 +209,4 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#000',
     },
-}); 
+});

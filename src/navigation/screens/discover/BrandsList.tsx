@@ -1,12 +1,16 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BrandsStackParamList } from '@/navigation/types';
-import { Layout } from '@/components/Layout';
+import { TextInput } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+// import Carousel from 'react-native-snap-carousel'
+// import Carousel from "react-native-reanimated-carousel";
+// import { useSharedValue } from "react-native-reanimated";
 
 interface Brand {
     id: number;
@@ -15,6 +19,116 @@ interface Brand {
 }
 
 type BrandsListNavigationProp = NativeStackNavigationProp<BrandsStackParamList, 'BrandsList'>;
+
+function BrandSearch() {
+    const styles = StyleSheet.create({
+        searchContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderWidth: 0.5,
+            borderColor: '#000',
+            borderRadius: 20,
+            paddingHorizontal: 10,
+            margin: 15,
+        },
+        searchIcon: {
+            marginRight: 10,
+        },
+        searchInput: {
+            flex: 1,
+            height: 40,
+        },
+    });
+    return (
+        // Search input
+        <View style={styles.searchContainer}>
+            <MaterialIcons name="search" size={30} color="#000" style={styles.searchIcon} />
+            <TextInput
+                style={styles.searchInput}
+                placeholder="Search for brands"
+                placeholderTextColor="#666"
+            />
+        </View>
+    );
+}
+
+function TrendingBrandsCarousel() {
+    const [brands, setBrands] = useState<Brand[]>([
+        {
+            id: 1,
+            name: "Fugazi",
+            post_count: 10,
+        },
+        {
+            id: 2,
+            name: "MadHappy",
+            post_count: 15,
+        },
+        {
+            id: 3,
+            name: "Nike",
+            post_count: 20,
+        },
+        {
+            id: 4,
+            name: "Adidas",
+            post_count: 12,
+        },
+    ]);
+
+    const navigation = useNavigation<BrandsListNavigationProp>();
+
+    const styles = StyleSheet.create({
+        carouselContainer: {
+            marginTop: 10,
+            height: '25%',
+            flexGrow: 0
+        },
+        card: {
+            width: 130,
+            height: 130,
+            backgroundColor: '#f0f0f0',
+            borderRadius: 10,
+            marginHorizontal: 10,
+            padding: 10,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        brandIcon: {
+            fontSize: 40,
+            fontWeight: 'bold',
+        },
+        brandName: {
+            fontSize: 16,
+            marginTop: 10,
+            textAlign: 'center',
+        },
+        postCount: {
+            fontSize: 12,
+            color: '#666',
+            marginTop: 5,
+        },
+    });
+
+    return (
+        <ScrollView horizontal style={styles.carouselContainer}>
+            {brands.map((brand) => (
+                <TouchableOpacity
+                    key={brand.id}
+                    style={styles.card}
+                    onPress={() => navigation.navigate('BrandDetails', {
+                        brandId: brand.id,
+                        brandName: brand.name,
+                    })}
+                >
+                    <Text style={styles.brandIcon}>{brand.name.charAt(0)}</Text>
+                    <Text style={styles.brandName}>{brand.name}</Text>
+                    <Text style={styles.postCount}>{brand.post_count} posts</Text>
+                </TouchableOpacity>
+            ))}
+        </ScrollView>
+    );
+}
 
 export function BrandsList() {
     const navigation = useNavigation<BrandsListNavigationProp>();
@@ -56,24 +170,28 @@ export function BrandsList() {
         </TouchableOpacity>
     );
 
+
+
     return (
-        <Layout>
-            <View style={styles.container}>
-                <Text style={styles.title}>Brands</Text>
-                {isLoading ? (
-                    <Text>Loading...</Text>
-                ) : !brands?.length ? (
-                    <Text>No brands yet</Text>
-                ) : (
-                    <FlashList
-                        data={brands}
-                        renderItem={renderBrand}
-                        estimatedItemSize={60}
-                        ItemSeparatorComponent={() => <View style={styles.separator} />}
-                    />
-                )}
-            </View>
-        </Layout>
+        <View style={styles.container}>
+            <Text style={styles.mainTitle}>Discover Brands</Text>
+            <BrandSearch />
+            <Text style={styles.trendingTitle}>Trending Brands</Text>
+            <TrendingBrandsCarousel />
+            <Text style={styles.title}>Brands</Text>
+            {isLoading ? (
+                <Text>Loading...</Text>
+            ) : !brands?.length ? (
+                <Text>No brands yet</Text>
+            ) : (
+                <FlashList
+                    data={brands}
+                    renderItem={renderBrand}
+                    estimatedItemSize={60}
+                    ItemSeparatorComponent={() => <View style={styles.separator} />}
+                />
+            )}
+        </View>
     );
 }
 
@@ -81,6 +199,19 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+        paddingTop: 10
+    },
+    mainTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        paddingTop: 0,
+        alignSelf: 'center',
+    },
+    trendingTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        paddingTop: 0,
+        marginLeft: 20
     },
     title: {
         fontSize: 24,
@@ -89,7 +220,6 @@ const styles = StyleSheet.create({
     },
     brandItem: {
         padding: 15,
-        backgroundColor: '#fff',
     },
     brandName: {
         fontSize: 16,
@@ -105,4 +235,4 @@ const styles = StyleSheet.create({
         backgroundColor: '#ddd',
         marginLeft: 15,
     },
-}); 
+});

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Button, TextInput, ScrollView, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '@/lib/supabase';
@@ -96,15 +96,17 @@ export function Post() {
     };
 
     return (
-        <Layout>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} >
             <View style={styles.container}>
                 {image ? (
                     <>
+                        <Text style={styles.trendingTitle}>Image Preview</Text>
                         <Image
                             source={{ uri: image }}
                             style={styles.image}
                             contentFit="cover"
                         />
+                        <Text style={styles.trendingTitle}>Description</Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Add a description..."
@@ -112,6 +114,7 @@ export function Post() {
                             onChangeText={setDescription}
                             multiline
                         />
+                        <Text style={styles.trendingTitle}>Brands</Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Add brands (comma separated)"
@@ -128,7 +131,7 @@ export function Post() {
                     <Text style={styles.placeholder}>Select an image to post</Text>
                 )}
             </View>
-        </Layout>
+        </TouchableWithoutFeedback>
     );
 }
 
@@ -141,7 +144,7 @@ const styles = StyleSheet.create({
     image: {
         width: '100%',
         height: 300,
-        marginVertical: 20,
+        marginBottom: 15
     },
     input: {
         borderWidth: 1,
@@ -154,5 +157,10 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 20,
         color: '#999',
+    },
+    trendingTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 10
     },
 }); 

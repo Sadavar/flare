@@ -8,9 +8,24 @@ const Stack = createNativeStackNavigator<ProfileStackParamList>();
 
 export function Profile() {
     return (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator
+            screenOptions={{
+                headerShown: true,
+                headerTitle: 'Profile',
+                headerStyle: {
+                    backgroundColor: 'white',
+                },
+                headerTintColor: 'black',
+                headerTitleStyle: {
+                    fontWeight: 'bold',
+                },
+            }}
+        >
             <Stack.Screen name="ProfileMain" component={ProfileMain} />
-            <Stack.Screen name="PostDetails" component={PostDetails} />
+            <Stack.Screen name="PostDetails" component={PostDetails}
+                options={{
+                    headerTitle: '',
+                }} />
         </Stack.Navigator>
     );
 } 

@@ -20,6 +20,7 @@ export function Layout({ children, style }: LayoutProps) {
 const styles = StyleSheet.create({
     safe: {
         flex: 1,
+        backgroundColor: '#ffffff',
     },
     container: {
         flex: 1,

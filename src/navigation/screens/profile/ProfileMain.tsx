@@ -56,50 +56,48 @@ export function ProfileMain() {
     );
 
     return (
-        <Layout>
-            <View style={styles.container}>
-                <View style={styles.header}>
-                    <View style={styles.profileSection}>
-                        <View style={styles.userIcon}>
-                            <MaterialIcons name="person" size={40} color="black" />
-                        </View>
-                        <View style={styles.userInfo}>
-                            <Text style={styles.username}>@{username}</Text>
-                            <Text style={styles.bio}>professional frollicker | NYC 📍</Text>
-                        </View>
+        <View style={styles.container}>
+            <View style={styles.header}>
+                <View style={styles.profileSection}>
+                    <View style={styles.userIcon}>
+                        <MaterialIcons name="person" size={40} color="black" />
                     </View>
-
-                    <View style={styles.statsContainer}>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statNumber}>{posts?.length || 0}</Text>
-                            <Text style={styles.statLabel}>Posts</Text>
-                        </View>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statNumber}>1.2K</Text>
-                            <Text style={styles.statLabel}>Followers</Text>
-                        </View>
-                        <View style={styles.statItem}>
-                            <Text style={styles.statNumber}>45</Text>
-                            <Text style={styles.statLabel}>Brands</Text>
-                        </View>
+                    <View style={styles.userInfo}>
+                        <Text style={styles.username}>@{username}</Text>
+                        <Text style={styles.bio}>professional frollicker | NYC 📍</Text>
                     </View>
                 </View>
 
-                {isLoading ? (
-                    <Text style={styles.loadingText}>Loading...</Text>
-                ) : (
-                    <FlashList
-                        data={posts}
-                        renderItem={renderPost}
-                        numColumns={3}
-                        estimatedItemSize={124}
-                        ListEmptyComponent={
-                            <Text style={styles.emptyText}>No posts yet</Text>
-                        }
-                    />
-                )}
+                <View style={styles.statsContainer}>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>{posts?.length || 0}</Text>
+                        <Text style={styles.statLabel}>Posts</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>1.2K</Text>
+                        <Text style={styles.statLabel}>Followers</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>45</Text>
+                        <Text style={styles.statLabel}>Brands</Text>
+                    </View>
+                </View>
             </View>
-        </Layout>
+
+            {isLoading ? (
+                <Text style={styles.loadingText}>Loading...</Text>
+            ) : (
+                <FlashList
+                    data={posts}
+                    renderItem={renderPost}
+                    numColumns={3}
+                    estimatedItemSize={124}
+                    ListEmptyComponent={
+                        <Text style={styles.emptyText}>No posts yet</Text>
+                    }
+                />
+            )}
+        </View>
     );
 }
 

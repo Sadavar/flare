@@ -15,9 +15,9 @@ import { Login } from './screens/auth/Login';
 import { Username } from './screens/auth/Username';
 import { Post } from './screens/post/Post';
 import { Profile } from './screens/profile/Profile';
-import { Global } from './screens/discover/Global';
+import { Global } from './screens/discover/global/Global';
 import { Friends } from './screens/discover/Friends';
-import { Brands } from './screens/discover/Brands';
+import { Brands } from './screens/discover/brands/Brands';
 import { Layout } from '@/components/Layout';
 import { UserProfile } from './screens/discover/UserProfile';
 
@@ -108,6 +108,8 @@ function MainTabs() {
           name="Post"
           component={Post}
           options={{
+            headerShown: true,
+            title: 'Create Post',
             tabBarIcon: ({ color }) => (
               <MaterialIcons name="add-box" size={30} color={color} />
             ),

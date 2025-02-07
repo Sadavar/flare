@@ -118,38 +118,36 @@ export function PostDetails() {
     }
 
     return (
-        <Layout>
-            <View style={styles.container}>
-                <Image
-                    source={{ uri: post.image_url }}
-                    style={styles.image}
-                    contentFit="cover"
-                />
-                <View style={styles.detailsContainer}>
-                    <Text style={styles.date}>
-                        {new Date(post.created_at).toLocaleDateString()}
-                    </Text>
-                    {post.description && (
-                        <Text style={styles.description}>{post.description}</Text>
-                    )}
-                    <View style={styles.brandsContainer}>
-                        <Text style={styles.brandsLabel}>Featured Brands:</Text>
-                        <View style={styles.brandsList}>
-                            {post.brands.map((brand, index) => (
-                                <View key={index} style={styles.brandButton}>
-                                    <Text style={styles.brandText}>{brand.name}</Text>
-                                </View>
-                            ))}
-                        </View>
+        <View style={styles.container}>
+            <Image
+                source={{ uri: post.image_url }}
+                style={styles.image}
+                contentFit="cover"
+            />
+            <View style={styles.detailsContainer}>
+                <Text style={styles.date}>
+                    {new Date(post.created_at).toLocaleDateString()}
+                </Text>
+                {post.description && (
+                    <Text style={styles.description}>{post.description}</Text>
+                )}
+                <View style={styles.brandsContainer}>
+                    <Text style={styles.brandsLabel}>Featured Brands:</Text>
+                    <View style={styles.brandsList}>
+                        {post.brands.map((brand, index) => (
+                            <View key={index} style={styles.brandButton}>
+                                <Text style={styles.brandText}>{brand.name}</Text>
+                            </View>
+                        ))}
                     </View>
-                    <Button
-                        title="Delete Post"
-                        onPress={handleDelete}
-                        color="#FF3B30"
-                    />
                 </View>
+                <Button
+                    title="Delete Post"
+                    onPress={handleDelete}
+                    color="#FF3B30"
+                />
             </View>
-        </Layout>
+        </View>
     );
 }
 

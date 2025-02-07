@@ -42,4 +42,8 @@ export type BrandsStackParamList = {
 export type ProfileStackParamList = {
     ProfileMain: undefined;
     PostDetails: { postId: string };
+};
+
+export type PostStackParamList = {
+    CreatePost: undefined;
 }; 

@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ListRenderItem } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    Dimensions,
+    ListRenderItem,
+    KeyboardAvoidingView,
+    Platform,
+    TextInput,
+    FlatList,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BrandsStackParamList } from '@/navigation/types';
-import { TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { FlatList } from 'react-native-gesture-handler';
 
 const { width } = Dimensions.get("window");
 
@@ -17,8 +26,10 @@ interface Brand {
 
 type BrandsListNavigationProp = NativeStackNavigationProp<BrandsStackParamList, 'BrandsList'>;
 
-// Keep your existing BrandSearch component
-function BrandSearch() {
+function BrandSearch({ searchQuery, setSearchQuery }: {
+    searchQuery: string;
+    setSearchQuery: (text: string) => void;
+}) {
     const styles = StyleSheet.create({
         searchContainer: {
             flexDirection: 'row',
@@ -37,6 +48,7 @@ function BrandSearch() {
             height: 40,
         },
     });
+
     return (
         <View style={styles.searchContainer}>
             <MaterialIcons name="search" size={30} color="#000" style={styles.searchIcon} />
@@ -44,6 +56,9 @@ function BrandSearch() {
                 style={styles.searchInput}
                 placeholder="Search for brands"
                 placeholderTextColor="#666"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCorrect={false}
             />
         </View>
     );
@@ -51,7 +66,9 @@ function BrandSearch() {
 
 export function BrandsScreen() {
     const navigation = useNavigation<BrandsListNavigationProp>();
-    const [brands, setBrands] = useState<Brand[]>([
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const [brands] = useState<Brand[]>([
         { id: 1, name: "Fugazi", post_count: 10 },
         { id: 2, name: "MadHappy", post_count: 15 },
         { id: 3, name: "Nike", post_count: 20 },
@@ -74,15 +91,23 @@ export function BrandsScreen() {
         { id: 20, name: "Burberry", post_count: 5 },
     ]);
 
+    const filteredBrands = brands.filter(brand =>
+        brand.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     const styles = StyleSheet.create({
         container: {
             flex: 1,
             backgroundColor: '#fff',
         },
+        fixedHeader: {
+            paddingTop: 10,
+            backgroundColor: '#fff',
+            zIndex: 1,
+        },
         mainTitle: {
             fontSize: 18,
             fontWeight: 'bold',
-            paddingTop: 10,
             alignSelf: 'center',
         },
         trendingTitle: {
@@ -135,28 +160,36 @@ export function BrandsScreen() {
             flexWrap: 'wrap',
             paddingHorizontal: 5,
         },
+        suggestionsList: {
+            flex: 1,
+            marginTop: 10,
+        },
+        suggestionItem: {
+            padding: 15,
+            borderBottomWidth: 1,
+            borderBottomColor: '#eee',
+        },
+        suggestionText: {
+            fontSize: 16,
+        },
+        suggestionPostCount: {
+            fontSize: 12,
+            color: '#666',
+        },
     });
 
-    const renderTrendingBrands = () => (
-        <FlatList
-            horizontal
-            data={brands.slice(0, 10)} // Show first 10 brands as trending
-            showsHorizontalScrollIndicator={true}
-            renderItem={({ item }) => (
-                <TouchableOpacity
-                    style={styles.trendingCard}
-                    onPress={() => navigation.navigate('BrandDetails', {
-                        brandId: item.id,
-                        brandName: item.name,
-                    })}
-                >
-                    <Text style={styles.brandIcon}>{item.name.charAt(0)}</Text>
-                    <Text style={styles.brandName}>{item.name}</Text>
-                    <Text style={styles.postCount}>{item.post_count} posts</Text>
-                </TouchableOpacity>
-            )}
-            style={styles.carouselContainer}
-        />
+    const renderTrendingItem: ListRenderItem<Brand> = ({ item }) => (
+        <TouchableOpacity
+            style={styles.trendingCard}
+            onPress={() => navigation.navigate('BrandDetails', {
+                brandId: item.id,
+                brandName: item.name,
+            })}
+        >
+            <Text style={styles.brandIcon}>{item.name.charAt(0)}</Text>
+            <Text style={styles.brandName}>{item.name}</Text>
+            <Text style={styles.postCount}>{item.post_count} posts</Text>
+        </TouchableOpacity>
     );
 
     const renderGridItem: ListRenderItem<Brand> = ({ item }) => (
@@ -173,27 +206,68 @@ export function BrandsScreen() {
         </TouchableOpacity>
     );
 
-    const ListHeader = () => (
-        <>
-            <Text style={styles.mainTitle}>Discover Brands</Text>
-            <BrandSearch />
-            <Text style={styles.trendingTitle}>Trending Brands</Text>
-            {renderTrendingBrands()}
-            <Text style={styles.trendingTitle}>All Brands</Text>
-        </>
+    const renderSuggestionItem: ListRenderItem<Brand> = ({ item }) => (
+        <TouchableOpacity
+            style={styles.suggestionItem}
+            onPress={() => {
+                navigation.navigate('BrandDetails', {
+                    brandId: item.id,
+                    brandName: item.name,
+                });
+                setSearchQuery('');
+            }}
+        >
+            <Text style={styles.suggestionText}>{item.name}</Text>
+            <Text style={styles.suggestionPostCount}>{item.post_count} posts</Text>
+        </TouchableOpacity>
     );
 
     return (
-        <View style={styles.container}>
-            <FlatList
-                data={brands}
-                renderItem={renderGridItem}
-                ListHeaderComponent={ListHeader}
-                numColumns={3}
-                columnWrapperStyle={{ justifyContent: 'flex-start' }}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 20 }}
-            />
-        </View>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+            <View style={styles.fixedHeader}>
+                <Text style={styles.mainTitle}>Discover Brands</Text>
+                <BrandSearch
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                />
+            </View>
+
+            {searchQuery ? (
+                <FlatList
+                    key="search-results" // Unique key for search mode
+                    data={filteredBrands}
+                    renderItem={renderSuggestionItem}
+                    keyExtractor={item => item.id.toString()}
+                    style={styles.suggestionsList}
+                    keyboardShouldPersistTaps="always"
+                />
+            ) : (
+                <FlatList
+                    key="grid-view" // Unique key for grid mode
+                    ListHeaderComponent={
+                        <>
+                            <Text style={styles.trendingTitle}>Trending Brands</Text>
+                            <FlatList
+                                horizontal
+                                data={brands.slice(0, 10)}
+                                renderItem={renderTrendingItem}
+                                showsHorizontalScrollIndicator={false}
+                                style={styles.carouselContainer}
+                            />
+                            <Text style={styles.trendingTitle}>All Brands</Text>
+                        </>
+                    }
+                    data={brands}
+                    renderItem={renderGridItem}
+                    numColumns={3}
+                    columnWrapperStyle={{ justifyContent: 'flex-start' }}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 20 }}
+                />
+            )}
+        </KeyboardAvoidingView>
     );
 }

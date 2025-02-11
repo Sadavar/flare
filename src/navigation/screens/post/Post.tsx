@@ -1,5 +1,17 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, TextInput, ScrollView, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    Button,
+    TextInput,
+    ScrollView,
+    Keyboard,
+    TouchableWithoutFeedback,
+    KeyboardAvoidingView,
+    TouchableOpacity,
+    Touchable
+} from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '@/lib/supabase';
@@ -18,6 +30,8 @@ export function Post() {
     const [description, setDescription] = useState('');
     const [brandsInput, setBrandsInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [brandSuggestions, setBrandSuggestions] = useState<string[]>([]);
+    const [taggedBrands, setTaggedBrands] = useState<string[]>([]);
     const navigation = useNavigation();
     const { user } = useSession();
 
@@ -65,12 +79,12 @@ export function Post() {
 
             if (postError) throw postError;
 
-            const brands = brandsInput
-                .split(',')
-                .map(brand => brand.trim())
-                .filter(brand => brand.length > 0);
+            // const brands = brandsInput
+            //     .split(',')
+            //     .map(brand => brand.trim())
+            //     .filter(brand => brand.length > 0);
 
-            for (const brandName of brands) {
+            for (const brandName of taggedBrands) {
                 const { data: brandData, error: brandError } = await supabase
                     .from('brands')
                     .upsert([{ name: brandName }], { onConflict: 'name' })
@@ -96,41 +110,89 @@ export function Post() {
     };
 
     return (
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} >
-            <View style={styles.container}>
-                {image ? (
-                    <>
-                        <Text style={styles.trendingTitle}>Image Preview</Text>
-                        <Image
-                            source={{ uri: image }}
-                            style={styles.image}
-                            contentFit="cover"
-                        />
-                        <Text style={styles.trendingTitle}>Description</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Add a description..."
-                            value={description}
-                            onChangeText={setDescription}
-                            multiline
-                        />
-                        <Text style={styles.trendingTitle}>Brands</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Add brands (comma separated)"
-                            value={brandsInput}
-                            onChangeText={setBrandsInput}
-                        />
-                        <Button
-                            title="Post"
-                            onPress={uploadPost}
-                            disabled={loading}
-                        />
-                    </>
-                ) : (
-                    <Text style={styles.placeholder}>Select an image to post</Text>
-                )}
-            </View>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <ScrollView style={{ backgroundColor: 'white' }} keyboardShouldPersistTaps='handled'>
+                <KeyboardAvoidingView behavior='position' keyboardVerticalOffset={150}>
+                    <View style={styles.container}>
+                        {image ? (
+                            <>
+                                <Text style={styles.trendingTitle}>Image Preview</Text>
+                                <Image
+                                    source={{ uri: image }}
+                                    style={styles.image}
+                                    contentFit='contain'
+                                />
+                                <Text style={styles.trendingTitle}>Description</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Add a description..."
+                                    value={description}
+                                    onChangeText={setDescription}
+                                    multiline
+                                />
+                                <Text style={styles.trendingTitle}>Brands</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Add brands..."
+                                    value={brandsInput}
+                                    onChangeText={async (text) => {
+                                        setBrandsInput(text);
+                                        if (text.length > 0) {
+                                            const { data, error } = await supabase
+                                                .from('brands')
+                                                .select('name')
+                                                .ilike('name', `%${text}%`)
+                                                .limit(5);
+
+                                            if (error) {
+                                                console.error('Error fetching brands:', error);
+                                            } else {
+                                                setBrandSuggestions(data.map(item => item.name));
+                                            }
+                                        } else {
+                                            setBrandSuggestions([]);
+                                        }
+                                    }}
+                                />
+                                {brandSuggestions.map((suggestion, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={styles.suggestion}
+                                        onPress={() => {
+                                            setTaggedBrands([...taggedBrands, suggestion]);
+                                            setBrandSuggestions([]);
+                                            setBrandsInput('');
+                                        }}
+                                    >
+                                        <Text>{suggestion}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                                <View style={styles.taggedBrandsContainer}>
+                                    {taggedBrands.map((brand, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={styles.taggedBrand}
+                                            onPress={() => {
+                                                setTaggedBrands(taggedBrands.filter((_, i) => i !== index));
+                                            }}
+                                        >
+                                            <Text style={styles.taggedBrandText}>{brand}</Text>
+                                            <Text style={styles.removeTag}>X</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                                <Button
+                                    title="Post"
+                                    onPress={uploadPost}
+                                    disabled={loading}
+                                />
+                            </>
+                        ) : (
+                            <Text style={styles.placeholder}>Select an image to post</Text>
+                        )}
+                    </View>
+                </KeyboardAvoidingView>
+            </ScrollView>
         </TouchableWithoutFeedback>
     );
 }
@@ -142,7 +204,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     image: {
-        width: '100%',
         height: 300,
         marginBottom: 15
     },
@@ -163,4 +224,40 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 10
     },
-}); 
+    suggestionsContainer: {
+        position: 'absolute',
+        zIndex: 100,
+        marginTop: 5,
+        borderColor: '#ddd',
+        borderWidth: 1,
+        borderRadius: 5,
+        padding: 10,
+    },
+    suggestion: {
+        padding: 10,
+        borderBottomWidth: 1,
+        borderColor: '#eee',
+    },
+    taggedBrandsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 10,
+    },
+    taggedBrand: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#e0e0e0',
+        borderRadius: 20,
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        marginRight: 5,
+        marginBottom: 5,
+    },
+    taggedBrandText: {
+        marginRight: 5,
+    },
+    removeTag: {
+        color: 'red',
+        fontWeight: 'bold',
+    },
+});

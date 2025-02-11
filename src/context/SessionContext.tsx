@@ -4,18 +4,21 @@ import { supabase } from '@/lib/supabase';
 interface SessionContextType {
     user: any;
     username: string | null;
+    loading: boolean;
     signOut: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextType>({
     user: null,
     username: null,
+    loading: true,
     signOut: async () => { },
 });
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<any>(null);
     const [username, setUsername] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
         checkUser();
@@ -30,6 +33,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     const checkUser = async () => {
         console.log('Checking user');
+        setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         console.log('user', user);
         if (user) {
@@ -44,6 +48,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             setUsername(null);
         }
+        setLoading(false);
     };
 
     const signOut = async () => {
@@ -51,7 +56,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <SessionContext.Provider value={{ user, username, signOut }}>
+        <SessionContext.Provider value={{ user, username, loading, signOut }}>
             {children}
         </SessionContext.Provider>
     );

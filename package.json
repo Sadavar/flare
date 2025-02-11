@@ -24,7 +24,7 @@
     "base64-arraybuffer": "^1.0.2",
     "expo": "~52.0.11",
     "expo-asset": "~11.0.1",
-    "expo-dev-client": "~5.0.10",
+    "expo-dev-client": "~5.0.12",
     "expo-image": "~1.10.6",
     "expo-image-picker": "~14.7.1",
     "expo-splash-screen": "~0.29.13",
@@ -40,10 +40,8 @@
     "react-native-pager-view": "6.2.3",
     "react-native-phone-number-input": "^2.1.0",
     "react-native-reanimated": "~3.16.1",
-    "react-native-reanimated-carousel": "^3.5.1",
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0",
-    "react-native-snap-carousel": "^3.9.1",
     "react-native-tab-view": "^3.5.2",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-uuid": "^2.0.3",
@@ -53,7 +51,6 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@types/react": "~18.3.12",
-    "@types/react-native-snap-carousel": "^3.8.11",
     "typescript": "^5.7.2"
   },
   "private": true

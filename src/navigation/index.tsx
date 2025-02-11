@@ -4,6 +4,7 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { View, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSession } from '@/context/SessionContext';
+import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRef } from 'react';
 import { Modalize } from 'react-native-modalize';
@@ -145,7 +146,22 @@ function MainTabs() {
 }
 
 export function Navigation() {
-  const { user, username } = useSession();
+  const { user, username, loading: sessionLoading } = useSession();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!sessionLoading) {
+      setIsLoading(false);
+    }
+  }, [sessionLoading]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        {/* <Text>Loading...</Text> */}
+      </View>
+    );
+  }
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

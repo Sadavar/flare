@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import type { ProfileStackParamList } from '@/navigation/types';
+import type { ProfileStackParamList } from '@/types';
 import { Layout } from '@/components/Layout';
 
 type PostDetailsRouteProp = RouteProp<ProfileStackParamList, 'PostDetails'>;

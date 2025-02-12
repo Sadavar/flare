@@ -19,7 +19,7 @@ import { useSession } from '@/context/SessionContext';
 import { decode } from 'base64-arraybuffer';
 import uuid from 'react-native-uuid';
 import type { RouteProp } from '@react-navigation/native';
-import type { MainTabParamList } from '@/navigation/types';
+import type { MainTabParamList } from '@/types';
 import { Layout } from '@/components/Layout';
 
 type PostScreenRouteProp = RouteProp<MainTabParamList, 'Post'>;

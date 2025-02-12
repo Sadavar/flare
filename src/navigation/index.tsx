@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRef } from 'react';
 import { Modalize } from 'react-native-modalize';
 import { PostModal } from '@/components/PostModal';
-import type { RootStackParamList, MainTabParamList, DiscoverTabParamList } from './types';
+import type { RootStackParamList, MainTabParamList, DiscoverTabParamList } from '../types';
 
 // Import screens
 import { Login } from './screens/auth/Login';
@@ -17,7 +17,7 @@ import { Username } from './screens/auth/Username';
 import { Post } from './screens/post/Post';
 import { Profile } from './screens/profile/Profile';
 import { Global } from './screens/discover/global/Global';
-import { Friends } from './screens/discover/Friends';
+import { Friends } from './screens/discover/friends/Friends';
 import { Brands } from './screens/discover/brands/Brands';
 import { Layout } from '@/components/Layout';
 import { UserProfile } from './screens/discover/UserProfile';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import type { BrandsStackParamList } from '@/navigation/types';
+import type { BrandsStackParamList } from '@/types';
 import { Layout } from '@/components/Layout';
 import { PostView } from '@/components/PostView';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';

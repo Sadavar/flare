@@ -6,19 +6,13 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRoute, RouteProp } from '@react-navigation/native';
-import type { BrandsStackParamList } from '@/navigation/types';
+import type { BrandsStackParamList } from '@/types';
 import { Layout } from '@/components/Layout';
 import { useNavigation } from '@react-navigation/native';
+import { Post } from '@/types'
+
 
 type BrandDetailsRouteProp = RouteProp<BrandsStackParamList, 'BrandDetails'>;
-
-interface Post {
-    uuid: string;
-    image_url: string;
-    user: {
-        username: string;
-    };
-}
 
 interface Product {
     id: string;
@@ -53,7 +47,7 @@ export function BrandDetails() {
 
             if (error) throw error;
 
-            return data.map(({ posts: post }) => ({
+            return data.map(({ post }) => ({
                 uuid: post.uuid,
                 image_url: supabase.storage
                     .from('outfits')

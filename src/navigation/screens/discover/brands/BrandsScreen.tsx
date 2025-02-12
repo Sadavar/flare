@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { BrandsStackParamList } from '@/navigation/types';
+import type { BrandsStackParamList } from '@/types';
 import { MaterialIcons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get("window");
@@ -24,7 +24,7 @@ interface Brand {
     post_count: number;
 }
 
-type BrandsListNavigationProp = NativeStackNavigationProp<BrandsStackParamList, 'BrandsList'>;
+type BrandsListNavigationProp = NativeStackNavigationProp<BrandsStackParamList, 'BrandsScreen'>;
 
 function BrandSearch({ searchQuery, setSearchQuery }: {
     searchQuery: string;

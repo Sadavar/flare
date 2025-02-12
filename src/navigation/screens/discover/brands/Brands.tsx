@@ -1,6 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import type { BrandsStackParamList } from '@/navigation/types';
+import type { BrandsStackParamList } from '@/types';
 import { BrandsScreen } from './BrandsScreen';
 import { BrandDetails } from './BrandDetails';
 import { PostDetails } from '../PostDetails';

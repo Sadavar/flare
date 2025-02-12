@@ -7,14 +7,10 @@ import { supabase } from '@/lib/supabase';
 import { Layout } from '@/components/Layout';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
-import type { DiscoverTabParamList } from '@/navigation/types';
+import type { DiscoverTabParamList } from '@/types';
+import { Post } from '@/types'
 
 type UserProfileRouteProp = RouteProp<DiscoverTabParamList, 'UserProfile'>;
-
-interface Post {
-    uuid: string;
-    image_url: string;
-}
 
 export function UserProfile() {
     const [username, setUsername] = useState<string | null>(null);

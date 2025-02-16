@@ -83,6 +83,10 @@ export function Post() {
         // Set image from navigation params if available
         if (route.params?.image) {
             setImage(route.params.image);
+            setDescription('');
+            setBrandsInput('');
+            setTaggedBrands([]);
+            setSelectedStyles([]);
         }
     }, [route.params?.image]);
 

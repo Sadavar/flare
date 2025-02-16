@@ -7,10 +7,12 @@ import { supabase } from '@/lib/supabase';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSession } from '@/context/SessionContext';
 import { Layout } from '@/components/Layout';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Post, ProfileStackParamList } from '@/types';
 import { useUserPosts } from '@/hooks/usePostQueries';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 
 type ProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
 
@@ -31,6 +33,18 @@ export function ProfileMain() {
                 contentFit="cover"
             />
         </TouchableOpacity>
+    );
+
+    const queryClient = useQueryClient();
+
+    const onRefresh = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: ['userPosts', username] });
+    }, [queryClient, username]);
+
+    useFocusEffect(
+        useCallback(() => {
+            onRefresh();
+        }, [onRefresh])
     );
 
     return (
@@ -60,6 +74,9 @@ export function ProfileMain() {
                         <Text style={styles.statLabel}>Brands</Text>
                     </View>
                 </View>
+                <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
+                    <MaterialIcons name="refresh" size={24} color="black" />
+                </TouchableOpacity>
             </View>
 
             {isLoading ? (
@@ -152,4 +169,12 @@ const styles = StyleSheet.create({
         marginTop: 20,
         color: '#666',
     },
-}); 
+    refreshButton: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        padding: 10,
+        borderRadius: 20,
+        backgroundColor: '#f0f0f0',
+    },
+});

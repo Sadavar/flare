@@ -80,12 +80,15 @@ export function FriendsFeed() {
                     .from('outfits')
                     .getPublicUrl(post.image_url).data.publicUrl,
                 description: post.description,
+                username: post.profiles?.username, // Directly assign username
                 user: {
-                    username: post.profiles?.username // Fixed to use object access
+                    username: post.profiles?.username
                 },
                 brands: post.post_brands.map((pb: any) => ({
                     id: pb.brands.id,
-                    name: pb.brands.name
+                    name: pb.brands.name,
+                    x_coord: 0,
+                    y_coord: 0
                 }))
             }));
         },

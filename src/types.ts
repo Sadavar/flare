@@ -48,6 +48,7 @@ export type BrandsStackParamList = {
     BrandsScreen: undefined;
     BrandDetails: { brandId: number; brandName: string };
     PostDetails: { postId: string };
+    UserProfile: { username: string };
 };
 
 export type ProfileStackParamList = {
@@ -63,14 +64,17 @@ export type PostStackParamList = {
 export interface Post {
     uuid: string;
     image_url: string;
-    description: string;
-    username: string;
-    brands: Array<{
+    description?: string;
+    username?: string;
+    brands?: Array<{
         id: number;
         name: string;
         x_coord: number;
         y_coord: number;
     }>;
+    user?: {
+        username: string;
+    };
 }
 
 export interface Brand {

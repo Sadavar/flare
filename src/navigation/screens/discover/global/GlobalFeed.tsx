@@ -128,11 +128,11 @@ export function GlobalFeed() {
                                 />
                             </TouchableOpacity>
 
-                            {post.brands?.length > 0 && (
+                            {post.brands && post.brands.length > 0 && (
                                 <View style={styles.brandsContainer}>
                                     <Text style={styles.brandsLabel}>Featured Brands:</Text>
                                     <View style={styles.brandsList}>
-                                        {post.brands.map((brand) => (
+                                        {post.brands?.map((brand) => (
                                             <TouchableOpacity
                                                 key={brand.id}
                                                 style={styles.brandButton}

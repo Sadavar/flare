@@ -17,21 +17,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MasonryList from '@react-native-seoul/masonry-list';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Post, Brand } from '@/types';
 
-interface Brand {
-    id: number;
-    name: string;
-}
-
-interface Post {
-    uuid: string;
-    image_url: string;
-    description: string;
-    user: {
-        username: string;
-    };
-    brands: Brand[];
-}
 
 function BrandSearch({ searchQuery, setSearchQuery }: {
     searchQuery: string;
@@ -78,12 +65,14 @@ export function BrandsScreen() {
                     uuid,
                     image_url,
                     description,
-                    profiles!posts_user_uuid_fkey (username),
-                    post_brands!inner (
-                        brands!inner (
+                    profiles!posts_user_uuid_fkey (username), 
+                    post_brands (
+                        brands (
                             id,
                             name
-                        )
+                        ),
+                        x_coord,
+                        y_coord
                     )
                 `)
                 .order('created_at', { ascending: false });
@@ -101,12 +90,12 @@ export function BrandsScreen() {
                     .from('outfits')
                     .getPublicUrl(post.image_url).data.publicUrl,
                 description: post.description,
-                user: {
-                    username: post.profiles?.username
-                },
+                username: post.profiles.username,
                 brands: post.post_brands.map((pb: any) => ({
                     id: pb.brands.id,
-                    name: pb.brands.name
+                    name: pb.brands.name,
+                    x_coord: pb.x_coord,
+                    y_coord: pb.y_coord
                 }))
             }));
         },

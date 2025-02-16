@@ -59,16 +59,22 @@ export type PostStackParamList = {
     CreatePost: undefined;
 };
 
+
 export interface Post {
     uuid: string;
     image_url: string;
     description: string;
-    user: {
-        username: string;
-    };
+    username: string;
     brands: Array<{
         id: number;
         name: string;
+        x_coord: number;
+        y_coord: number;
     }>;
+}
+
+export interface Brand {
+    id: number;
+    name: string;
 }
 

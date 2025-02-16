@@ -10,6 +10,7 @@ import MasonryList from '@react-native-seoul/masonry-list';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Post } from '@/types'
+import { useGlobalFeed } from '@/hooks/usePostQueries';
 
 
 type GlobalFeedNavigationProp = NativeStackNavigationProp<GlobalStackParamList, 'GlobalFeed'>;
@@ -53,45 +54,7 @@ export function GlobalFeed() {
     const navigation = useNavigation<GlobalFeedNavigationProp>();
     const { user: currentUser, username: currentUsername } = useSession();
 
-    const { data: posts, isLoading } = useQuery<Post[], boolean>({
-        queryKey: ['globalFeed'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('posts')
-                .select(`
-                    uuid,
-                    image_url,
-                    description,
-                    created_at,
-                    user_uuid,
-                    profiles!posts_user_uuid_fkey (username),
-                    post_brands (
-                        brands (
-                            id,
-                            name
-                        )
-                    )
-                `)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            return data.map(post => ({
-                uuid: post.uuid,
-                image_url: supabase.storage
-                    .from('outfits')
-                    .getPublicUrl(post.image_url).data.publicUrl,
-                description: post.description,
-                user: {
-                    username: post.profiles?.username // Fixed to use object access
-                },
-                brands: post.post_brands.map((pb: any) => ({
-                    id: pb.brands.id,
-                    name: pb.brands.name
-                }))
-            }));
-        },
-    });
+    const { data: posts, isLoading } = useGlobalFeed();
 
     const handleBrandPress = (brandId: number, brandName: string) => {
         navigation.getParent()?.navigate('Brands', {

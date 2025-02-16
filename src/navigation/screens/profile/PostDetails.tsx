@@ -1,60 +1,23 @@
-import React from 'react';
-import { View, Text, StyleSheet, Alert, Button } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Alert, Button, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import type { ProfileStackParamList } from '@/types';
 import { Layout } from '@/components/Layout';
+import { usePost } from '@/hooks/usePostQueries';
+import { supabase } from '@/lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
 
 type PostDetailsRouteProp = RouteProp<ProfileStackParamList, 'PostDetails'>;
-
-interface Post {
-    uuid: string;
-    image_url: string;
-    description: string;
-    created_at: string;
-    brands: Array<{
-        name: string;
-    }>;
-}
 
 export function PostDetails() {
     const route = useRoute<PostDetailsRouteProp>();
     const navigation = useNavigation();
-    const queryClient = useQueryClient();
     const { postId } = route.params;
+    const [showTags, setShowTags] = useState(true);
 
-    const { data: post, isLoading } = useQuery({
-        queryKey: ['post', postId],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('posts')
-                .select(`
-                    uuid,
-                    image_url,
-                    description,
-                    created_at,
-                    post_brands (
-                        brands (
-                            name
-                        )
-                    )
-                `)
-                .eq('uuid', postId)
-                .single();
-
-            if (error) throw error;
-
-            return {
-                ...data,
-                brands: data.post_brands.map((pb: any) => pb.brands),
-                image_url: supabase.storage
-                    .from('outfits')
-                    .getPublicUrl(data.image_url).data.publicUrl
-            };
-        },
-    });
+    const { data: post, isLoading } = usePost(postId);
+    const queryClient = useQueryClient();
 
     const handleDelete = async () => {
         Alert.alert(
@@ -98,6 +61,11 @@ export function PostDetails() {
         );
     };
 
+
+    const toggleTagsVisibility = () => {
+        setShowTags((prevState) => !prevState);
+    };
+
     if (isLoading) {
         return (
             <Layout>
@@ -107,6 +75,7 @@ export function PostDetails() {
             </Layout>
         );
     }
+
     if (!post) {
         return (
             <Layout>
@@ -118,36 +87,58 @@ export function PostDetails() {
     }
 
     return (
-        <View style={styles.container}>
-            <Image
-                source={{ uri: post.image_url }}
-                style={styles.image}
-                contentFit="cover"
-            />
-            <View style={styles.detailsContainer}>
-                <Text style={styles.date}>
-                    {new Date(post.created_at).toLocaleDateString()}
-                </Text>
-                {post.description && (
-                    <Text style={styles.description}>{post.description}</Text>
-                )}
-                <View style={styles.brandsContainer}>
-                    <Text style={styles.brandsLabel}>Featured Brands:</Text>
-                    <View style={styles.brandsList}>
-                        {post.brands.map((brand, index) => (
-                            <View key={index} style={styles.brandButton}>
-                                <Text style={styles.brandText}>{brand.name}</Text>
-                            </View>
-                        ))}
-                    </View>
+        <Layout>
+            <View style={styles.container}>
+                <View style={styles.imageContainer}>
+                    <TouchableOpacity onPress={toggleTagsVisibility} activeOpacity={1}>
+                        <Image
+                            source={{ uri: post.image_url }}
+                            style={styles.image}
+                            contentFit="contain"
+                        />
+                    </TouchableOpacity>
+                    {showTags && post.brands?.map((brand) => (
+                        <View
+                            key={brand.id}
+                            style={[
+                                styles.tag,
+                                {
+                                    left: `${brand.x_coord}%`,
+                                    top: `${brand.y_coord}%`,
+                                },
+                            ]}
+                        >
+                            <Text style={styles.tagText}>{brand.name}</Text>
+                        </View>
+                    ))}
                 </View>
-                <Button
-                    title="Delete Post"
-                    onPress={handleDelete}
-                    color="#FF3B30"
-                />
+
+                <View style={styles.detailsContainer}>
+                    {/* <Text style={styles.date}>
+                        {new Date(post.created_at).toLocaleDateString()}
+                    </Text> */}
+                    <Text style={styles.brandsLabel}>Description:</Text>
+                    {post.description && (
+                        <Text style={styles.description}>{post.description}</Text>
+                    )}
+                    <View style={styles.brandsContainer}>
+                        <Text style={styles.brandsLabel}>Featured Brands:</Text>
+                        <View style={styles.brandsList}>
+                            {post.brands.map((brand) => (
+                                <View key={brand.id} style={styles.brandButton}>
+                                    <Text style={styles.brandText}>{brand.name}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                    <Button
+                        title="Delete Post"
+                        onPress={handleDelete}
+                        color="#FF3B30"
+                    />
+                </View>
             </View>
-        </View>
+        </Layout>
     );
 }
 
@@ -156,9 +147,25 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
     },
+    imageContainer: {
+        position: 'relative',
+    },
     image: {
         width: '100%',
         height: 400,
+    },
+    tag: {
+        position: 'absolute',
+        transform: [{ translateX: -50 }, { translateY: -50 }],
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        borderRadius: 15,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        zIndex: 1,
+    },
+    tagText: {
+        color: '#fff',
+        fontSize: 12,
     },
     detailsContainer: {
         padding: 20,
@@ -194,4 +201,4 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#000',
     },
-}); 
+});

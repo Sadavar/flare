@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -10,7 +10,9 @@ import {
     TouchableWithoutFeedback,
     KeyboardAvoidingView,
     TouchableOpacity,
-    Touchable
+    PanResponder,
+    GestureResponderEvent,
+    LayoutChangeEvent,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -18,11 +20,18 @@ import { supabase } from '@/lib/supabase';
 import { useSession } from '@/context/SessionContext';
 import { decode } from 'base64-arraybuffer';
 import uuid from 'react-native-uuid';
+import { Modalize } from 'react-native-modalize';
 import type { RouteProp } from '@react-navigation/native';
 import type { MainTabParamList } from '@/types';
-import { Layout } from '@/components/Layout';
+import { Dimensions } from 'react-native';
 
 type PostScreenRouteProp = RouteProp<MainTabParamList, 'Post'>;
+
+type BrandTag = {
+    name: string;
+    x: number;
+    y: number;
+};
 
 export function Post() {
     const route = useRoute<PostScreenRouteProp>();
@@ -31,9 +40,44 @@ export function Post() {
     const [brandsInput, setBrandsInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [brandSuggestions, setBrandSuggestions] = useState<string[]>([]);
-    const [taggedBrands, setTaggedBrands] = useState<string[]>([]);
+    const [taggedBrands, setTaggedBrands] = useState<BrandTag[]>([]);
+    const [activePosition, setActivePosition] = useState<{ x: number, y: number } | null>(null);
+    const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+    const [isDragging, setIsDragging] = useState<number | null>(null);
+    const modalizeRef = useRef<Modalize>(null);
+    const imageRef = useRef<View>(null);
     const navigation = useNavigation();
     const { user } = useSession();
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const [imageLayout, setImageLayout] = useState<{
+        width: number;
+        height: number;
+        pageX: number;
+        pageY: number;
+    } | null>(null);
+
+    const [tagPillSizes, setTagPillSizes] = useState<{ width: number; height: number }[]>([]);
+
+    const handleTagLayout = (index: number, event: LayoutChangeEvent) => {
+        const { width, height } = event.nativeEvent.layout;
+        setTagPillSizes(prevSizes => {
+            const newSizes = [...prevSizes];
+            newSizes[index] = { width, height };
+            return newSizes;
+        });
+    };
+
+    // Add this useEffect to get and store image layout
+    useEffect(() => {
+        if (imageRef.current) {
+            imageRef.current.measure((x, y, width, height, pageX, pageY) => {
+                setImageLayout({ width, height, pageX, pageY });
+            });
+        }
+    }, [image]); // Re-measure when image changes
+
 
     useEffect(() => {
         // Set image from navigation params if available
@@ -41,6 +85,105 @@ export function Post() {
             setImage(route.params.image);
         }
     }, [route.params?.image]);
+
+    useEffect(() => {
+        const fetchBrands = async () => {
+            if (brandsInput.length == 0) {
+                const { data, error } = await supabase
+                    .from('brands')
+                    .select('name')
+                if (!error && data) {
+                    const brands = data.map(item => item.name);
+                    setBrandSuggestions([...brands, ...brands, ...brands]);
+                } else {
+                }
+            }
+        }
+        fetchBrands();
+    }, [brandsInput])
+
+    const handleImagePress = (event: any) => {
+        event.persist(); // Persist the event
+
+        if (isDragging !== null || !imageLayout) return;
+
+        const touchX = event.nativeEvent.pageX - imageLayout.pageX;
+        const touchY = event.nativeEvent.pageY - imageLayout.pageY;
+
+        // Calculate position as percentage of image dimensions
+        const xPercent = (touchX / imageLayout.width) * 100;
+        const yPercent = (touchY / imageLayout.height) * 100;
+
+        // Ensure coordinates are within bounds
+        if (xPercent >= 0 && xPercent <= 100 && yPercent >= 0 && yPercent <= 100) {
+            setActivePosition({ x: xPercent, y: yPercent });
+            modalizeRef.current?.open();
+        }
+    };
+
+    const handleBrandSelect = (brandName: string) => {
+        if (activePosition) {
+            setTaggedBrands([...taggedBrands, {
+                name: brandName,
+                x: activePosition.x,
+                y: activePosition.y
+            }]);
+            modalizeRef.current?.close();
+            setActivePosition(null);
+            setBrandsInput('');
+        }
+    };
+
+    const handleTagDragStart = (index: number) => {
+        setIsDragging(index);
+    };
+
+    const handleTagDragMove = (event, index) => {
+        event.persist();
+        if (isDragging === index && imageLayout) {
+            const { pageX, pageY } = imageLayout;
+
+            const touchX = event.nativeEvent.pageX - pageX;
+            const touchY = event.nativeEvent.pageY - pageY;
+
+            const { width = 0, height = 0 } = tagPillSizes[index] || {};
+
+            const adjustedWidth = imageLayout.width - width;
+            const adjustedHeight = imageLayout.height - height;
+
+            const screenWidth = Dimensions.get('window').width;
+            console.log("screen width", screenWidth)
+
+            console.log('touchX:', touchX);
+            console.log('touchY:', touchY);
+            console.log('imageLayout:', imageLayout);
+            console.log('tagPillSizes:', tagPillSizes);
+
+            if (touchX >= width && touchX <= adjustedWidth &&
+                touchY >= 50 && touchY <= 360) {
+
+                const xPercent = Math.max(0, Math.min((touchX / imageLayout.width) * 100, 100));
+                const yPercent = Math.max(0, Math.min((touchY / imageLayout.height) * 100, 100));
+
+                const updatedTags = [...taggedBrands];
+                updatedTags[index] = {
+                    ...updatedTags[index],
+                    x: xPercent,
+                    y: yPercent
+                };
+                setTaggedBrands(updatedTags);
+            }
+        }
+    };
+
+
+    const handleTagDragEnd = () => {
+        setIsDragging(null);
+    };
+
+    const removeTag = (index: number) => {
+        setTaggedBrands(taggedBrands.filter((_, i) => i !== index));
+    };
 
     const uploadPost = async () => {
         if (!image || !user) return;
@@ -79,15 +222,13 @@ export function Post() {
 
             if (postError) throw postError;
 
-            // const brands = brandsInput
-            //     .split(',')
-            //     .map(brand => brand.trim())
-            //     .filter(brand => brand.length > 0);
 
-            for (const brandName of taggedBrands) {
+
+            // Upload tagged brands with coordinates
+            for (const tag of taggedBrands) {
                 const { data: brandData, error: brandError } = await supabase
                     .from('brands')
-                    .upsert([{ name: brandName }], { onConflict: 'name' })
+                    .upsert([{ name: tag.name }], { onConflict: 'name' })
                     .select('id')
                     .single();
 
@@ -98,6 +239,8 @@ export function Post() {
                     .insert([{
                         post_uuid: postData.uuid,
                         brand_id: brandData.id,
+                        x_coord: tag.x,
+                        y_coord: tag.y
                     }]);
             }
 
@@ -112,16 +255,73 @@ export function Post() {
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <ScrollView style={{ backgroundColor: 'white' }} keyboardShouldPersistTaps='handled'>
-                <KeyboardAvoidingView behavior='position' keyboardVerticalOffset={150}>
+                <KeyboardAvoidingView behavior='position' keyboardVerticalOffset={150} enabled={!isModalOpen} >
                     <View style={styles.container}>
                         {image ? (
                             <>
                                 <Text style={styles.trendingTitle}>Image Preview</Text>
-                                <Image
-                                    source={{ uri: image }}
-                                    style={styles.image}
-                                    contentFit='contain'
-                                />
+                                <Text style={styles.tagInstruction}>Tap image to add brands</Text>
+                                <View
+                                    ref={imageRef}
+                                    style={styles.imageContainer}
+                                    onLayout={() => {
+                                        // Re-measure on layout changes
+                                        imageRef.current?.measure((x, y, width, height, pageX, pageY) => {
+                                            setImageLayout({ width, height, pageX, pageY });
+                                        });
+                                    }}
+                                // onLayout={(e) => {
+                                //     const { x, y, width, height } = e.nativeEvent.layout;
+                                //     console.log('Image Container:', { x, y, width, height });
+                                // }}
+                                >
+                                    <TouchableWithoutFeedback onPress={handleImagePress}>
+                                        <Image
+                                            source={{ uri: image }}
+                                            style={styles.image}
+                                            contentFit='contain'
+                                        />
+                                    </TouchableWithoutFeedback>
+                                    {taggedBrands.map((tag, index) => (
+                                        <View
+                                            key={index}
+                                            style={[
+                                                styles.tagPill,
+                                                {
+                                                    left: `${tag.x}%`,
+                                                    top: `${tag.y}%`,
+                                                }
+                                            ]}
+                                            onLayout={(event) => handleTagLayout(index, event)}
+                                        >
+                                            <View
+                                                style={styles.tagPillContent}
+                                                {...PanResponder.create({
+                                                    onStartShouldSetPanResponder: () => true,
+                                                    onPanResponderGrant: () => handleTagDragStart(index),
+                                                    onPanResponderMove: (e) => handleTagDragMove(e, index),
+                                                    onPanResponderRelease: handleTagDragEnd,
+                                                }).panHandlers}
+                                            >
+                                                <Text
+                                                    style={styles.tagText}
+                                                    numberOfLines={1}
+                                                    ellipsizeMode="tail"
+                                                >
+                                                    {tag.name}
+                                                </Text>
+                                                <TouchableOpacity
+                                                    onPress={() => removeTag(index)}
+                                                    style={styles.removeButton}
+                                                >
+                                                    <Text style={styles.removeButtonText}>×</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+
+
                                 <Text style={styles.trendingTitle}>Description</Text>
                                 <TextInput
                                     style={styles.input}
@@ -130,43 +330,37 @@ export function Post() {
                                     onChangeText={setDescription}
                                     multiline
                                 />
+                                <Text style={styles.trendingTitle}>Style</Text>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={styles.styleScrollContainer}
+                                >
+                                    {['Indie', 'Streetwear', 'Rave', 'Vintage', 'Sporty', 'Goth', 'Casual', 'Formal'].map((style) => (
+                                        <TouchableOpacity
+                                            key={style}
+                                            style={[
+                                                styles.styleChip,
+                                                selectedStyles.includes(style) && styles.selectedStyleChip
+                                            ]}
+                                            onPress={() => {
+                                                if (selectedStyles.includes(style)) {
+                                                    setSelectedStyles(selectedStyles.filter(s => s !== style));
+                                                } else if (selectedStyles.length < 3) {
+                                                    setSelectedStyles([...selectedStyles, style]);
+                                                }
+                                            }}
+                                        >
+                                            <Text style={[
+                                                styles.styleChipText,
+                                                selectedStyles.includes(style) && styles.selectedStyleChipText
+                                            ]}>
+                                                {style}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
                                 <Text style={styles.trendingTitle}>Brands</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Add brands..."
-                                    value={brandsInput}
-                                    onChangeText={async (text) => {
-                                        setBrandsInput(text);
-                                        if (text.length > 0) {
-                                            const { data, error } = await supabase
-                                                .from('brands')
-                                                .select('name')
-                                                .ilike('name', `%${text}%`)
-                                                .limit(5);
-
-                                            if (error) {
-                                                console.error('Error fetching brands:', error);
-                                            } else {
-                                                setBrandSuggestions(data.map(item => item.name));
-                                            }
-                                        } else {
-                                            setBrandSuggestions([]);
-                                        }
-                                    }}
-                                />
-                                {brandSuggestions.map((suggestion, index) => (
-                                    <TouchableOpacity
-                                        key={index}
-                                        style={styles.suggestion}
-                                        onPress={() => {
-                                            setTaggedBrands([...taggedBrands, suggestion]);
-                                            setBrandSuggestions([]);
-                                            setBrandsInput('');
-                                        }}
-                                    >
-                                        <Text>{suggestion}</Text>
-                                    </TouchableOpacity>
-                                ))}
                                 <View style={styles.taggedBrandsContainer}>
                                     {taggedBrands.map((brand, index) => (
                                         <TouchableOpacity
@@ -176,7 +370,7 @@ export function Post() {
                                                 setTaggedBrands(taggedBrands.filter((_, i) => i !== index));
                                             }}
                                         >
-                                            <Text style={styles.taggedBrandText}>{brand}</Text>
+                                            <Text style={styles.taggedBrandText}>{brand.name}</Text>
                                             <Text style={styles.removeTag}>X</Text>
                                         </TouchableOpacity>
                                     ))}
@@ -192,6 +386,54 @@ export function Post() {
                         )}
                     </View>
                 </KeyboardAvoidingView>
+
+                <Modalize
+                    ref={modalizeRef}
+                    modalHeight={500}
+                    onOpen={() => setIsModalOpen(true)}
+                    onClose={() => setIsModalOpen(false)}
+                    panGestureEnabled={false} // Disables swipe down to dismiss
+
+                >
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Tag a Brand</Text>
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="Search brands..."
+                            value={brandsInput}
+                            onChangeText={async (text) => {
+                                setBrandsInput(text);
+                                if (text.length > 0) {
+                                    const { data, error } = await supabase
+                                        .from('brands')
+                                        .select('name')
+                                        .ilike('name', `%${text}%`)
+                                        .limit(5);
+
+                                    if (error) {
+                                        console.error('Error fetching brands:', error);
+                                    } else {
+                                        setBrandSuggestions(data.map(item => item.name));
+                                    }
+                                } else {
+                                    setBrandSuggestions([]);
+                                }
+                            }}
+                        />
+                        <ScrollView style={styles.suggestionsList}>
+                            {brandSuggestions.map((brand, index) => (
+                                <TouchableOpacity
+                                    key={index}
+                                    style={styles.suggestionItem}
+                                    onPress={() => handleBrandSelect(brand)}
+                                >
+                                    <Text style={styles.suggestionText}>{brand}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+                </Modalize>
+
             </ScrollView>
         </TouchableWithoutFeedback>
     );
@@ -203,9 +445,19 @@ const styles = StyleSheet.create({
         padding: 20,
         backgroundColor: '#fff',
     },
+    imageContainer: {
+        position: 'relative',
+        marginBottom: 15,
+    },
     image: {
         height: 300,
         marginBottom: 15
+    },
+    tagInstruction: {
+        textAlign: 'center',
+        color: '#666',
+        marginBottom: 10,
+        fontSize: 14,
     },
     input: {
         borderWidth: 1,
@@ -259,5 +511,90 @@ const styles = StyleSheet.create({
     removeTag: {
         color: 'red',
         fontWeight: 'bold',
+    },
+    styleScrollContainer: {
+        paddingVertical: 10,
+        paddingHorizontal: 5,
+    },
+    styleChip: {
+        backgroundColor: '#f0f0f0',
+        borderRadius: 20,
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+        marginHorizontal: 5,
+    },
+    selectedStyleChip: {
+        backgroundColor: '#000',
+    },
+    styleChipText: {
+        color: '#666',
+        fontSize: 14,
+    },
+    selectedStyleChipText: {
+        color: '#fff',
+    },
+
+    tagPill: {
+        position: 'absolute',
+        transform: [{ translateX: -50 }, { translateY: -50 }],
+        zIndex: 1,
+        maxWidth: 100,
+        maxHeight: 35
+    },
+    tagPillContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        borderRadius: 15,
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+
+    },
+    tagText: {
+        color: '#fff',
+        fontSize: 12,
+        marginRight: 5,
+        flexShrink: 1,
+    },
+    removeButton: {
+        width: 16,
+        height: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    removeButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    modalContent: {
+        alignItems: 'center',
+    },
+    modalTitle: {
+        paddingTop: 20,
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 15,
+        textAlign: 'center',
+        width: 300,
+    },
+    searchInput: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 10,
+        width: 300,
+    },
+    suggestionsList: {
+        marginTop: 10,
+    },
+    suggestionItem: {
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    suggestionText: {
+        fontSize: 16,
     },
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -6,6 +6,10 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/context/SessionContext';
 import { useNavigation } from '@react-navigation/native';
+import type { Post } from '@/types';
+import { useUserPosts } from '@/hooks/usePostQueries';
+import { Username } from '@/navigation/screens/auth/Username';
+import { usePost } from '@/hooks/usePostQueries'
 
 interface PostViewProps {
     postId: string;
@@ -14,40 +18,9 @@ interface PostViewProps {
 export function PostView({ postId }: PostViewProps) {
     const { username: currentUsername } = useSession();
     const navigation = useNavigation();
+    const [showTags, setShowTags] = useState(true);
 
-    const { data: post, isLoading } = useQuery({
-        queryKey: ['post', postId],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('posts')
-                .select(`
-                    uuid,
-                    image_url,
-                    description,
-                    created_at,
-                    profiles!posts_user_uuid_fkey (username),
-                    post_brands (
-                        brands (
-                            id,
-                            name
-                        )
-                    )
-                `)
-                .eq('uuid', postId)
-                .single();
-
-            if (error) throw error;
-
-            return {
-                ...data,
-                user: data.profiles,
-                brands: data.post_brands.map((pb: any) => pb.brands),
-                image_url: supabase.storage
-                    .from('outfits')
-                    .getPublicUrl(data.image_url).data.publicUrl
-            };
-        },
-    });
+    const { data: post, isLoading } = usePost(postId)
 
     if (isLoading) {
         return (
@@ -68,48 +41,75 @@ export function PostView({ postId }: PostViewProps) {
     const handleUserPress = (username: string) => {
         console.log(username);
         if (username === currentUsername) {
-            navigation.getParent()?.navigate('Profile', {
-                screen: 'ProfileMain'
-            });
+            navigation.getParent()?.navigate('Profile', { screen: 'ProfileMain' });
         } else {
             navigation.navigate('Global', {
                 screen: 'UserProfile',
-                params: { username }
+                params: { username },
             });
         }
-    }
+    };
 
     const handleBrandPress = (brandId: number, brandName: string) => {
         console.log(brandId, brandName);
         navigation.navigate('Brands', {
             screen: 'BrandDetails',
-            params: { brandId, brandName }
+            params: { brandId, brandName },
         });
-    }
+    };
+
+    const toggleTagsVisibility = () => {
+        setShowTags((prevState) => !prevState);
+    };
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.userInfo}
-                    onPress={() => { handleUserPress(post.user.username) }}
+                    onPress={() => handleUserPress(post.username)}
+                    activeOpacity={1}  // Add activeOpacity for TouchableOpacity
                 >
                     <View style={styles.userIcon}>
                         <MaterialIcons name="person" size={24} color="black" />
                     </View>
-                    <Text style={styles.username}>@{post.user.username}</Text>
+                    <Text style={styles.username}>@{post.username}</Text>
                 </TouchableOpacity>
             </View>
 
-            <Image
-                source={{ uri: post.image_url }}
-                style={styles.image}
-                contentFit="cover"
-            />
+            <View style={styles.imageContainer}>
+                <TouchableOpacity onPress={toggleTagsVisibility} activeOpacity={1}>
+                    <Image
+                        source={{ uri: post.image_url }}
+                        style={styles.image}
+                        contentFit="contain"
+                    />
+                </TouchableOpacity>
+                {showTags && post.brands?.map((brand) => (
+                    <TouchableOpacity
+                        key={brand.id}
+                        style={[
+                            styles.tag,
+                            {
+                                left: `${brand.x_coord}%`,
+                                top: `${brand.y_coord}%`,
+                            },
+                        ]}
+                        onPress={() => handleBrandPress(brand.id, brand.name)}
+                        activeOpacity={1}
+                    >
+                        <Text style={styles.tagText}>{brand.name}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
 
             {post.description && (
-                <Text style={styles.description}>{post.description}</Text>
-            )}
+                <>
+                    <Text style={{ fontSize: 14, fontWeight: '600', paddingLeft: 15 }}>Description:</Text>
+                    <Text style={styles.description}>{post.description}</Text>
+                </>
+            )
+            }
 
             <View style={styles.brandsContainer}>
                 <Text style={styles.brandsLabel}>Featured Brands:</Text>
@@ -119,13 +119,14 @@ export function PostView({ postId }: PostViewProps) {
                             key={brand.id}
                             style={styles.brandButton}
                             onPress={() => handleBrandPress(brand.id, brand.name)}
+                            activeOpacity={1}
                         >
                             <Text style={styles.brandText}>{brand.name}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
             </View>
-        </View>
+        </View >
     );
 }
 
@@ -156,9 +157,12 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
     },
+    imageContainer: {
+        position: 'relative',
+        marginBottom: 15,
+    },
     image: {
-        width: '100%',
-        aspectRatio: 1,
+        height: 300,
     },
     description: {
         fontSize: 14,
@@ -187,4 +191,17 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#000',
     },
-}); 
+    tag: {
+        position: 'absolute',
+        transform: [{ translateX: -50 }, { translateY: -50 }],
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        borderRadius: 15,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        zIndex: 1,
+    },
+    tagText: {
+        color: '#fff',
+        fontSize: 12,
+    },
+});

@@ -9,38 +9,16 @@ import { useSession } from '@/context/SessionContext';
 import { Layout } from '@/components/Layout';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { ProfileStackParamList } from '@/types';
+import type { Post, ProfileStackParamList } from '@/types';
+import { useUserPosts } from '@/hooks/usePostQueries';
 
 type ProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
 
-interface Post {
-    uuid: string;
-    image_url: string;
-}
-
 export function ProfileMain() {
     const navigation = useNavigation<ProfileNavigationProp>();
-    const { user, username } = useSession();
+    const { user, username = '' } = useSession();
 
-    const { data: posts, isLoading } = useQuery({
-        queryKey: ['userPosts', user?.id],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('posts')
-                .select('*')
-                .eq('user_uuid', user?.id)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            return data.map(post => ({
-                ...post,
-                image_url: supabase.storage
-                    .from('outfits')
-                    .getPublicUrl(post.image_url).data.publicUrl
-            }));
-        },
-    });
+    const { data: posts, isLoading } = useUserPosts(username || "")
 
     const renderPost = ({ item }: { item: Post }) => (
         <TouchableOpacity

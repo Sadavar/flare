@@ -16,10 +16,8 @@ export function PostDetails() {
     const { postId } = route.params;
 
     return (
-        <Layout>
-            <PostView
-                postId={postId}
-            />
-        </Layout>
+        <PostView
+            postId={postId}
+        />
     );
 } 

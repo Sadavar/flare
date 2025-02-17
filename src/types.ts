@@ -75,6 +75,12 @@ export interface Post {
     user?: {
         username: string;
     };
+    styles?: Style[];
+}
+
+export interface Style {
+    id: number;
+    name: string;
 }
 
 export interface Brand {

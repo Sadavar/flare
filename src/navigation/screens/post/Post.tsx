@@ -33,6 +33,11 @@ type BrandTag = {
     y: number;
 };
 
+type Style = {
+    id: number;
+    name: string;
+};
+
 export function Post() {
     const route = useRoute<PostScreenRouteProp>();
     const [image, setImage] = useState<string | null>(null);
@@ -42,7 +47,7 @@ export function Post() {
     const [brandSuggestions, setBrandSuggestions] = useState<string[]>([]);
     const [taggedBrands, setTaggedBrands] = useState<BrandTag[]>([]);
     const [activePosition, setActivePosition] = useState<{ x: number, y: number } | null>(null);
-    const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+    const [selectedStyleIds, setSelectedStyleIds] = useState<number[]>([]);
     const [isDragging, setIsDragging] = useState<number | null>(null);
     const modalizeRef = useRef<Modalize>(null);
     const imageRef = useRef<View>(null);
@@ -59,6 +64,8 @@ export function Post() {
     } | null>(null);
 
     const [tagPillSizes, setTagPillSizes] = useState<{ width: number; height: number }[]>([]);
+
+    const [styleOptions, setStyleOptions] = useState<Style[]>([]);
 
     const handleTagLayout = (index: number, event: LayoutChangeEvent) => {
         const { width, height } = event.nativeEvent.layout;
@@ -86,7 +93,7 @@ export function Post() {
             setDescription('');
             setBrandsInput('');
             setTaggedBrands([]);
-            setSelectedStyles([]);
+            setSelectedStyleIds([]);
         }
     }, [route.params?.image]);
 
@@ -105,6 +112,22 @@ export function Post() {
         }
         fetchBrands();
     }, [brandsInput])
+
+    useEffect(() => {
+        const fetchStyles = async () => {
+            const { data, error } = await supabase
+                .from('styles')
+                .select('id, name');
+
+            if (!error && data) {
+                setStyleOptions(data);
+            } else {
+                console.error('Error fetching styles:', error);
+            }
+        };
+
+        fetchStyles();
+    }, []);
 
     const handleImagePress = (event: any) => {
         event.persist(); // Persist the event
@@ -142,7 +165,7 @@ export function Post() {
         setIsDragging(index);
     };
 
-    const handleTagDragMove = (event, index) => {
+    const handleTagDragMove = (event: GestureResponderEvent, index: number) => {
         event.persist();
         if (isDragging === index && imageLayout) {
             const { pageX, pageY } = imageLayout;
@@ -226,7 +249,22 @@ export function Post() {
 
             if (postError) throw postError;
 
+            // Insert style relationships
+            if (selectedStyleIds.length > 0) {
+                const styleRelations = selectedStyleIds.map(styleId => ({
+                    post_uuid: postData.uuid,
+                    style_id: styleId,
+                }));
+                console.log("styleRelations", styleRelations)
 
+                for (const style of styleRelations) {
+                    const { error: styleError } = await supabase
+                        .from('post_styles')
+                        .insert(style);
+
+                    if (styleError) throw styleError;
+                }
+            }
 
             // Upload tagged brands with coordinates
             for (const tag of taggedBrands) {
@@ -340,26 +378,26 @@ export function Post() {
                                     showsHorizontalScrollIndicator={false}
                                     contentContainerStyle={styles.styleScrollContainer}
                                 >
-                                    {['Indie', 'Streetwear', 'Rave', 'Vintage', 'Sporty', 'Goth', 'Casual', 'Formal'].map((style) => (
+                                    {styleOptions.map((style) => (
                                         <TouchableOpacity
-                                            key={style}
+                                            key={style.id}
                                             style={[
                                                 styles.styleChip,
-                                                selectedStyles.includes(style) && styles.selectedStyleChip
+                                                selectedStyleIds.includes(style.id) && styles.selectedStyleChip
                                             ]}
                                             onPress={() => {
-                                                if (selectedStyles.includes(style)) {
-                                                    setSelectedStyles(selectedStyles.filter(s => s !== style));
-                                                } else if (selectedStyles.length < 3) {
-                                                    setSelectedStyles([...selectedStyles, style]);
+                                                if (selectedStyleIds.includes(style.id)) {
+                                                    setSelectedStyleIds(selectedStyleIds.filter(id => id !== style.id));
+                                                } else if (selectedStyleIds.length < 3) {
+                                                    setSelectedStyleIds([...selectedStyleIds, style.id]);
                                                 }
                                             }}
                                         >
                                             <Text style={[
                                                 styles.styleChipText,
-                                                selectedStyles.includes(style) && styles.selectedStyleChipText
+                                                selectedStyleIds.includes(style.id) && styles.selectedStyleChipText
                                             ]}>
-                                                {style}
+                                                {style.name}
                                             </Text>
                                         </TouchableOpacity>
                                     ))}

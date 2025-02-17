@@ -373,6 +373,7 @@ export function Post() {
                                     multiline
                                 />
                                 <Text style={styles.trendingTitle}>Style</Text>
+
                                 <ScrollView
                                     horizontal
                                     showsHorizontalScrollIndicator={false}

@@ -9,7 +9,7 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
     Discover: undefined;
-    Post: { image?: string };
+    Post: { image?: string, postId?: string };
     Profile: {
         screen?: keyof ProfileStackParamList;
         params?: ProfileStackParamList[keyof ProfileStackParamList];
@@ -54,6 +54,7 @@ export type BrandsStackParamList = {
 export type ProfileStackParamList = {
     ProfileMain: undefined;
     PostDetails: { postId: string };
+    PostEdit: { postId: string };
 };
 
 export type PostStackParamList = {
@@ -66,16 +67,12 @@ export interface Post {
     image_url: string;
     description?: string;
     username?: string;
-    brands?: Array<{
-        id: number;
-        name: string;
-        x_coord: number;
-        y_coord: number;
-    }>;
+    created_at?: string;
+    brands?: Brand[];
+    styles?: Style[];
     user?: {
         username: string;
     };
-    styles?: Style[];
 }
 
 export interface Style {
@@ -86,5 +83,7 @@ export interface Style {
 export interface Brand {
     id: number;
     name: string;
+    x_coord: number;
+    y_coord: number;
 }
 

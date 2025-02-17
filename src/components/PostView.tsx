@@ -22,6 +22,8 @@ export function PostView({ postId }: PostViewProps) {
 
     const { data: post, isLoading } = usePost(postId)
 
+    console.log(post)
+
     if (isLoading) {
         return (
             <View style={styles.container}>
@@ -126,6 +128,19 @@ export function PostView({ postId }: PostViewProps) {
                     ))}
                 </View>
             </View>
+
+            {post.styles && post.styles.length > 0 && (
+                <View style={styles.stylesContainer}>
+                    <Text style={styles.stylesLabel}>Styles:</Text>
+                    <View style={styles.stylesList}>
+                        {post.styles.map((style) => (
+                            <View key={style.id} style={styles.styleChip}>
+                                <Text style={styles.styleText}>{style.name}</Text>
+                            </View>
+                        ))}
+                    </View>
+                </View>
+            )}
         </View >
     );
 }
@@ -203,5 +218,28 @@ const styles = StyleSheet.create({
     tagText: {
         color: '#fff',
         fontSize: 12,
+    },
+    stylesContainer: {
+        padding: 15,
+    },
+    stylesLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 5,
+    },
+    stylesList: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 5,
+    },
+    styleChip: {
+        backgroundColor: '#f0f0f0',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 15,
+    },
+    styleText: {
+        fontSize: 12,
+        color: '#000',
     },
 });

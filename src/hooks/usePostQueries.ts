@@ -3,20 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
-
-export interface Post {
-    uuid: string;
-    image_url: string;
-    description: string;
-    username: string;
-    created_at: string;
-    brands: Array<{
-        id: number;
-        name: string;
-        x_coord: number;
-        y_coord: number;
-    }>;
-}
+import type { Post } from '@/types';
 
 const POST_SELECT_QUERY = `
     uuid,
@@ -31,6 +18,12 @@ const POST_SELECT_QUERY = `
         ),
         x_coord,
         y_coord
+    ),
+    post_styles (
+        styles (
+            id,
+            name
+        )
     )
 `;
 
@@ -162,11 +155,17 @@ export function useDeletePost() {
 
     const deletePost = async (postId: string) => {
         try {
-            // Delete post_brands entries first
-            await supabase
-                .from('post_brands')
-                .delete()
-                .eq('post_uuid', postId);
+            // Delete post_brands and post_styles entries first
+            await Promise.all([
+                supabase
+                    .from('post_brands')
+                    .delete()
+                    .eq('post_uuid', postId),
+                supabase
+                    .from('post_styles')
+                    .delete()
+                    .eq('post_uuid', postId)
+            ]);
 
             // Then delete the post
             const { error } = await supabase
@@ -176,7 +175,6 @@ export function useDeletePost() {
 
             if (error) throw error;
 
-            // Manual invalidation not needed due to real-time subscriptions
             return { success: true };
         } catch (error: any) {
             return { success: false, error: error.message };
@@ -237,6 +235,10 @@ function formatPost(post: any): Post {
             name: pb.brands.name,
             x_coord: pb.x_coord,
             y_coord: pb.y_coord
+        })),
+        styles: post.post_styles.map((ps: any) => ({
+            id: ps.styles.id,
+            name: ps.styles.name
         }))
     };
 }

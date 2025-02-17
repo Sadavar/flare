@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { ProfileStackParamList } from '@/types';
 import { ProfileMain } from './ProfileMain';
 import { PostDetails } from './PostDetails';
+import { PostEdit } from './PostEdit';
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
 
@@ -26,6 +27,13 @@ export function Profile() {
                 options={{
                     headerTitle: '',
                 }} />
+            <Stack.Screen
+                name="PostEdit"
+                component={PostEdit}
+                options={{
+                    headerTitle: 'Edit Post',
+                }}
+            />
         </Stack.Navigator>
     );
 } 

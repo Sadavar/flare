@@ -10,17 +10,17 @@ import {
     Platform,
     ScrollView,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MasonryList from '@react-native-seoul/masonry-list';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Post, Brand } from '@/types';
+import { Brand, Post, Style } from '@/types';
+import { POST_SELECT_QUERY, formatPost } from '@/hooks/usePostQueries';
 
-
-function BrandSearch({ searchQuery, setSearchQuery }: {
+function StyleSearch({ searchQuery, setSearchQuery }: {
     searchQuery: string;
     setSearchQuery: (text: string) => void;
 }) {
@@ -29,7 +29,7 @@ function BrandSearch({ searchQuery, setSearchQuery }: {
             <MaterialIcons name="search" size={30} color="#000" style={styles.searchIcon} />
             <TextInput
                 style={styles.searchInput}
-                placeholder="Search for brands"
+                placeholder="Search for styles"
                 placeholderTextColor="#666"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -41,10 +41,12 @@ function BrandSearch({ searchQuery, setSearchQuery }: {
 
 export function BrandsScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
-    const [selectedBrands, setSelectedBrands] = useState<number[]>([]);
+    const [selectedStyles, setSelectedStyles] = useState<number[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const queryClient = useQueryClient();
 
-    const { data: brands, isLoading: brandsLoading } = useQuery<Brand[]>({
+    // Query for brands
+    const { data: brands } = useQuery<Brand[]>({
         queryKey: ['brands'],
         queryFn: async () => {
             const { data, error } = await supabase
@@ -52,72 +54,80 @@ export function BrandsScreen() {
                 .select('id, name')
                 .order('name');
             if (error) throw error;
-            return data;
-        },
-    });
-
-    const { data: posts } = useQuery<Post[]>({
-        queryKey: ['brandPosts', selectedBrands],
-        queryFn: async () => {
-            let query = supabase
-                .from('posts')
-                .select(`
-                    uuid,
-                    image_url,
-                    description,
-                    profiles!posts_user_uuid_fkey (username), 
-                    post_brands (
-                        brands (
-                            id,
-                            name
-                        ),
-                        x_coord,
-                        y_coord
-                    )
-                `)
-                .order('created_at', { ascending: false });
-
-            if (selectedBrands.length > 0) {
-                query = query.in('post_brands.brands.id', selectedBrands);
-            }
-
-            const { data, error } = await query;
-            if (error) throw error;
-
-            return data.map(post => ({
-                uuid: post.uuid,
-                image_url: supabase.storage
-                    .from('outfits')
-                    .getPublicUrl(post.image_url).data.publicUrl,
-                description: post.description,
-                username: post.profiles.username,
-                brands: post.post_brands.map((pb: any) => ({
-                    id: pb.brands.id,
-                    name: pb.brands.name,
-                    x_coord: pb.x_coord,
-                    y_coord: pb.y_coord
-                }))
+            return data.map(brand => ({
+                id: brand.id,
+                name: brand.name,
+                x_coord: null,
+                y_coord: null,
             }));
         },
     });
 
-    const filteredBrands = brands?.filter(brand =>
-        brand.name.toLowerCase().includes(searchQuery.toLowerCase())
+    // Query for styles
+    const { data: stylesData, isLoading: stylesLoading } = useQuery<Style[]>({
+        queryKey: ['styles'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('styles')
+                .select('id, name')
+                .order('name');
+            if (error) throw error;
+            return data;
+        },
+    });
+
+    // Query for posts filtered by styles
+    const { data: posts } = useQuery<Post[]>({
+        queryKey: ['stylePosts', selectedStyles],
+        queryFn: async () => {
+            let query = supabase
+                .from('posts')
+                .select(POST_SELECT_QUERY)
+                .order('created_at', { ascending: false });
+
+            if (selectedStyles.length > 0) {
+                // Get posts that have ANY of the selected styles
+                const { data: styleFilteredPosts, error: styleError } = await supabase
+                    .from('post_styles')
+                    .select('post_uuid')
+                    .in('style_id', selectedStyles);
+
+                if (styleError) throw styleError;
+
+                // Get unique post UUIDs
+                const postUuids = [...new Set(styleFilteredPosts.map(post => post.post_uuid))];
+
+                if (postUuids.length > 0) {
+                    query = query.in('uuid', postUuids);
+                } else {
+                    return [];
+                }
+            }
+
+            const { data, error } = await query;
+            console.log('Query response:', { data, error });
+            if (error) throw error;
+
+            return data.map(formatPost);
+        },
+    });
+
+    const filteredStyles = stylesData?.filter(style =>
+        style.name.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
-    const handleBrandPress = (brandId: number) => {
-        setSelectedBrands(prev => {
-            if (prev.includes(brandId)) {
-                return prev.filter(id => id !== brandId);
+    const handleStylePress = (styleId: number) => {
+        setSelectedStyles(prev => {
+            if (prev.includes(styleId)) {
+                return prev.filter(id => id !== styleId);
             }
-            return [...prev, brandId];
+            return [...prev, styleId];
         });
     };
 
-    const handleAllBrandsPress = () => {
-        setSelectedBrands([]);
+    const handleAllStylesPress = () => {
+        setSelectedStyles([]);
     };
-
     const renderTrendingItem = ({ item }: { item: Brand }) => (
         <TouchableOpacity
             style={styles.trendingCard}
@@ -135,16 +145,13 @@ export function BrandsScreen() {
         if (searchQuery) {
             return (
                 <FlatList
-                    data={filteredBrands}
+                    data={filteredStyles}
                     renderItem={({ item }) => (
                         <TouchableOpacity
                             key={item.id.toString()}
                             style={styles.suggestionItem}
                             onPress={() => {
-                                navigation.navigate('BrandDetails', {
-                                    brandId: item.id,
-                                    brandName: item.name,
-                                });
+                                setSelectedStyles([item.id]);
                                 setSearchQuery('');
                             }}
                         >
@@ -156,115 +163,109 @@ export function BrandsScreen() {
             );
         } else {
             return (
-                <>
-                    <MasonryList
-                        ListHeaderComponent={
-                            <View>
-                                <Text style={styles.trendingTitle}>Trending Brands</Text>
-                                <FlatList
-                                    horizontal
-                                    data={brands?.slice(0, 10)}
-                                    renderItem={renderTrendingItem}
-                                    showsHorizontalScrollIndicator={false}
-                                    style={styles.carouselContainer}
-                                    keyExtractor={item => item.id.toString()}
-                                />
+                <MasonryList
+                    ListHeaderComponent={
+                        <View>
+                            <Text style={styles.trendingTitle}>Trending Brands</Text>
+                            <FlatList
+                                horizontal
+                                data={brands ? brands.slice(0, 10) : []}
+                                renderItem={renderTrendingItem}
+                                showsHorizontalScrollIndicator={false}
+                                style={styles.carouselContainer}
+                                keyExtractor={item => item.id.toString()}
+                            />
 
-                                <Text style={styles.trendingTitle}>All Brands</Text>
-                                <ScrollView
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
-                                    style={styles.chipsContainer}
-                                    contentContainerStyle={styles.chipsContent}
-                                    keyboardShouldPersistTaps="always"
+                            <Text style={styles.trendingTitle}>Filter by Style</Text>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={styles.chipsContainer}
+                                contentContainerStyle={styles.chipsContent}
+                                keyboardShouldPersistTaps="always"
+                            >
+                                <TouchableOpacity
+                                    style={[
+                                        styles.chip,
+                                        selectedStyles.length === 0 && styles.chipSelected
+                                    ]}
+                                    onPress={handleAllStylesPress}
                                 >
+                                    <Text style={[
+                                        styles.chipText,
+                                        selectedStyles.length === 0 && styles.chipTextSelected
+                                    ]}>All Styles</Text>
+                                </TouchableOpacity>
+
+                                {stylesData?.map((style) => (
                                     <TouchableOpacity
+                                        key={style.id}
                                         style={[
                                             styles.chip,
-                                            selectedBrands.length === 0 && styles.chipSelected
+                                            selectedStyles.includes(style.id) && styles.chipSelected
                                         ]}
-                                        onPress={handleAllBrandsPress}
+                                        onPress={() => handleStylePress(style.id)}
                                     >
                                         <Text style={[
                                             styles.chipText,
-                                            selectedBrands.length === 0 && styles.chipTextSelected
-                                        ]}>All Brands</Text>
+                                            selectedStyles.includes(style.id) && styles.chipTextSelected
+                                        ]}>{style.name}</Text>
                                     </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    }
+                    data={posts || []}
+                    keyExtractor={(item: Post) => item.uuid}
+                    numColumns={2}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.masonryContent}
+                    renderItem={({ item, i }) => {
+                        const post = item as Post;
+                        const imageHeight = i % 3 === 0 ? 250 : i % 2 === 0 ? 200 : 300;
 
-                                    {brands?.map((brand) => (
-                                        <TouchableOpacity
-                                            key={brand.id}
-                                            style={[
-                                                styles.chip,
-                                                selectedBrands.includes(brand.id) && styles.chipSelected
-                                            ]}
-                                            onPress={() => handleBrandPress(brand.id)}
-                                        >
-                                            <Text style={[
-                                                styles.chipText,
-                                                selectedBrands.includes(brand.id) && styles.chipTextSelected
-                                            ]}>{brand.name}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        }
-                        data={posts || []}
-                        keyExtractor={(item: Post) => item.uuid}
-                        numColumns={2}
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={styles.masonryContent}
-                        renderItem={({ item, i }) => {
-                            const post = item as Post;
-                            const imageHeight = i % 3 === 0 ? 250 : i % 2 === 0 ? 200 : 300;
+                        return (
+                            <View style={[
+                                styles.postContainer,
+                                { marginLeft: i % 2 === 0 ? 0 : 8 }
+                            ]}>
+                                <TouchableOpacity
+                                    onPress={() => navigation.navigate('PostDetails', { postId: post.uuid })}
+                                >
+                                    <Image
+                                        source={{ uri: post.image_url }}
+                                        style={[styles.postImage, { height: imageHeight }]}
+                                        contentFit="cover"
+                                    />
+                                </TouchableOpacity>
 
-                            return (
-                                <View style={[
-                                    styles.postContainer,
-                                    { marginLeft: i % 2 === 0 ? 0 : 8 }
-                                ]}>
-                                    <TouchableOpacity
-                                        onPress={() => navigation.navigate('PostDetails', { postId: post.uuid })}
-                                    >
-                                        <Image
-                                            source={{ uri: post.image_url }}
-                                            style={[styles.postImage, { height: imageHeight }]}
-                                            contentFit="cover"
-                                        />
-                                    </TouchableOpacity>
-
-                                    {post.brands?.length > 0 && (
-                                        <View style={styles.brandsContainer}>
-                                            <Text style={styles.brandsLabel}>Featured Brands:</Text>
-                                            <View style={styles.brandsList}>
-                                                {post.brands.map((brand) => (
-                                                    <TouchableOpacity
-                                                        key={brand.id}
-                                                        style={styles.brandButton}
-                                                        onPress={() => navigation.navigate('BrandDetails', {
-                                                            brandId: brand.id,
-                                                            brandName: brand.name
-                                                        })}
-                                                    >
-                                                        <Text style={styles.brandText}>{brand.name}</Text>
-                                                    </TouchableOpacity>
-                                                ))}
-                                            </View>
+                                {post.styles && (
+                                    <View style={styles.stylesContainer}>
+                                        <Text style={styles.stylesLabel}>Styles:</Text>
+                                        <View style={styles.stylesList}>
+                                            {post.styles.map((style) => (
+                                                <View
+                                                    key={style.id}
+                                                    style={styles.styleChip}
+                                                >
+                                                    <Text style={styles.styleText}>{style.name}</Text>
+                                                </View>
+                                            ))}
                                         </View>
-                                    )}
-                                </View>
-                            );
-                        }}
-                    />
-                </>
+                                    </View>
+                                )}
+                            </View>
+                        );
+                    }}
+                />
             );
         }
     };
 
-    if (brandsLoading) {
+    if (stylesLoading) {
         return (
             <View style={styles.container}>
-                <Text>Loading brands...</Text>
+                <Text>Loading styles...</Text>
             </View>
         );
     }
@@ -275,8 +276,8 @@ export function BrandsScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
             <View style={styles.fixedHeader}>
-                <Text style={styles.mainTitle}>Discover Brands</Text>
-                <BrandSearch
+                <Text style={styles.mainTitle}>Discover Styles</Text>
+                <StyleSearch
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
                 />
@@ -358,9 +359,6 @@ const styles = StyleSheet.create({
     suggestionText: {
         fontSize: 16,
     },
-    suggestionsList: {
-        flex: 1,
-    },
     chipsContainer: {
         marginVertical: 12,
     },
@@ -399,27 +397,27 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         backgroundColor: '#f0f0f0',
     },
-    brandsContainer: {
+    stylesContainer: {
         marginTop: 8,
     },
-    brandsLabel: {
+    stylesLabel: {
         fontWeight: '600',
         color: '#333',
         fontSize: 12,
         marginBottom: 4,
     },
-    brandsList: {
+    stylesList: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 6,
     },
-    brandButton: {
+    styleChip: {
         backgroundColor: '#e0e0e0',
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 8,
     },
-    brandText: {
+    styleText: {
         fontSize: 12,
         color: '#444',
     },

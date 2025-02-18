@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import type { Post } from '@/types';
 
-const POST_SELECT_QUERY = `
+export const POST_SELECT_QUERY = `
     uuid,
     image_url,
     description,
@@ -221,7 +221,7 @@ async function fetchUserPosts(username: string) {
 }
 
 // Helper function to format post data consistently
-function formatPost(post: any): Post {
+export function formatPost(post: any): Post {
     return {
         uuid: post.uuid,
         image_url: supabase.storage

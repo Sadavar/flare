@@ -47,13 +47,13 @@ export function BrandDetails() {
 
             if (error) throw error;
 
-            return data.map(({ post }) => ({
-                uuid: post.uuid,
+            return data.map(({ posts }) => ({
+                uuid: posts.uuid,
                 image_url: supabase.storage
                     .from('outfits')
-                    .getPublicUrl(post.image_url).data.publicUrl,
+                    .getPublicUrl(posts.image_url).data.publicUrl,
                 user: {
-                    username: post.profiles.username
+                    username: posts.profiles.username
                 }
             }));
         },

@@ -83,7 +83,7 @@ export interface Style {
 export interface Brand {
     id: number;
     name: string;
-    x_coord: number;
-    y_coord: number;
+    x_coord: number | null;
+    y_coord: number | null;
 }
 

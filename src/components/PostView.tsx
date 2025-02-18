@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -10,19 +10,80 @@ import type { Post } from '@/types';
 import { useUserPosts } from '@/hooks/usePostQueries';
 import { Username } from '@/navigation/screens/auth/Username';
 import { usePost } from '@/hooks/usePostQueries'
+import { getColors } from 'react-native-image-colors';
+import { SessionContext } from '@/context/SessionContext';
+
+// Get screen width
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface PostViewProps {
     postId: string;
 }
 
+// Update the type for the API response
+type ColorApiResponse = {
+    colors: string[];
+};
+
 export function PostView({ postId }: PostViewProps) {
     const { username: currentUsername } = useSession();
     const navigation = useNavigation();
     const [showTags, setShowTags] = useState(true);
+    const [imageColors, setImageColors] = useState<ColorApiResponse | null>(null);
+    const [isImageLoaded, setIsImageLoaded] = useState(false);
+    const [imageHeight, setImageHeight] = useState(undefined);
+    const loadingStartTimeRef = useRef(Date.now());
 
-    const { data: post, isLoading } = usePost(postId)
+    // Pre-fetch and cache dimensions before rendering
+    const { data: post, isLoading } = usePost(postId);
 
-    console.log(post)
+    // Process colors after image is loaded
+    const handleOnLoad = useCallback((event) => {
+        const loadTime = Date.now() - loadingStartTimeRef.current;
+        console.log(`Image loaded in ${loadTime}ms`);
+
+        // Calculate actual height based on natural image dimensions
+        if (event?.source) {
+            const { width, height } = event.source;
+            const aspectRatio = width / height;
+            const calculatedHeight = SCREEN_WIDTH / aspectRatio;
+            setImageHeight(calculatedHeight);
+        }
+
+        setIsImageLoaded(true);
+
+        // Fetch colors after image is loaded
+        if (post?.image_url) {
+            fetchColors(post.image_url);
+        }
+    }, [post?.image_url]);
+
+    const fetchColors = async (imageUrl) => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch('https://yhnamwhotpnhgcicqpmd.supabase.co/functions/v1/extractColors', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({
+                    image_url: imageUrl
+                })
+            });
+            const data = await response.json();
+            setImageColors(data);
+        } catch (err) {
+            console.error('Error getting colors:', err);
+        }
+    };
+
+    const handleImageError = useCallback((error) => {
+        console.error('Error loading image:', error);
+        // Set a default aspect ratio on error
+        setImageHeight(SCREEN_WIDTH);
+        setIsImageLoaded(true);
+    }, []);
 
     if (isLoading) {
         return (
@@ -41,7 +102,6 @@ export function PostView({ postId }: PostViewProps) {
     }
 
     const handleUserPress = (username: string) => {
-        console.log(username);
         if (username === currentUsername) {
             navigation.getParent()?.navigate('Profile', { screen: 'ProfileMain' });
         } else {
@@ -53,7 +113,6 @@ export function PostView({ postId }: PostViewProps) {
     };
 
     const handleBrandPress = (brandId: number, brandName: string) => {
-        console.log(brandId, brandName);
         navigation.navigate('Brands', {
             screen: 'BrandDetails',
             params: { brandId, brandName },
@@ -65,12 +124,12 @@ export function PostView({ postId }: PostViewProps) {
     };
 
     return (
-        <View style={styles.container}>
+        <ScrollView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.userInfo}
                     onPress={() => handleUserPress(post.username)}
-                    activeOpacity={1}  // Add activeOpacity for TouchableOpacity
+                    activeOpacity={1}
                 >
                     <View style={styles.userIcon}>
                         <MaterialIcons name="person" size={24} color="black" />
@@ -80,14 +139,38 @@ export function PostView({ postId }: PostViewProps) {
             </View>
 
             <View style={styles.imageContainer}>
-                <TouchableOpacity onPress={toggleTagsVisibility} activeOpacity={1}>
-                    <Image
-                        source={{ uri: post.image_url }}
-                        style={styles.image}
-                        contentFit="contain"
-                    />
-                </TouchableOpacity>
-                {showTags && post.brands?.map((brand) => (
+                {/* Hidden image for preloading that will trigger onLoad/calculate dimensions */}
+                <Image
+                    source={{ uri: post.image_url }}
+                    style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}
+                    onLoad={handleOnLoad}
+                    onError={handleImageError}
+                    priority="high"
+                    cachePolicy="memory-disk"
+                />
+
+                {isImageLoaded && (
+                    <TouchableOpacity
+                        onPress={toggleTagsVisibility}
+                        activeOpacity={1}
+                        style={{ width: '100%' }}
+                    >
+                        <Image
+                            source={{ uri: post.image_url }}
+                            style={[
+                                styles.image,
+                                { height: imageHeight }
+                            ]}
+                            contentFit="contain"
+                            cachePolicy="memory-disk"
+                            recyclingKey={postId}
+                            transition={200} // Disable transition to prevent resize effect
+                            priority="high"
+                        />
+                    </TouchableOpacity>
+                )}
+
+                {isImageLoaded && showTags && post.brands?.map((brand) => (
                     <TouchableOpacity
                         key={brand.id}
                         style={[
@@ -104,6 +187,26 @@ export function PostView({ postId }: PostViewProps) {
                     </TouchableOpacity>
                 ))}
             </View>
+
+            {/* Color palette section */}
+            {imageColors && (
+                <View style={styles.colorsContainer}>
+                    <Text style={styles.colorsTitle}>Color Palette</Text>
+                    <View style={styles.colorStrip}>
+                        {imageColors?.colors?.slice(0, 5).map((color, index) => (
+                            <View
+                                key={index}
+                                style={[
+                                    styles.colorSwatch,
+                                    { backgroundColor: color }
+                                ]}
+                            >
+                                {/* <Text style={styles.colorText}>{color}</Text> */}
+                            </View>
+                        ))}
+                    </View>
+                </View>
+            )}
 
             {post.description && (
                 <>
@@ -141,7 +244,7 @@ export function PostView({ postId }: PostViewProps) {
                     </View>
                 </View>
             )}
-        </View >
+        </ScrollView >
     );
 }
 
@@ -174,10 +277,20 @@ const styles = StyleSheet.create({
     },
     imageContainer: {
         position: 'relative',
+        width: '100%',
+        backgroundColor: '#f0f0f0',
         marginBottom: 15,
+        minHeight: 200, // Minimum height for loading state
+    },
+    loadingContainer: {
+        width: '100%',
+        height: 300,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     image: {
-        height: 300,
+        width: '100%',
+        backgroundColor: '#f0f0f0',
     },
     description: {
         fontSize: 14,
@@ -241,5 +354,45 @@ const styles = StyleSheet.create({
     styleText: {
         fontSize: 12,
         color: '#000',
+    },
+    colorsContainer: {
+        padding: 15,
+        backgroundColor: '#fff',
+        marginBottom: 15,
+    },
+    colorsTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 10,
+        color: '#333',
+    },
+    colorStrip: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 8,
+    },
+    colorSwatch: {
+        flex: 1,
+        aspectRatio: 1,
+        borderRadius: 8,
+        padding: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 3,
+    },
+    colorText: {
+        fontSize: 8,
+        color: '#fff',
+        textAlign: 'center',
+        textShadowColor: 'rgba(0, 0, 0, 0.75)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 2,
     },
 });

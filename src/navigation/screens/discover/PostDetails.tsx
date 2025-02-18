@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSession } from '@/context/SessionContext';
 import { supabase } from '@/lib/supabase';
 
+
 type PostDetailsRouteProp = RouteProp<BrandsStackParamList, 'PostDetails'>;
 type PostDetailsNavigationProp = NativeStackNavigationProp<BrandsStackParamList, 'PostDetails'>;
 

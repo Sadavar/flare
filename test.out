@@ -1,0 +1,11 @@
+HTTP/1.1 546 <none>
+Content-Type: application/json
+Content-Length: 104
+Connection: keep-alive
+vary: Accept-Encoding
+date: Tue, 18 Feb 2025 05:04:31 GMT
+X-Kong-Upstream-Latency: 3180
+X-Kong-Proxy-Latency: 18
+Via: kong/2.8.1
+
+{"code":"WORKER_LIMIT","message":"Worker failed to respond due to a resource limit (please check logs)"}

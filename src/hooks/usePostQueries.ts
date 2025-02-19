@@ -1,7 +1,7 @@
 // hooks/usePostQueries.ts
 import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import type { Post } from '@/types';
 
@@ -176,39 +176,48 @@ async function fetchPost(postId: string) {
     return formatPost(data);
 }
 
-export function useGlobalFeed(pageSize = 5) {
+export function useGlobalFeed(pageSize: number) {
     const isActive = useRef(true);
 
     const queryClient = useQueryClient();
     console.log('[useGlobalFeed] Initializing with pageSize:', pageSize);
+    const invalidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Debounced invalidation function
+    const debouncedInvalidation = useCallback(() => {
+        if (invalidationTimeoutRef.current) {
+            clearTimeout(invalidationTimeoutRef.current);
+        }
+
+        invalidationTimeoutRef.current = setTimeout(() => {
+            if (isActive.current) {
+                queryClient.invalidateQueries({ queryKey: ['globalFeed'] });
+            }
+        }, 500); // 500ms debounce
+    }, [queryClient]);
 
     useEffect(() => {
         isActive.current = true;
-        console.log('[useGlobalFeed] Setting up realtime subscription');
-        // Subscribe to all post changes
-        const channel: RealtimeChannel = supabase
+        const channel = supabase
             .channel('global-posts')
             .on('postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'posts'
-                },
-                (payload) => {
-                    if (!isActive.current) return;
-                    console.log('[useGlobalFeed] Realtime change detected:', payload.eventType);
-                    // Refetch the global feed when any changes occur
-                    queryClient.invalidateQueries({ queryKey: ['globalFeed'] });
+                { event: '*', schema: 'public', table: 'posts' },
+                () => {
+                    if (isActive.current) {
+                        debouncedInvalidation();
+                    }
                 }
             )
             .subscribe();
 
         return () => {
             isActive.current = false;
-            console.log('[useGlobalFeed] Cleaning up realtime subscription');
+            if (invalidationTimeoutRef.current) {
+                clearTimeout(invalidationTimeoutRef.current);
+            }
             channel.unsubscribe();
         };
-    }, [queryClient]);
+    }, [queryClient, debouncedInvalidation]);
 
     const result = useInfiniteQuery({
         queryKey: ['globalFeed'],
@@ -306,15 +315,16 @@ export function formatPost(post: any): Post {
         description: post.description,
         username: post.profiles.username,
         created_at: post.created_at,
-        brands: post.post_brands.map((pb: any) => ({
+        brands: post.post_brands?.map((pb: any) => ({
             id: pb.brands.id,
             name: pb.brands.name,
             x_coord: pb.x_coord,
             y_coord: pb.y_coord
-        })),
-        styles: post.post_styles.map((ps: any) => ({
+        })) || [],
+        styles: post.post_styles?.map((ps: any) => ({
             id: ps.styles.id,
             name: ps.styles.name
-        }))
+        })) || []
     };
 }
+

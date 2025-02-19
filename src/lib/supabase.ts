@@ -20,3 +20,48 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         detectSessionInUrl: false,
     },
 })
+
+// Add this function to check for duplicate posts
+export const checkDuplicatePosts = async () => {
+    try {
+        console.log('🔍 Checking for duplicate posts...');
+
+        // Fetch all posts
+        const { data: posts, error } = await supabase
+            .from('posts')
+            .select('uuid')
+
+        if (error) {
+            console.error('❌ Error fetching posts:', error);
+            return;
+        }
+
+        // Create a map to store UUID occurrences
+        const uuidCounts = posts.reduce((acc: { [key: string]: number }, post) => {
+            acc[post.uuid] = (acc[post.uuid] || 0) + 1;
+            return acc;
+        }, {});
+
+        // Find duplicates (UUIDs that appear more than once)
+        const duplicates = Object.entries(uuidCounts)
+            .filter(([_, count]) => count > 1)
+            .map(([uuid, count]) => ({ uuid, count }));
+
+        if (duplicates.length > 0) {
+            console.log('🚨 Found duplicate posts:');
+            duplicates.forEach(({ uuid, count }) => {
+                console.log(`UUID: ${uuid} appears ${count} times`);
+            });
+        } else {
+            console.log('✅ No duplicate posts found');
+        }
+
+        console.log(`Total posts checked: ${posts.length}`);
+
+    } catch (error) {
+        console.error('❌ Error checking duplicates:', error);
+    }
+};
+
+// You can call this function wherever needed, for example:
+// checkDuplicatePosts();

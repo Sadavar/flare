@@ -47,13 +47,13 @@ export type DiscoverTabParamList = {
 export type BrandsStackParamList = {
     BrandsScreen: undefined;
     BrandDetails: { brandId: number; brandName: string };
-    PostDetails: { postId: string };
+    PostDetails: { post: Post };
     UserProfile: { username: string };
 };
 
 export type ProfileStackParamList = {
     ProfileMain: undefined;
-    PostDetails: { postId: string };
+    PostDetails: { post: Post };
     PostEdit: { postId: string };
 };
 

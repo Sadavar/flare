@@ -10,128 +10,46 @@ import type { Post } from '@/types';
 import { useUserPosts } from '@/hooks/usePostQueries';
 import { Username } from '@/navigation/screens/auth/Username';
 import { usePost } from '@/hooks/usePostQueries'
-import { getColors } from 'react-native-image-colors';
-import { SessionContext } from '@/context/SessionContext';
+
+export function PostView({ post }: { post: Post }) {
+    return (
+        <View>
+            <Image
+                source={{ uri: post.image_url }}
+                style={{ width: '100%', height: 200 }}
+                transition={200}
+                priority="high"
+            />
+        </View>
+    )
+}
 
 // Get screen width
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-interface PostViewProps {
-    postId: string;
-}
-
-// Update the type for the API response
-type ColorApiResponse = {
-    colors: string[];
-};
-
-export function PostView({ postId }: PostViewProps) {
+export function PostView2({ post }: { post: Post }) {
     const { username: currentUsername } = useSession();
     const navigation = useNavigation();
     const [showTags, setShowTags] = useState(true);
-    const [imageColors, setImageColors] = useState<ColorApiResponse | null>(null);
     const [isImageLoaded, setIsImageLoaded] = useState(false);
-    const [imageHeight, setImageHeight] = useState(undefined);
+    const [imageHeight, setImageHeight] = useState(SCREEN_WIDTH);
     const loadingStartTimeRef = useRef(Date.now());
 
-    // At the top of the component
-    const isMounted = useRef(true);
-    const pendingRequests = useRef([]);
+    // Reset loading state when post changes and add a fallback timer
+    // useEffect(() => {
+    //     setIsImageLoaded(false);
+    //     loadingStartTimeRef.current = Date.now();
 
-    // Pre-fetch and cache dimensions before rendering
-    const { data: post, isLoading } = usePost(postId);
+    //     // Fallback: Force loading to complete after 8 seconds even if onLoad doesn't fire
+    //     const fallbackTimer = setTimeout(() => {
+    //         if (!isImageLoaded) {
+    //             console.log('Image load timed out - forcing completion');
+    //             setIsImageLoaded(true);
+    //         }
+    //     }, 8000);
 
-    // Add to useEffect for lifecycle management
-    useEffect(() => {
-        isMounted.current = true;
-        loadingStartTimeRef.current = Date.now();
-
-        return () => {
-            isMounted.current = false;
-
-            // Cancel any pending color extraction requests
-            pendingRequests.current.forEach((controller: AbortController) => {
-                controller.abort();
-            });
-            pendingRequests.current = [];
-        };
-    }, []);
-
-    // Update handleOnLoad to check mounted state
-    const handleOnLoad = useCallback((event) => {
-        if (!isMounted.current) return;
-
-        const loadTime = Date.now() - loadingStartTimeRef.current;
-        console.log(`Image loaded in ${loadTime}ms`);
-
-        // Calculate actual height based on natural image dimensions
-        if (event?.source && isMounted.current) {
-            const { width, height } = event.source;
-            const aspectRatio = width / height;
-            const calculatedHeight = SCREEN_WIDTH / aspectRatio;
-            setImageHeight(calculatedHeight);
-        }
-
-        if (isMounted.current) {
-            setIsImageLoaded(true);
-
-            // Only fetch colors if component is still mounted
-            if (post?.image_url && isMounted.current) {
-                fetchColors(post.image_url);
-            }
-        }
-    }, [post?.image_url]);
-
-    // Update fetchColors to be cancelable and check mounted state
-    const fetchColors = async (imageUrl) => {
-        if (!isMounted.current) return;
-
-        const controller = new AbortController();
-        pendingRequests.current.push(controller);
-
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const response = await fetch(
-                'https://yhnamwhotpnhgcicqpmd.supabase.co/functions/v1/extractColors',
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${session?.access_token}`
-                    },
-                    body: JSON.stringify({ image_url: imageUrl }),
-                    signal: controller.signal
-                }
-            );
-
-            if (!isMounted.current) return;
-
-            const data = await response.json();
-            setImageColors(data);
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                console.error('Error getting colors:', err);
-            }
-        } finally {
-            // Remove this controller from pending requests
-            pendingRequests.current = pendingRequests.current.filter(c => c !== controller);
-        }
-    };
-
-    const handleImageError = useCallback((error) => {
-        console.error('Error loading image:', error);
-        // Set a default aspect ratio on error
-        setImageHeight(SCREEN_WIDTH);
-        setIsImageLoaded(true);
-    }, []);
-
-    if (isLoading) {
-        return (
-            <View style={styles.container}>
-                <Text>Loading...</Text>
-            </View>
-        );
-    }
+    //     return () => clearTimeout(fallbackTimer);
+    // }, [post?.id]);
 
     if (!post) {
         return (
@@ -163,6 +81,13 @@ export function PostView({ postId }: PostViewProps) {
         setShowTags((prevState) => !prevState);
     };
 
+
+
+    const handleImageError = () => {
+        console.error('Failed to load image:', post.image_url);
+        setIsImageLoaded(true); // Still mark as "loaded" to remove loading indicator
+    };
+
     return (
         <ScrollView style={styles.container}>
             <View style={styles.header}>
@@ -179,36 +104,32 @@ export function PostView({ postId }: PostViewProps) {
             </View>
 
             <View style={styles.imageContainer}>
-                {/* Hidden image for preloading that will trigger onLoad/calculate dimensions */}
-                <Image
-                    source={{ uri: post.image_url }}
-                    style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}
-                    onLoad={handleOnLoad}
-                    onError={handleImageError}
-                    priority="high"
-                    cachePolicy="memory-disk"
-                />
+                <View style={[styles.loadingContainer, { opacity: isImageLoaded ? 0 : 1 }]}>
+                    <ActivityIndicator size="large" color="#0000ff" />
+                    <Text style={styles.loadingText}>Loading image...</Text>
+                </View>
 
-                {isImageLoaded && (
-                    <TouchableOpacity
-                        onPress={toggleTagsVisibility}
-                        activeOpacity={1}
-                        style={{ width: '100%' }}
-                    >
-                        <Image
-                            source={{ uri: post.image_url }}
-                            style={[
-                                styles.image,
-                                { height: imageHeight }
-                            ]}
-                            contentFit="contain"
-                            cachePolicy="memory-disk"
-                            recyclingKey={postId}
-                            transition={200} // Disable transition to prevent resize effect
-                            priority="high"
-                        />
-                    </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                    onPress={toggleTagsVisibility}
+                    activeOpacity={1}
+                    style={{ width: '100%' }}
+                >
+                    <Image
+                        source={{ uri: post.image_url }}
+                        style={[
+                            {
+                                width: '100%',
+                                aspectRatio: 1,
+                                opacity: isImageLoaded ? 1 : 0.1 // Show image partially while loading
+                            }
+                        ]}
+                        contentFit="cover"
+                        transition={200}
+                        onError={handleImageError}
+                    // Using memory cache only as disk cache might be causing issues
+                    // cachePolicy="memory"
+                    />
+                </TouchableOpacity>
 
                 {isImageLoaded && showTags && post.brands?.map((brand) => (
                     <TouchableOpacity
@@ -228,33 +149,12 @@ export function PostView({ postId }: PostViewProps) {
                 ))}
             </View>
 
-            {/* Color palette section */}
-            {imageColors && (
-                <View style={styles.colorsContainer}>
-                    <Text style={styles.colorsTitle}>Color Palette</Text>
-                    <View style={styles.colorStrip}>
-                        {imageColors?.colors?.slice(0, 5).map((color, index) => (
-                            <View
-                                key={index}
-                                style={[
-                                    styles.colorSwatch,
-                                    { backgroundColor: color }
-                                ]}
-                            >
-                                {/* <Text style={styles.colorText}>{color}</Text> */}
-                            </View>
-                        ))}
-                    </View>
-                </View>
-            )}
-
             {post.description && (
                 <>
                     <Text style={{ fontSize: 14, fontWeight: '600', paddingLeft: 15 }}>Description:</Text>
                     <Text style={styles.description}>{post.description}</Text>
                 </>
-            )
-            }
+            )}
 
             <View style={styles.brandsContainer}>
                 <Text style={styles.brandsLabel}>Featured Brands:</Text>
@@ -284,7 +184,7 @@ export function PostView({ postId }: PostViewProps) {
                     </View>
                 </View>
             )}
-        </ScrollView >
+        </ScrollView>
     );
 }
 
@@ -323,10 +223,17 @@ const styles = StyleSheet.create({
         minHeight: 200, // Minimum height for loading state
     },
     loadingContainer: {
+        position: 'absolute',
         width: '100%',
-        height: 300,
+        height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#f0f0f0',
+        zIndex: 1,
+    },
+    loadingText: {
+        marginTop: 10,
+        color: '#666',
     },
     image: {
         width: '100%',

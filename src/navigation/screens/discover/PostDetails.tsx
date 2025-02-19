@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import type { BrandsStackParamList } from '@/types';
+import type { BrandsStackParamList, Post } from '@/types';
 import { Layout } from '@/components/Layout';
 import { PostView } from '@/components/PostView';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,11 +14,13 @@ type PostDetailsNavigationProp = NativeStackNavigationProp<BrandsStackParamList,
 export function PostDetails() {
     const route = useRoute<PostDetailsRouteProp>();
     const navigation = useNavigation<PostDetailsNavigationProp>();
-    const { postId } = route.params;
+    const { post }: { post: Post } = route.params;
+
+    console.log('post', post);
 
     return (
         <PostView
-            postId={postId}
+            post={post}
         />
     );
 } 

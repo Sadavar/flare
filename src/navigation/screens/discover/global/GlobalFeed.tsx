@@ -220,9 +220,9 @@ export function GlobalFeed() {
                                     source={{ uri: post.image_url }}
                                     style={[styles.postImage, { height: imageHeight }]}
                                     contentFit="cover"
-                                    cachePolicy="memory-disk"
                                     recyclingKey={post.uuid}
                                     priority="high"
+                                    transition={100}
                                 />
                                 <Text style={styles.postIdText}>#{i + 1} - {post.uuid.slice(-4)}</Text>
                             </TouchableOpacity>

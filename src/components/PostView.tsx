@@ -144,8 +144,7 @@ export function PostView({ postId }: PostViewProps) {
                         styles.image,
                         { height: imageHeight || SCREEN_WIDTH } // Fallback height
                     ]}
-                    contentFit="cover" // Match GlobalFeed's contentFit
-                    cachePolicy="memory-disk"
+                    contentFit="contain" // Match GlobalFeed's contentFit
                     recyclingKey={post.uuid} // Ensure consistent keys
                     transition={0} // Remove transition for instant display
                     priority="high"

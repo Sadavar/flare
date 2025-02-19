@@ -19,13 +19,13 @@ export type MainTabParamList = {
 export type GlobalStackParamList = {
     GlobalFeed: undefined;
     UserProfile: { username: string };
-    PostDetails: { postId: string };
+    PostDetails: { post: Post };
 };
 
 export type FriendsStackParamList = {
     FriendsFeed: undefined;
     UserProfile: { username: string };
-    PostDetails: { postId: string };
+    PostDetails: { post: Post };
 };
 
 export type DiscoverTabParamList = {
@@ -47,13 +47,13 @@ export type DiscoverTabParamList = {
 export type BrandsStackParamList = {
     BrandsScreen: undefined;
     BrandDetails: { brandId: number; brandName: string };
-    PostDetails: { postId: string };
+    PostDetails: { post: Post };
     UserProfile: { username: string };
 };
 
 export type ProfileStackParamList = {
     ProfileMain: undefined;
-    PostDetails: { postId: string };
+    PostDetails: { post: Post };
     PostEdit: { postId: string };
 };
 

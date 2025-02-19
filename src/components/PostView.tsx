@@ -11,13 +11,12 @@ import { useUserPosts } from '@/hooks/usePostQueries';
 import { Username } from '@/navigation/screens/auth/Username';
 import { usePost } from '@/hooks/usePostQueries'
 import { getColors } from 'react-native-image-colors';
-import { SessionContext } from '@/context/SessionContext';
 
 // Get screen width
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface PostViewProps {
-    postId: string;
+    post: Post;
 }
 
 // Update the type for the API response
@@ -25,7 +24,20 @@ type ColorApiResponse = {
     colors: string[];
 };
 
-export function PostView({ postId }: PostViewProps) {
+export function PostView({ post }: PostViewProps) {
+
+    console.log('post', post);
+
+    return (
+        <Image
+            source={{ uri: post?.image_url }}
+            style={{ width: '100%', height: 200 }}
+            priority="high"
+        />
+    )
+}
+
+export function PostView2(props: PostViewProps) {
     const { username: currentUsername } = useSession();
     const navigation = useNavigation();
     const [showTags, setShowTags] = useState(true);
@@ -37,9 +49,6 @@ export function PostView({ postId }: PostViewProps) {
     // At the top of the component
     const isMounted = useRef(true);
     const pendingRequests = useRef([]);
-
-    // Pre-fetch and cache dimensions before rendering
-    const { data: post, isLoading } = usePost(postId);
 
     // Add to useEffect for lifecycle management
     useEffect(() => {
@@ -76,11 +85,11 @@ export function PostView({ postId }: PostViewProps) {
             setIsImageLoaded(true);
 
             // Only fetch colors if component is still mounted
-            if (post?.image_url && isMounted.current) {
-                fetchColors(post.image_url);
+            if (props.post?.image_url && isMounted.current) {
+                fetchColors(props.post.image_url);
             }
         }
-    }, [post?.image_url]);
+    }, [props.post?.image_url]);
 
     // Update fetchColors to be cancelable and check mounted state
     const fetchColors = async (imageUrl) => {
@@ -133,7 +142,7 @@ export function PostView({ postId }: PostViewProps) {
         );
     }
 
-    if (!post) {
+    if (!props.post) {
         return (
             <View style={styles.container}>
                 <Text>Post not found</Text>
@@ -168,20 +177,20 @@ export function PostView({ postId }: PostViewProps) {
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.userInfo}
-                    onPress={() => handleUserPress(post.username)}
+                    onPress={() => handleUserPress(props.post.username)}
                     activeOpacity={1}
                 >
                     <View style={styles.userIcon}>
                         <MaterialIcons name="person" size={24} color="black" />
                     </View>
-                    <Text style={styles.username}>@{post.username}</Text>
+                    <Text style={styles.username}>@{props.post.username}</Text>
                 </TouchableOpacity>
             </View>
 
             <View style={styles.imageContainer}>
                 {/* Hidden image for preloading that will trigger onLoad/calculate dimensions */}
                 <Image
-                    source={{ uri: post.image_url }}
+                    source={{ uri: props.post.image_url }}
                     style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}
                     onLoad={handleOnLoad}
                     onError={handleImageError}
@@ -196,21 +205,20 @@ export function PostView({ postId }: PostViewProps) {
                         style={{ width: '100%' }}
                     >
                         <Image
-                            source={{ uri: post.image_url }}
+                            source={{ uri: props.post.image_url }}
                             style={[
                                 styles.image,
                                 { height: imageHeight }
                             ]}
                             contentFit="contain"
-                            cachePolicy="memory-disk"
-                            recyclingKey={postId}
+                            recyclingKey={props.post.uuid}
                             transition={200} // Disable transition to prevent resize effect
                             priority="high"
                         />
                     </TouchableOpacity>
                 )}
 
-                {isImageLoaded && showTags && post.brands?.map((brand) => (
+                {isImageLoaded && showTags && props.post.brands?.map((brand) => (
                     <TouchableOpacity
                         key={brand.id}
                         style={[
@@ -248,10 +256,10 @@ export function PostView({ postId }: PostViewProps) {
                 </View>
             )}
 
-            {post.description && (
+            {props.post.description && (
                 <>
                     <Text style={{ fontSize: 14, fontWeight: '600', paddingLeft: 15 }}>Description:</Text>
-                    <Text style={styles.description}>{post.description}</Text>
+                    <Text style={styles.description}>{props.post.description}</Text>
                 </>
             )
             }

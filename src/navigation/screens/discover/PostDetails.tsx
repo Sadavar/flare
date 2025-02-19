@@ -14,11 +14,13 @@ type PostDetailsNavigationProp = NativeStackNavigationProp<BrandsStackParamList,
 export function PostDetails() {
     const route = useRoute<PostDetailsRouteProp>();
     const navigation = useNavigation<PostDetailsNavigationProp>();
-    const { postId } = route.params;
+    const { post } = route.params;
+
+    console.log('post detail', post);
 
     return (
         <PostView
-            postId={postId}
+            post={post}
         />
     );
 } 

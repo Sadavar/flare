@@ -11,7 +11,6 @@ import { useUserPosts } from '@/hooks/usePostQueries';
 import { Username } from '@/navigation/screens/auth/Username';
 import { usePost } from '@/hooks/usePostQueries'
 import { getColors } from 'react-native-image-colors';
-import { SessionContext } from '@/context/SessionContext';
 
 // Get screen width
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -52,11 +51,11 @@ export function PostView({ postId }: PostViewProps) {
 
         setIsImageLoaded(true);
 
-        // Fetch colors after image is loaded
-        if (post?.image_url) {
+        // Only fetch colors if not already available
+        if (post?.image_url && !imageColors) {
             fetchColors(post.image_url);
         }
-    }, [post?.image_url]);
+    }, [post?.image_url, imageColors]);
 
     const fetchColors = async (imageUrl) => {
         try {
@@ -139,38 +138,22 @@ export function PostView({ postId }: PostViewProps) {
             </View>
 
             <View style={styles.imageContainer}>
-                {/* Hidden image for preloading that will trigger onLoad/calculate dimensions */}
                 <Image
                     source={{ uri: post.image_url }}
-                    style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}
-                    onLoad={handleOnLoad}
-                    onError={handleImageError}
-                    priority="high"
+                    style={[
+                        styles.image,
+                        { height: imageHeight || SCREEN_WIDTH } // Fallback height
+                    ]}
+                    contentFit="cover" // Match GlobalFeed's contentFit
                     cachePolicy="memory-disk"
+                    recyclingKey={post.uuid} // Ensure consistent keys
+                    transition={0} // Remove transition for instant display
+                    priority="high"
+                    onLoad={handleOnLoad} // Keep dimension calculation
+                    onError={handleImageError}
                 />
 
-                {isImageLoaded && (
-                    <TouchableOpacity
-                        onPress={toggleTagsVisibility}
-                        activeOpacity={1}
-                        style={{ width: '100%' }}
-                    >
-                        <Image
-                            source={{ uri: post.image_url }}
-                            style={[
-                                styles.image,
-                                { height: imageHeight }
-                            ]}
-                            contentFit="contain"
-                            cachePolicy="memory-disk"
-                            recyclingKey={postId}
-                            transition={200} // Disable transition to prevent resize effect
-                            priority="high"
-                        />
-                    </TouchableOpacity>
-                )}
-
-                {isImageLoaded && showTags && post.brands?.map((brand) => (
+                {showTags && post.brands?.map((brand) => (
                     <TouchableOpacity
                         key={brand.id}
                         style={[

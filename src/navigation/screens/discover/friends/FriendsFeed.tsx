@@ -48,6 +48,13 @@ function FriendsSearch() {
 }
 
 export function FriendsFeed() {
+    return (
+        <View>
+            <Text>Friends Feed</Text>
+        </View>
+    )
+}
+export function FriendsFeed2() {
     const navigation = useNavigation<FriendsFeedNavigationProp>();
     const { user: currentUser, username: currentUsername } = useSession();
 

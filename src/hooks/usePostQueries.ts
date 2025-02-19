@@ -1,5 +1,5 @@
 // hooks/usePostQueries.ts
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -59,11 +59,18 @@ export function usePost(postId: string) {
         };
     }, [postId, queryClient]);
 
+    // Add staleTime and cacheTime to reduce refetching
     return useQuery<Post>({
         queryKey: ['post', postId],
         queryFn: () => fetchPost(postId),
-        enabled: !!postId
+        enabled: !!postId,
+        staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+        // Only refetch if window is refocused and data is stale
+        refetchOnWindowFocus: 'always',
+        // Don't refetch on reconnect unless stale
+        refetchOnReconnect: false
     });
+
 }
 
 export function useUserPosts(username: string) {
@@ -119,37 +126,6 @@ export function useUserPosts(username: string) {
     });
 }
 
-export function useGlobalFeed() {
-    const queryClient = useQueryClient();
-
-    useEffect(() => {
-        // Subscribe to all post changes
-        const channel: RealtimeChannel = supabase
-            .channel('global-posts')
-            .on('postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'posts'
-                },
-                () => {
-                    // Refetch the global feed when any changes occur
-                    queryClient.invalidateQueries({ queryKey: ['globalFeed'] });
-                }
-            )
-            .subscribe();
-
-        return () => {
-            channel.unsubscribe();
-        };
-    }, [queryClient]);
-
-    return useQuery<Post[]>({
-        queryKey: ['globalFeed'],
-        queryFn: fetchGlobalFeed
-    });
-}
-
 export function useDeletePost() {
     const queryClient = useQueryClient();
 
@@ -164,7 +140,10 @@ export function useDeletePost() {
                 supabase
                     .from('post_styles')
                     .delete()
-                    .eq('post_uuid', postId)
+                    .eq('post_uuid', postId),
+                supabase.storage
+                    .from('outfits')
+                    .remove([postId])
             ]);
 
             // Then delete the post
@@ -197,13 +176,105 @@ async function fetchPost(postId: string) {
     return formatPost(data);
 }
 
-async function fetchGlobalFeed() {
-    const { data, error } = await supabase
-        .from('posts')
-        .select(POST_SELECT_QUERY)
-        .order('created_at', { ascending: false });
+export function useGlobalFeed(pageSize = 5) {
+    const queryClient = useQueryClient();
+    console.log('[useGlobalFeed] Initializing with pageSize:', pageSize);
 
-    if (error) throw error;
+    useEffect(() => {
+        console.log('[useGlobalFeed] Setting up realtime subscription');
+        // Subscribe to all post changes
+        const channel: RealtimeChannel = supabase
+            .channel('global-posts')
+            .on('postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'posts'
+                },
+                (payload) => {
+                    console.log('[useGlobalFeed] Realtime change detected:', payload.eventType);
+                    // Refetch the global feed when any changes occur
+                    queryClient.invalidateQueries({ queryKey: ['globalFeed'] });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            console.log('[useGlobalFeed] Cleaning up realtime subscription');
+            channel.unsubscribe();
+        };
+    }, [queryClient]);
+
+    const result = useInfiniteQuery({
+        queryKey: ['globalFeed'],
+        queryFn: async ({ pageParam = 0 }) => {
+            console.log('[useGlobalFeed] Fetching page:', pageParam, 'with pageSize:', pageSize);
+            const result = await fetchGlobalFeedPage(pageParam, pageSize);
+            console.log('[useGlobalFeed] Fetched page data. Items count:', result.length);
+            return result;
+        },
+        getNextPageParam: (lastPage, allPages) => {
+            const hasMore = lastPage.length === pageSize;
+            const nextPage = hasMore ? allPages.length : undefined;
+            console.log(
+                '[useGlobalFeed] getNextPageParam -',
+                'lastPageSize:', lastPage.length,
+                'pageSize:', pageSize,
+                'totalPages:', allPages.length,
+                'hasMore:', hasMore,
+                'nextPage:', nextPage
+            );
+            return nextPage;
+        },
+        initialPageParam: 0
+    });
+
+    console.log(
+        '[useGlobalFeed] Query state -',
+        'isFetching:', result.isFetching,
+        'isFetchingNextPage:', result.isFetchingNextPage,
+        'hasNextPage:', result.hasNextPage,
+        'pages count:', result.data?.pages?.length || 0
+    );
+
+    return result;
+}
+
+// Updated fetch function with pagination and logging
+async function fetchGlobalFeedPage(page: number, pageSize: number) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+
+    console.log('[fetchGlobalFeedPage] Range request -', 'from:', from, 'to:', to);
+
+    const startTime = Date.now();
+    const { data, error, count } = await supabase
+        .from('posts')
+        .select(POST_SELECT_QUERY, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
+    const endTime = Date.now();
+
+    if (error) {
+        console.error('[fetchGlobalFeedPage] Error fetching data:', error);
+        throw error;
+    }
+
+    console.log(
+        '[fetchGlobalFeedPage] Response -',
+        'items:', data.length,
+        'total count:', count,
+        'fetch time:', `${endTime - startTime}ms`
+    );
+
+    // Print the first and last item IDs for debugging
+    if (data.length > 0) {
+        console.log(
+            '[fetchGlobalFeedPage] Range verification -',
+            'first item id:', data[0].uuid,
+            'last item id:', data[data.length - 1].uuid
+        );
+    }
 
     return data.map(formatPost);
 }

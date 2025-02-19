@@ -38,8 +38,15 @@ function StyleSearch({ searchQuery, setSearchQuery }: {
         </View>
     );
 }
-
 export function BrandsScreen() {
+    return (
+        <View>
+            <Text>Brands Screen</Text>
+        </View>
+    )
+}
+
+export function BrandsScreen2() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const [selectedStyles, setSelectedStyles] = useState<number[]>([]);
     const [searchQuery, setSearchQuery] = useState('');

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -34,47 +34,87 @@ export function PostView({ postId }: PostViewProps) {
     const [imageHeight, setImageHeight] = useState(undefined);
     const loadingStartTimeRef = useRef(Date.now());
 
+    // At the top of the component
+    const isMounted = useRef(true);
+    const pendingRequests = useRef([]);
+
     // Pre-fetch and cache dimensions before rendering
     const { data: post, isLoading } = usePost(postId);
 
-    // Process colors after image is loaded
+    // Add to useEffect for lifecycle management
+    useEffect(() => {
+        isMounted.current = true;
+        loadingStartTimeRef.current = Date.now();
+
+        return () => {
+            isMounted.current = false;
+
+            // Cancel any pending color extraction requests
+            pendingRequests.current.forEach((controller: AbortController) => {
+                controller.abort();
+            });
+            pendingRequests.current = [];
+        };
+    }, []);
+
+    // Update handleOnLoad to check mounted state
     const handleOnLoad = useCallback((event) => {
+        if (!isMounted.current) return;
+
         const loadTime = Date.now() - loadingStartTimeRef.current;
         console.log(`Image loaded in ${loadTime}ms`);
 
         // Calculate actual height based on natural image dimensions
-        if (event?.source) {
+        if (event?.source && isMounted.current) {
             const { width, height } = event.source;
             const aspectRatio = width / height;
             const calculatedHeight = SCREEN_WIDTH / aspectRatio;
             setImageHeight(calculatedHeight);
         }
 
-        setIsImageLoaded(true);
+        if (isMounted.current) {
+            setIsImageLoaded(true);
 
-        // Fetch colors after image is loaded
-        if (post?.image_url) {
-            fetchColors(post.image_url);
+            // Only fetch colors if component is still mounted
+            if (post?.image_url && isMounted.current) {
+                fetchColors(post.image_url);
+            }
         }
     }, [post?.image_url]);
 
+    // Update fetchColors to be cancelable and check mounted state
     const fetchColors = async (imageUrl) => {
+        if (!isMounted.current) return;
+
+        const controller = new AbortController();
+        pendingRequests.current.push(controller);
+
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const response = await fetch('https://yhnamwhotpnhgcicqpmd.supabase.co/functions/v1/extractColors', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token}`
-                },
-                body: JSON.stringify({
-                    image_url: imageUrl
-                })
-            });
+            const response = await fetch(
+                'https://yhnamwhotpnhgcicqpmd.supabase.co/functions/v1/extractColors',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session?.access_token}`
+                    },
+                    body: JSON.stringify({ image_url: imageUrl }),
+                    signal: controller.signal
+                }
+            );
+
+            if (!isMounted.current) return;
+
             const data = await response.json();
             setImageColors(data);
         } catch (err) {
-            console.error('Error getting colors:', err);
+            if (err.name !== 'AbortError') {
+                console.error('Error getting colors:', err);
+            }
+        } finally {
+            // Remove this controller from pending requests
+            pendingRequests.current = pendingRequests.current.filter(c => c !== controller);
         }
     };
 

@@ -1,7 +1,7 @@
 // hooks/usePostQueries.ts
 import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import type { Post } from '@/types';
 
@@ -177,10 +177,13 @@ async function fetchPost(postId: string) {
 }
 
 export function useGlobalFeed(pageSize = 5) {
+    const isActive = useRef(true);
+
     const queryClient = useQueryClient();
     console.log('[useGlobalFeed] Initializing with pageSize:', pageSize);
 
     useEffect(() => {
+        isActive.current = true;
         console.log('[useGlobalFeed] Setting up realtime subscription');
         // Subscribe to all post changes
         const channel: RealtimeChannel = supabase
@@ -192,6 +195,7 @@ export function useGlobalFeed(pageSize = 5) {
                     table: 'posts'
                 },
                 (payload) => {
+                    if (!isActive.current) return;
                     console.log('[useGlobalFeed] Realtime change detected:', payload.eventType);
                     // Refetch the global feed when any changes occur
                     queryClient.invalidateQueries({ queryKey: ['globalFeed'] });
@@ -200,6 +204,7 @@ export function useGlobalFeed(pageSize = 5) {
             .subscribe();
 
         return () => {
+            isActive.current = false;
             console.log('[useGlobalFeed] Cleaning up realtime subscription');
             channel.unsubscribe();
         };

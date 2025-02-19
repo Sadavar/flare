@@ -48,38 +48,34 @@ function GlobalSearch() {
     );
 }
 
-// Add these functions before your GlobalFeed component
-// This maintains stable column assignments across pagination loads
-
-// Store column heights and assignments between renders
-const masonryState = {
-    columnHeights: [0, 0], // For 2 columns
-    itemToColumnMap: new Map<string, number>() // Maps item IDs to column assignments
-};
-
 /**
  * Assigns new items to columns while maintaining existing assignments
  * @param items Array of items to distribute
  * @param getItemHeight Function to estimate item height
  * @param getItemId Function to get unique ID for each item
  * @param numColumns Number of columns (default: 2)
+ * @param currentState Current masonry state reference
  */
 function balanceMasonryData<T>(
     items: T[],
     getItemHeight: (item: T, index: number) => number,
     getItemId: (item: T) => string,
-    numColumns: number = 2
+    numColumns: number = 2,
+    currentState: React.MutableRefObject<{
+        columnHeights: number[],
+        itemToColumnMap: Map<string, number>
+    }>
 ): T[] {
     if (items.length === 0) return items;
 
     // Reset column heights if no items are assigned yet
     // (happens on first load or when clearing data)
-    if (masonryState.itemToColumnMap.size === 0) {
-        masonryState.columnHeights = Array(numColumns).fill(0);
+    if (currentState.current.itemToColumnMap.size === 0) {
+        currentState.current.columnHeights = Array(numColumns).fill(0);
     }
 
     // Get current column heights
-    const columnHeights = [...masonryState.columnHeights];
+    const columnHeights = [...currentState.current.columnHeights];
 
     // Create virtual columns for distribution
     const columns: T[][] = Array(numColumns).fill(null).map(() => []);
@@ -90,7 +86,7 @@ function balanceMasonryData<T>(
 
     items.forEach(item => {
         const itemId = getItemId(item);
-        if (masonryState.itemToColumnMap.has(itemId)) {
+        if (currentState.current.itemToColumnMap.has(itemId)) {
             previouslyAssignedItems.push(item);
         } else {
             newItems.push(item);
@@ -100,7 +96,7 @@ function balanceMasonryData<T>(
     // Place previously assigned items in their original columns
     previouslyAssignedItems.forEach(item => {
         const itemId = getItemId(item);
-        const columnIndex = masonryState.itemToColumnMap.get(itemId)!;
+        const columnIndex = currentState.current.itemToColumnMap.get(itemId)!;
         columns[columnIndex].push(item);
         // Don't update heights yet - we'll do that after all assignments
     });
@@ -124,11 +120,11 @@ function balanceMasonryData<T>(
         columnHeights[shortestColumnIndex] += getItemHeight(item, items.indexOf(item));
 
         // Store assignment for future renders
-        masonryState.itemToColumnMap.set(getItemId(item), shortestColumnIndex);
+        currentState.current.itemToColumnMap.set(getItemId(item), shortestColumnIndex);
     });
 
     // Update stored column heights for next pagination
-    masonryState.columnHeights = columnHeights;
+    currentState.current.columnHeights = columnHeights;
 
     // Step 4: Create final array by taking items column by column
     // This works because MasonryList fills columns in order:
@@ -147,7 +143,6 @@ function balanceMasonryData<T>(
     return result;
 }
 
-
 export function GlobalFeed() {
     const navigation = useNavigation<GlobalFeedNavigationProp>();
     const { user: currentUser, username: currentUsername } = useSession();
@@ -156,10 +151,46 @@ export function GlobalFeed() {
     const queryClient = useQueryClient();
     const [isRefreshing, setIsRefreshing] = useState(false);
 
+    // Properly scoped masonryState using useRef
+    const masonryState = useRef({
+        columnHeights: [0, 0] as number[], // For 2 columns
+        itemToColumnMap: new Map<string, number>() // Maps item IDs to column assignments
+    });
+
     // Add navigation focus listener to manage memory
     const isFocused = useRef(true);
+    const isMounted = useRef(true);
+
+    // Cleanup helper function to avoid duplication
+    const cleanupResources = useCallback(() => {
+        try {
+            if (!isMounted.current) return;
+
+            console.log('[GlobalFeed] Cleaning up resources');
+            // Clear masonry state on ANY cleanup (navigation or tab change)
+            masonryState.current.columnHeights = [0, 0];
+            masonryState.current.itemToColumnMap.clear();
+            pageLoadCount.current = 0;
+
+            // Clear excess query cache to free memory 
+            if (data?.pages?.length > 1) {
+                queryClient.setQueryData(['globalFeed'], (oldData: any) => {
+                    if (!oldData) return oldData;
+                    return {
+                        ...oldData,
+                        pages: oldData.pages.slice(0, 1),
+                        pageParams: oldData.pageParams.slice(0, 1)
+                    };
+                });
+            }
+        } catch (error) {
+            console.error('[GlobalFeed] Error during cleanup:', error);
+        }
+    }, [queryClient, data?.pages?.length]);
 
     useEffect(() => {
+        isMounted.current = true;
+
         const unsubscribeFocus = navigation.addListener('focus', () => {
             console.log('[GlobalFeed] Screen focused');
             isFocused.current = true;
@@ -170,7 +201,6 @@ export function GlobalFeed() {
             isFocused.current = false;
 
             // Opportunity to clean up resources when navigating away
-            // Reset pagination state to reduce memory usage
             if (data?.pages?.length > 2) {
                 console.log('[GlobalFeed] Cleaning up excess pages on blur');
                 // Keep only first 2 pages to reduce memory pressure
@@ -186,10 +216,16 @@ export function GlobalFeed() {
         });
 
         return () => {
+            isMounted.current = false;
+            isFocused.current = false;
+            console.log('[GlobalFeed] Component unmounting - cleaning up');
+
+            cleanupResources();
+
             unsubscribeFocus();
             unsubscribeBlur();
         };
-    }, [navigation, queryClient]);
+    }, [navigation, cleanupResources]);
 
     // Use the updated hook that supports pagination with smaller page size
     const {
@@ -216,7 +252,7 @@ export function GlobalFeed() {
     // Memoize balanced posts calculation to prevent unnecessary recalculations
     const balancedPosts = useMemo(() => {
         if (allPosts.length === 0) return [];
-        return balanceMasonryData(allPosts, getPostHeight, getPostId);
+        return balanceMasonryData(allPosts, getPostHeight, getPostId, 2, masonryState);
     }, [allPosts, getPostHeight, getPostId]);
 
     // Debug current state - but limit logging frequency
@@ -233,15 +269,15 @@ export function GlobalFeed() {
     }, [data, isLoading, isFetching, isFetchingNextPage, hasNextPage, allPosts.length]);
 
     const handleRefresh = useCallback(async () => {
-        if (isRefreshing) return; // Prevent multiple simultaneous refreshes
+        if (isRefreshing || !isMounted.current) return; // Prevent multiple refreshes & check mount status
 
         console.log('[GlobalFeed] Pull-to-refresh triggered');
         setIsRefreshing(true);
 
         try {
             // Reset masonry state first
-            masonryState.columnHeights = [0, 0];
-            masonryState.itemToColumnMap.clear();
+            masonryState.current.columnHeights = [0, 0];
+            masonryState.current.itemToColumnMap.clear();
             pageLoadCount.current = 0;
 
             // Reset the query and refetch first page
@@ -252,32 +288,34 @@ export function GlobalFeed() {
         } catch (error) {
             console.error('[GlobalFeed] Error during refresh:', error);
         } finally {
-            setIsRefreshing(false);
+            if (isMounted.current) {
+                setIsRefreshing(false);
+            }
         }
     }, [isRefreshing, queryClient, refetch]);
 
     const handleBrandPress = useCallback((brandId: number, brandName: string) => {
-        if (!isFocused.current) return;
-        navigation.getParent()?.navigate('Brands', {
+        if (!isFocused.current || !isMounted.current) return;
+        safeNavigate('Brands', {
             screen: 'BrandDetails',
             params: { brandId, brandName }
         });
     }, [navigation]);
 
     const handleProfilePress = useCallback((username: string) => {
-        if (!isFocused.current) return;
+        if (!isFocused.current || !isMounted.current) return;
         if (username === currentUsername) {
-            navigation.getParent()?.navigate('Profile', {
+            safeNavigate('Profile', {
                 screen: 'ProfileMain'
             });
         } else {
-            navigation.navigate('UserProfile', { username });
+            safeNavigate('UserProfile', { username });
         }
     }, [navigation, currentUsername]);
 
     // Handler for when the user reaches near the end of the list
     const handleLoadMore = useCallback(() => {
-        if (!isFocused.current || isFetching) return;
+        if (!isFocused.current || isFetching || !isMounted.current) return;
 
         console.log('[GlobalFeed] onEndReached called');
         console.log('  - hasNextPage:', hasNextPage);
@@ -292,37 +330,32 @@ export function GlobalFeed() {
                 console.log('[GlobalFeed] No data found, not loading more');
                 return;
             }
-            // Limit maximum number of pages to prevent memory issues
+
+            // Add maximum page limit for memory management
+            // const MAX_PAGES = 5;
+            // if (data.pages && data.pages.length >= MAX_PAGES) {
+            //     console.log(`[GlobalFeed] Reached maximum page limit (${MAX_PAGES})`);
+            //     return;
+            // }
 
             pageLoadCount.current += 1;
             console.log('[GlobalFeed] Fetching next page:', pageLoadCount.current);
-            fetchNextPage();
+            fetchNextPage().catch(err => {
+                console.error('[GlobalFeed] Error fetching next page:', err);
+            });
             onEndReachedCalledDuringMomentum.current = true;
         }
-    }, [hasNextPage, isFetchingNextPage, isFetching, fetchNextPage, data?.pages?.length]);
+    }, [hasNextPage, isFetchingNextPage, isFetching, fetchNextPage, data]);
 
     // Debug column assignments if needed - limit to focused state
     useEffect(() => {
         if (!isFocused.current || allPosts.length === 0) return;
 
         console.log('[GlobalFeed] Column distribution stats:');
-        console.log('  - Left column items:', masonryState.columnHeights[0]);
-        console.log('  - Right column items:', masonryState.columnHeights[1]);
-        console.log('  - Total tracked items:', masonryState.itemToColumnMap.size);
+        console.log('  - Left column items:', masonryState.current.columnHeights[0]);
+        console.log('  - Right column items:', masonryState.current.columnHeights[1]);
+        console.log('  - Total tracked items:', masonryState.current.itemToColumnMap.size);
     }, [balancedPosts.length, allPosts.length]);
-
-    // Reset masonry state when changing feeds or clearing data
-    useEffect(() => {
-        return () => {
-            console.log('[GlobalFeed] Component unmounting - cleaning up');
-            masonryState.columnHeights = [0, 0];
-            masonryState.itemToColumnMap.clear();
-            pageLoadCount.current = 0;
-
-            // Optional: Clean query cache on unmount to further reduce memory
-            queryClient.removeQueries({ queryKey: ['globalFeed'] });
-        };
-    }, [queryClient]);
 
     // Memoize rendering functions to prevent unnecessary rerenders
     const renderListFooter = useCallback(() => {
@@ -336,7 +369,18 @@ export function GlobalFeed() {
         );
     }, [isFetchingNextPage]);
 
+    // Safe navigation handler - prevents navigation after unmount
+    const safeNavigate = useCallback((routeName, params) => {
+        if (isMounted.current && isFocused.current) {
+            navigation.navigate(routeName, params);
+        } else {
+            console.log('[GlobalFeed] Prevented navigation after unmount');
+        }
+    }, [navigation]);
+
     const renderItem = useCallback(({ item, i }: { item: Post, i: number }) => {
+        if (!isMounted.current) return null;
+
         const post = item;
 
         // Determine which column this item is in (for consistent heights)
@@ -354,8 +398,25 @@ export function GlobalFeed() {
             ]}>
                 <TouchableOpacity
                     onPress={() => {
-                        if (!isFocused.current) return;
-                        navigation.navigate('PostDetails', { postId: post.uuid });
+                        // Use safe navigation instead of direct navigation
+                        if (isMounted.current && isFocused.current) {
+                            // Prepare for navigation by reducing memory pressure
+                            if (data?.pages?.length > 2) {
+                                try {
+                                    queryClient.setQueryData(['globalFeed'], (oldData: any) => {
+                                        if (!oldData) return oldData;
+                                        return {
+                                            ...oldData,
+                                            pages: oldData.pages.slice(0, 2),
+                                            pageParams: oldData.pageParams.slice(0, 2)
+                                        };
+                                    });
+                                } catch (error) {
+                                    console.error('[GlobalFeed] Error trimming pages:', error);
+                                }
+                            }
+                            safeNavigate('PostDetails', { postId: post.uuid });
+                        }
                     }}
                 >
                     <Image
@@ -365,6 +426,8 @@ export function GlobalFeed() {
                         recyclingKey={post.uuid}
                         priority={i < 8 ? "high" : "normal"} // High priority only for visible items
                         transition={100}
+                        cachePolicy="memory-disk" // Add cache policy
+                        onError={e => console.warn(`[GlobalFeed] Image load error: ${post.uuid}`, e)}
                     />
                     <Text style={styles.postIdText}>#{i + 1} - {post.uuid.slice(-4)}</Text>
                 </TouchableOpacity>
@@ -387,7 +450,7 @@ export function GlobalFeed() {
                 )}
             </View>
         );
-    }, [navigation, handleBrandPress]);
+    }, [data?.pages?.length, queryClient, safeNavigate, handleBrandPress]);
 
     // Prepare header component with memo
     const ListHeaderComponent = useMemo(() => (
@@ -442,7 +505,11 @@ export function GlobalFeed() {
                 onMomentumScrollBegin={() => {
                     onEndReachedCalledDuringMomentum.current = false;
                 }}
-                renderItem={renderItem}
+                renderItem={renderItem as any}
+                maxToRenderPerBatch={8} // Limit batch size
+                windowSize={5} // Reduce window size
+                updateCellsBatchingPeriod={50} // Increase batching period
+                initialNumToRender={8} // Limit initial render count
             />
         );
     }

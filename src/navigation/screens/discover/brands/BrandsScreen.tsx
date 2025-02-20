@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -10,15 +10,15 @@ import {
     Platform,
     ScrollView,
 } from 'react-native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import MasonryList from '@react-native-seoul/masonry-list';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Brand, Post, Style } from '@/types';
 import { POST_SELECT_QUERY, formatPost } from '@/hooks/usePostQueries';
+import { PaginatedGridList } from '@/components/PaginatedGridList';
 
 function StyleSearch({ searchQuery, setSearchQuery }: {
     searchQuery: string;
@@ -38,19 +38,13 @@ function StyleSearch({ searchQuery, setSearchQuery }: {
         </View>
     );
 }
-export function BrandsScreen2() {
-    return (
-        <View>
-            <Text>Brands Screen</Text>
-        </View>
-    )
-}
 
 export function BrandsScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const [selectedStyles, setSelectedStyles] = useState<number[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const queryClient = useQueryClient();
+    const PAGE_SIZE = 10;
 
     // Query for brands
     const { data: brands } = useQuery<Brand[]>({
@@ -83,41 +77,74 @@ export function BrandsScreen() {
         },
     });
 
-    // Query for posts filtered by styles
-    const { data: posts } = useQuery<Post[]>({
-        queryKey: ['stylePosts', selectedStyles],
-        queryFn: async () => {
-            let query = supabase
-                .from('posts')
-                .select(POST_SELECT_QUERY)
-                .order('created_at', { ascending: false });
+    // Function to fetch filtered posts by page
+    const fetchFilteredPostsPage = useCallback(async (pageParam = 0) => {
+        console.log('[BrandsScreen] Fetching page:', pageParam, 'with styles:', selectedStyles);
+        const from = pageParam * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
 
-            if (selectedStyles.length > 0) {
-                // Get posts that have ANY of the selected styles
-                const { data: styleFilteredPosts, error: styleError } = await supabase
-                    .from('post_styles')
-                    .select('post_uuid')
-                    .in('style_id', selectedStyles);
+        let postQuery = supabase
+            .from('posts')
+            .select(POST_SELECT_QUERY, { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(from, to);
 
-                if (styleError) throw styleError;
+        if (selectedStyles.length > 0) {
+            // Get posts that have ANY of the selected styles
+            const { data: styleFilteredPosts, error: styleError } = await supabase
+                .from('post_styles')
+                .select('post_uuid')
+                .in('style_id', selectedStyles);
 
-                // Get unique post UUIDs
-                const postUuids = [...new Set(styleFilteredPosts.map(post => post.post_uuid))];
+            if (styleError) throw styleError;
 
-                if (postUuids.length > 0) {
-                    query = query.in('uuid', postUuids);
-                } else {
-                    return [];
-                }
+            // Get unique post UUIDs
+            const postUuids = [...new Set(styleFilteredPosts.map(post => post.post_uuid))];
+
+            if (postUuids.length > 0) {
+                postQuery = postQuery.in('uuid', postUuids);
+            } else {
+                return [];
             }
+        }
 
-            const { data, error } = await query;
-            console.log('Query response:', { data, error });
-            if (error) throw error;
+        const { data, error, count } = await postQuery;
+        console.log('[BrandsScreen] Query response:', { dataLength: data?.length, error, count });
+        if (error) throw error;
 
-            return data.map(formatPost);
-        },
+        // Process the posts and format them
+        const formattedPosts = await Promise.all((data || []).map(async (post) => {
+            return formatPost(post);
+        }));
+
+        return {
+            posts: formattedPosts,
+            nextPage: formattedPosts.length === PAGE_SIZE ? pageParam + 1 : undefined,
+            totalCount: count || 0
+        };
+    }, [selectedStyles, PAGE_SIZE]);
+
+    // Convert to useInfiniteQuery for posts filtered by styles
+    const {
+        data: postsData,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading: postsLoading,
+        isError: postsError,
+        refetch: refetchPosts
+    } = useInfiniteQuery({
+        queryKey: ['stylePosts', selectedStyles],
+        queryFn: ({ pageParam = 0 }) => fetchFilteredPostsPage(pageParam),
+        getNextPageParam: (lastPage) => lastPage.nextPage,
+        initialPageParam: 0
     });
+
+    console.log('[BrandsScreen] Posts data:', postsData);
+
+    // Flatten posts data correctly for use with PaginatedGridList
+    const flattenedPosts = postsData?.pages.flatMap(page => page.posts) || [];
+    console.log('[BrandsScreen] Flattened posts:', flattenedPosts);
 
     const filteredStyles = stylesData?.filter(style =>
         style.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -135,6 +162,7 @@ export function BrandsScreen() {
     const handleAllStylesPress = () => {
         setSelectedStyles([]);
     };
+
     const renderTrendingItem = ({ item }: { item: Brand }) => (
         <TouchableOpacity
             style={styles.trendingCard}
@@ -148,126 +176,128 @@ export function BrandsScreen() {
         </TouchableOpacity>
     );
 
-    const renderContent = () => {
-        if (searchQuery) {
+    const renderPostItem = ({ item }: { item: Post }) => {
+        // Handle empty state
+        if (item == undefined || item == null || item.image_url == undefined || item.image_url == null) {
+            console.log('[PaginatedGridList] Showing empty state');
             return (
-                <FlatList
-                    data={filteredStyles}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity
-                            key={item.id.toString()}
-                            style={styles.suggestionItem}
-                            onPress={() => {
-                                setSelectedStyles([item.id]);
-                                setSearchQuery('');
-                            }}
-                        >
-                            <Text style={styles.suggestionText}>{item.name}</Text>
-                        </TouchableOpacity>
-                    )}
-                    keyExtractor={(item) => item.id.toString()}
-                />
-            );
-        } else {
-            return (
-                <MasonryList
-                    ListHeaderComponent={
-                        <View>
-                            <Text style={styles.trendingTitle}>Trending Brands</Text>
-                            <FlatList
-                                horizontal
-                                data={brands ? brands.slice(0, 10) : []}
-                                renderItem={renderTrendingItem}
-                                showsHorizontalScrollIndicator={false}
-                                style={styles.carouselContainer}
-                                keyExtractor={item => item.id.toString()}
-                            />
-
-                            <Text style={styles.trendingTitle}>Filter by Style</Text>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={styles.chipsContainer}
-                                contentContainerStyle={styles.chipsContent}
-                                keyboardShouldPersistTaps="always"
-                            >
-                                <TouchableOpacity
-                                    style={[
-                                        styles.chip,
-                                        selectedStyles.length === 0 && styles.chipSelected
-                                    ]}
-                                    onPress={handleAllStylesPress}
-                                >
-                                    <Text style={[
-                                        styles.chipText,
-                                        selectedStyles.length === 0 && styles.chipTextSelected
-                                    ]}>All Styles</Text>
-                                </TouchableOpacity>
-
-                                {stylesData?.map((style) => (
-                                    <TouchableOpacity
-                                        key={style.id}
-                                        style={[
-                                            styles.chip,
-                                            selectedStyles.includes(style.id) && styles.chipSelected
-                                        ]}
-                                        onPress={() => handleStylePress(style.id)}
-                                    >
-                                        <Text style={[
-                                            styles.chipText,
-                                            selectedStyles.includes(style.id) && styles.chipTextSelected
-                                        ]}>{style.name}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        </View>
-                    }
-                    data={posts || []}
-                    keyExtractor={(item: Post) => item.uuid}
-                    numColumns={2}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.masonryContent}
-                    renderItem={({ item, i }) => {
-                        const post = item as Post;
-                        const imageHeight = i % 3 === 0 ? 250 : i % 2 === 0 ? 200 : 300;
-
-                        return (
-                            <View style={[
-                                styles.postContainer,
-                                { marginLeft: i % 2 === 0 ? 0 : 8 }
-                            ]}>
-                                <TouchableOpacity
-                                    onPress={() => navigation.navigate('PostDetails', { postId: post.uuid })}
-                                >
-                                    <Image
-                                        source={{ uri: post.image_url }}
-                                        style={[styles.postImage, { height: imageHeight }]}
-                                        contentFit="cover"
-                                    />
-                                </TouchableOpacity>
-
-                                {post.styles && (
-                                    <View style={styles.stylesContainer}>
-                                        <Text style={styles.stylesLabel}>Styles:</Text>
-                                        <View style={styles.stylesList}>
-                                            {post.styles.map((style) => (
-                                                <View
-                                                    key={style.id}
-                                                    style={styles.styleChip}
-                                                >
-                                                    <Text style={styles.styleText}>{style.name}</Text>
-                                                </View>
-                                            ))}
-                                        </View>
-                                    </View>
-                                )}
-                            </View>
-                        );
-                    }}
-                />
-            );
+                <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No items found.</Text>
+                </View>
+            )
         }
+        return (
+            <View style={styles.postContainer}>
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('PostDetails', { post: item })}
+                >
+                    <Image
+                        source={{ uri: item.image_url }}
+                        style={styles.postImage}
+                        contentFit="cover"
+                    />
+                </TouchableOpacity>
+
+                {item.styles && (
+                    <View style={styles.stylesContainer}>
+                        <Text style={styles.stylesLabel}>Styles:</Text>
+                        <View style={styles.stylesList}>
+                            {item.styles.map((style) => (
+                                <View
+                                    key={style.id}
+                                    style={styles.styleChip}
+                                >
+                                    <Text style={styles.styleText}>{style.name}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                )}
+            </View>
+        );
     };
+
+    // Header component for PaginatedGridList
+    const renderHeader = () => {
+        return (
+            <View>
+                <Text style={styles.mainTitle}>Discover Styles</Text>
+                <StyleSearch
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                />
+
+                <Text style={styles.trendingTitle}>Trending Brands</Text>
+                <FlatList
+                    horizontal
+                    data={brands ? brands.slice(0, 10) : []}
+                    renderItem={renderTrendingItem}
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.carouselContainer}
+                    keyExtractor={item => item.id.toString()}
+                />
+
+                <Text style={styles.trendingTitle}>Filter by Style</Text>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.chipsContainer}
+                    contentContainerStyle={styles.chipsContent}
+                    keyboardShouldPersistTaps="always"
+                >
+                    <TouchableOpacity
+                        style={[
+                            styles.chip,
+                            selectedStyles.length === 0 && styles.chipSelected
+                        ]}
+                        onPress={handleAllStylesPress}
+                    >
+                        <Text style={[
+                            styles.chipText,
+                            selectedStyles.length === 0 && styles.chipTextSelected
+                        ]}>All Styles</Text>
+                    </TouchableOpacity>
+
+                    {stylesData?.map((style) => (
+                        <TouchableOpacity
+                            key={style.id}
+                            style={[
+                                styles.chip,
+                                selectedStyles.includes(style.id) && styles.chipSelected
+                            ]}
+                            onPress={() => handleStylePress(style.id)}
+                        >
+                            <Text style={[
+                                styles.chipText,
+                                selectedStyles.includes(style.id) && styles.chipTextSelected
+                            ]}>{style.name}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+        );
+    };
+
+    // Custom empty component
+    const renderEmptyComponent = () => (
+        <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+                {selectedStyles.length > 0
+                    ? "No posts found with the selected styles. Try selecting different styles."
+                    : "No posts found."}
+            </Text>
+        </View>
+    );
+
+    // Custom error component
+    const renderErrorComponent = () => (
+        <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>
+                Error loading posts. Pull down to try again.
+            </Text>
+        </View>
+    );
+
 
     if (stylesLoading) {
         return (
@@ -282,16 +312,54 @@ export function BrandsScreen() {
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <View style={styles.fixedHeader}>
-                <Text style={styles.mainTitle}>Discover Styles</Text>
-                <StyleSearch
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
+            {searchQuery ? (
+                // Show search results
+                <FlatList
+                    data={filteredStyles}
+                    ListHeaderComponent={() => (
+                        <View style={styles.fixedHeader}>
+                            <Text style={styles.mainTitle}>Discover Styles</Text>
+                            <StyleSearch
+                                searchQuery={searchQuery}
+                                setSearchQuery={setSearchQuery}
+                            />
+                        </View>
+                    )}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity
+                            key={item.id.toString()}
+                            style={styles.suggestionItem}
+                            onPress={() => {
+                                setSelectedStyles([item.id]);
+                                setSearchQuery('');
+                            }}
+                        >
+                            <Text style={styles.suggestionText}>{item.name}</Text>
+                        </TouchableOpacity>
+                    )}
+                    keyExtractor={(item) => item.id.toString()}
                 />
-            </View>
-
-            {renderContent()}
-
+            ) : (
+                // Show paginated grid view for posts
+                <PaginatedGridList
+                    data={flattenedPosts}
+                    header={renderHeader()}
+                    renderItem={renderPostItem}
+                    fetchNextPage={fetchNextPage}
+                    hasNextPage={!!hasNextPage}
+                    isFetchingNextPage={isFetchingNextPage}
+                    isLoading={postsLoading}
+                    isError={postsError}
+                    refetch={refetchPosts}
+                    keyExtractor={(item: Post) => item.uuid}
+                    numColumns={2}
+                    estimatedItemSize={280}
+                    emptyComponent={renderEmptyComponent()}
+                    errorComponent={renderErrorComponent()}
+                    loadingMoreText="Loading more posts..."
+                    contentContainerStyle={styles.gridContent}
+                />
+            )}
         </KeyboardAvoidingView>
     );
 }
@@ -311,6 +379,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         alignSelf: 'center',
+        marginVertical: 8,
     },
     searchContainer: {
         flexDirection: 'row',
@@ -392,17 +461,19 @@ const styles = StyleSheet.create({
     chipTextSelected: {
         color: '#fff',
     },
-    masonryContent: {
+    gridContent: {
         paddingHorizontal: 12,
     },
     postContainer: {
         marginBottom: 16,
         flex: 1,
+        marginHorizontal: 6,
     },
     postImage: {
         width: '100%',
-        borderRadius: 12,
+        aspectRatio: 0.75, // 3:4 aspect ratio (width:height)
         backgroundColor: '#f0f0f0',
+        borderRadius: 12,
     },
     stylesContainer: {
         marginTop: 8,
@@ -427,5 +498,27 @@ const styles = StyleSheet.create({
     styleText: {
         fontSize: 12,
         color: '#444',
+    },
+    emptyContainer: {
+        paddingTop: 50,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 20,
+    },
+    emptyText: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+    },
+    errorContainer: {
+        paddingTop: 50,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 20,
+    },
+    errorText: {
+        fontSize: 16,
+        color: '#e53935',
+        textAlign: 'center',
     },
 });

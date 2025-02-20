@@ -104,13 +104,15 @@ export function PaginatedGridList({
         );
     }
 
-    // Handle empty state
-    if (data.length === 0) {
+    if (data.length === 0 || data == undefined || data == null || data[0] == undefined) {
         console.log('[PaginatedGridList] Showing empty state');
-        return emptyComponent || (
-            <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No items found.</Text>
-            </View>
+        return (
+            <>
+                {header}
+                <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No items found.</Text>
+                </View>
+            </>
         );
     }
 

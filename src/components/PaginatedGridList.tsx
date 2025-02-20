@@ -108,7 +108,6 @@ export function PaginatedGridList({
         console.log('[PaginatedGridList] Showing empty state');
         return (
             <>
-                {header}
                 <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>No items found.</Text>
                 </View>
@@ -132,7 +131,6 @@ export function PaginatedGridList({
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.5}
                 ListFooterComponent={footerComponent}
-                contentContainerStyle={[styles.listContent, contentContainerStyle]}
                 refreshing={isLoading}
                 onRefresh={handleRefresh}
                 showsVerticalScrollIndicator={false}

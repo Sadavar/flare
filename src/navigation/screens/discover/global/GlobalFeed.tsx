@@ -1,9 +1,9 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Dimensions, TouchableOpacity, TextInput } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { useGlobalFeed } from '@/hooks/usePostQueries';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { Post } from '@/types';
 import { PaginatedGridList } from '@/components/PaginatedGridList';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -92,6 +92,13 @@ export function GlobalFeed() {
         refetch
     } = useGlobalFeed(10);
 
+    const isFocused = useIsFocused();
+
+    useEffect(() => {
+        if (!isFocused) return;
+        refetch();
+    }, [isFocused]);
+
     // Flatten posts from all pages
     const allPosts = data?.pages?.flat() || [];
 
@@ -145,7 +152,7 @@ export function GlobalFeed() {
     return (
         <PaginatedGridList
             data={allPosts}
-            header={<Header />}
+            header={Header}
             renderItem={renderItem}
             fetchNextPage={fetchNextPage}
             hasNextPage={hasNextPage}

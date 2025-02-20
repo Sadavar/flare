@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -10,14 +10,13 @@ import {
     Platform,
     ScrollView,
 } from 'react-native';
-import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Brand, Post, Style } from '@/types';
-import { POST_SELECT_QUERY, formatPost } from '@/hooks/usePostQueries';
+import { Brand, Post } from '@/types';
+import { useBrands, useStyles, useFilteredPostsByStyles } from '@/hooks/usePostQueries';
 import { PaginatedGridList } from '@/components/PaginatedGridList';
 
 function StyleSearch({ searchQuery, setSearchQuery }: {
@@ -46,85 +45,11 @@ export function BrandsScreen() {
     const queryClient = useQueryClient();
     const PAGE_SIZE = 10;
 
-    // Query for brands
-    const { data: brands } = useQuery<Brand[]>({
-        queryKey: ['brands'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('brands')
-                .select('id, name')
-                .order('name');
-            if (error) throw error;
-            return data.map(brand => ({
-                id: brand.id,
-                name: brand.name,
-                x_coord: null,
-                y_coord: null,
-            }));
-        },
-    });
+    // Using the refactored hooks from usePostQueries
+    const { data: brands } = useBrands();
+    const { data: stylesData, isLoading: stylesLoading } = useStyles();
 
-    // Query for styles
-    const { data: stylesData, isLoading: stylesLoading } = useQuery<Style[]>({
-        queryKey: ['styles'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('styles')
-                .select('id, name')
-                .order('name');
-            if (error) throw error;
-            return data;
-        },
-    });
-
-    // Function to fetch filtered posts by page
-    const fetchFilteredPostsPage = useCallback(async (pageParam = 0) => {
-        console.log('[BrandsScreen] Fetching page:', pageParam, 'with styles:', selectedStyles);
-        const from = pageParam * PAGE_SIZE;
-        const to = from + PAGE_SIZE - 1;
-
-        let postQuery = supabase
-            .from('posts')
-            .select(POST_SELECT_QUERY, { count: 'exact' })
-            .order('created_at', { ascending: false })
-            .range(from, to);
-
-        if (selectedStyles.length > 0) {
-            // Get posts that have ANY of the selected styles
-            const { data: styleFilteredPosts, error: styleError } = await supabase
-                .from('post_styles')
-                .select('post_uuid')
-                .in('style_id', selectedStyles);
-
-            if (styleError) throw styleError;
-
-            // Get unique post UUIDs
-            const postUuids = [...new Set(styleFilteredPosts.map(post => post.post_uuid))];
-
-            if (postUuids.length > 0) {
-                postQuery = postQuery.in('uuid', postUuids);
-            } else {
-                return [];
-            }
-        }
-
-        const { data, error, count } = await postQuery;
-        console.log('[BrandsScreen] Query response:', { dataLength: data?.length, error, count });
-        if (error) throw error;
-
-        // Process the posts and format them
-        const formattedPosts = await Promise.all((data || []).map(async (post) => {
-            return formatPost(post);
-        }));
-
-        return {
-            posts: formattedPosts,
-            nextPage: formattedPosts.length === PAGE_SIZE ? pageParam + 1 : undefined,
-            totalCount: count || 0
-        };
-    }, [selectedStyles, PAGE_SIZE]);
-
-    // Convert to useInfiniteQuery for posts filtered by styles
+    // Use the refactored hook for filtered posts
     const {
         data: postsData,
         fetchNextPage,
@@ -133,12 +58,7 @@ export function BrandsScreen() {
         isLoading: postsLoading,
         isError: postsError,
         refetch: refetchPosts
-    } = useInfiniteQuery({
-        queryKey: ['stylePosts', selectedStyles],
-        queryFn: ({ pageParam = 0 }) => fetchFilteredPostsPage(pageParam),
-        getNextPageParam: (lastPage) => lastPage.nextPage,
-        initialPageParam: 0
-    });
+    } = useFilteredPostsByStyles(selectedStyles, PAGE_SIZE);
 
     console.log('[BrandsScreen] Posts data:', postsData);
 
@@ -177,15 +97,6 @@ export function BrandsScreen() {
     );
 
     const renderPostItem = ({ item }: { item: Post }) => {
-        // Handle empty state
-        if (item == undefined || item == null || item.image_url == undefined || item.image_url == null) {
-            console.log('[PaginatedGridList] Showing empty state');
-            return (
-                <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No items found.</Text>
-                </View>
-            )
-        }
         return (
             <View style={styles.postContainer}>
                 <TouchableOpacity
@@ -363,6 +274,7 @@ export function BrandsScreen() {
         </KeyboardAvoidingView>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: {

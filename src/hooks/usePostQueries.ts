@@ -1,9 +1,10 @@
 // hooks/usePostQueries.ts
 import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
-import type { Post } from '@/types';
+import type { Post, Style, Brand } from '@/types';
+import { useIsFocused } from '@react-navigation/native';
 
 export const POST_SELECT_QUERY = `
     uuid,
@@ -71,7 +72,6 @@ export function usePost(postId: string) {
         // Don't refetch on reconnect unless stale
         refetchOnReconnect: false
     });
-
 }
 
 // Updated to use infinite query with pagination and debug logs
@@ -187,6 +187,205 @@ export function useUserPosts(username: string, pageSize = 12) {
     return result;
 }
 
+function useIsTabFocused(tabName: string) {
+    const isFocused = useIsFocused();
+    const [isTabMounted, setIsTabMounted] = useState(false);
+
+    useEffect(() => {
+        setIsTabMounted(true);
+        return () => setIsTabMounted(false);
+    }, []);
+
+    return isFocused && isTabMounted;
+}
+
+export function useGlobalFeed(pageSize = 5) {
+    const isTabFocused = useIsTabFocused('Global');
+    const queryClient = useQueryClient();
+    const channelRef = useRef<RealtimeChannel | null>(null);
+
+    useEffect(() => {
+        if (!isTabFocused) return;
+
+        // Subscribe to all post changes
+        channelRef.current = supabase
+            .channel('global-posts')
+            .on('postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'posts'
+                },
+                (payload) => {
+                    console.log('[useGlobalFeed] Realtime change detected:', payload.eventType);
+                    queryClient.invalidateQueries({ queryKey: ['globalFeed'] });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            console.log('[useGlobalFeed] Cleaning up subscription');
+            channelRef.current?.unsubscribe();
+            channelRef.current = null;
+        };
+    }, [isTabFocused, queryClient]);
+
+    return useInfiniteQuery({
+        queryKey: ['globalFeed'],
+        queryFn: async ({ pageParam = 0 }) => {
+            console.log('[useGlobalFeed] Fetching page:', pageParam);
+            return fetchGlobalFeedPage(pageParam, pageSize);
+        },
+        getNextPageParam: (lastPage, allPages) => {
+            const hasMore = lastPage.length === pageSize;
+            return hasMore ? allPages.length : undefined;
+        },
+        initialPageParam: 0,
+        enabled: isTabFocused,
+        staleTime: 30 * 1000,
+        gcTime: 5 * 60 * 1000,
+    });
+}
+
+export function useDeletePost() {
+    const queryClient = useQueryClient();
+
+    const deletePost = async (postId: string) => {
+        try {
+            // Delete post_brands and post_styles entries first
+            await Promise.all([
+                supabase
+                    .from('post_brands')
+                    .delete()
+                    .eq('post_uuid', postId),
+                supabase
+                    .from('post_styles')
+                    .delete()
+                    .eq('post_uuid', postId),
+                supabase.storage
+                    .from('outfits')
+                    .remove([postId])
+            ]);
+
+            // Then delete the post
+            const { error } = await supabase
+                .from('posts')
+                .delete()
+                .eq('uuid', postId);
+
+            if (error) throw error;
+
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, error: error.message };
+        }
+    };
+
+    return { deletePost };
+}
+
+// Moved from BrandsScreen - Query for brands
+export function useBrands() {
+    return useQuery<Brand[]>({
+        queryKey: ['brands'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('brands')
+                .select('id, name')
+                .order('name');
+            if (error) throw error;
+            return data.map(brand => ({
+                id: brand.id,
+                name: brand.name,
+                x_coord: null,
+                y_coord: null,
+            }));
+        },
+    });
+}
+
+// Moved from BrandsScreen - Query for styles
+export function useStyles() {
+    return useQuery<Style[]>({
+        queryKey: ['styles'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('styles')
+                .select('id, name')
+                .order('name');
+            if (error) throw error;
+            return data;
+        },
+    });
+}
+
+// Moved from BrandsScreen - Function to fetch filtered posts by page
+export function useFilteredPostsByStyles(selectedStyles: number[], pageSize = 10) {
+    const isTabFocused = useIsTabFocused('Brands');
+
+    const fetchFilteredPostsPage = useCallback(async (pageParam = 0) => {
+        const from = pageParam * pageSize;
+        const to = from + pageSize - 1;
+        console.log('[useFilteredPostsByStyles] Fetching page:', pageParam, 'from:', from, 'to:', to, 'with styles:', selectedStyles);
+
+        let postQuery = supabase
+            .from('posts')
+            .select(POST_SELECT_QUERY, { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(from, to);
+
+        if (selectedStyles.length > 0) {
+            // Get posts that have ANY of the selected styles
+            const { data: styleFilteredPosts, error: styleError } = await supabase
+                .from('post_styles')
+                .select('post_uuid')
+                .in('style_id', selectedStyles);
+
+            if (styleError) throw styleError;
+
+            // Get unique post UUIDs
+            const postUuids = [...new Set(styleFilteredPosts.map(post => post.post_uuid))];
+
+            if (postUuids.length > 0) {
+                postQuery = postQuery.in('uuid', postUuids);
+            } else {
+                return {
+                    posts: [],
+                    nextPage: undefined,
+                    totalCount: 0
+                };
+            }
+        }
+
+        const { data, error, count } = await postQuery;
+        console.log('[useFilteredPostsByStyles] Query response:', { dataLength: data?.length, error, count });
+        if (error) throw error;
+
+        // Process the posts and format them
+        const formattedPosts = await Promise.all((data || []).map(async (post) => {
+            return formatPost(post);
+        }));
+
+        return {
+            posts: formattedPosts,
+            nextPage: formattedPosts.length === pageSize ? pageParam + 1 : undefined,
+            totalCount: count || 0
+        };
+    }, [selectedStyles, pageSize]);
+
+    return useInfiniteQuery({
+        queryKey: ['stylePosts', selectedStyles],
+        queryFn: ({ pageParam = 0 }) => fetchFilteredPostsPage(pageParam),
+        getNextPageParam: (lastPage) => lastPage.nextPage,
+        initialPageParam: 0,
+        enabled: isTabFocused,
+        staleTime: 30 * 1000,
+        gcTime: 5 * 60 * 1000,
+    });
+}
+
+// Helper functions
+
 // New function to fetch paginated user posts with debugging
 async function fetchUserPostsPage(username: string, page: number, pageSize: number) {
     const from = page * pageSize;
@@ -252,127 +451,6 @@ async function fetchUserPostsPage(username: string, page: number, pageSize: numb
     return processedData.map(formatPost);
 }
 
-export function useDeletePost() {
-    const queryClient = useQueryClient();
-
-    const deletePost = async (postId: string) => {
-        try {
-            // Delete post_brands and post_styles entries first
-            await Promise.all([
-                supabase
-                    .from('post_brands')
-                    .delete()
-                    .eq('post_uuid', postId),
-                supabase
-                    .from('post_styles')
-                    .delete()
-                    .eq('post_uuid', postId),
-                supabase.storage
-                    .from('outfits')
-                    .remove([postId])
-            ]);
-
-            // Then delete the post
-            const { error } = await supabase
-                .from('posts')
-                .delete()
-                .eq('uuid', postId);
-
-            if (error) throw error;
-
-            return { success: true };
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
-    };
-
-    return { deletePost };
-}
-
-// Reusable query functions
-async function fetchPost(postId: string) {
-    const { data, error } = await supabase
-        .from('posts')
-        .select(POST_SELECT_QUERY)
-        .eq('uuid', postId)
-        .single();
-
-    if (error) throw error;
-
-    // Update public_image_url if needed
-    const processedPost = await updatePostWithPublicUrl(data);
-    return formatPost(processedPost);
-}
-
-export function useGlobalFeed(pageSize = 5) {
-    const isActive = useRef(true);
-
-    const queryClient = useQueryClient();
-    console.log('[useGlobalFeed] Initializing with pageSize:', pageSize);
-
-    useEffect(() => {
-        isActive.current = true;
-        console.log('[useGlobalFeed] Setting up realtime subscription');
-        // Subscribe to all post changes
-        const channel: RealtimeChannel = supabase
-            .channel('global-posts')
-            .on('postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'posts'
-                },
-                (payload) => {
-                    if (!isActive.current) return;
-                    console.log('[useGlobalFeed] Realtime change detected:', payload.eventType);
-                    // Refetch the global feed when any changes occur
-                    queryClient.invalidateQueries({ queryKey: ['globalFeed'] });
-                }
-            )
-            .subscribe();
-
-        return () => {
-            isActive.current = false;
-            console.log('[useGlobalFeed] Cleaning up realtime subscription');
-            channel.unsubscribe();
-        };
-    }, [queryClient]);
-
-    const result = useInfiniteQuery({
-        queryKey: ['globalFeed'],
-        queryFn: async ({ pageParam = 0 }) => {
-            console.log('[useGlobalFeed] Fetching page:', pageParam, 'with pageSize:', pageSize);
-            const result = await fetchGlobalFeedPage(pageParam, pageSize);
-            console.log('[useGlobalFeed] Fetched page data. Items count:', result.length);
-            return result;
-        },
-        getNextPageParam: (lastPage, allPages) => {
-            const hasMore = lastPage.length === pageSize;
-            const nextPage = hasMore ? allPages.length : undefined;
-            console.log(
-                '[useGlobalFeed] getNextPageParam -',
-                'lastPageSize:', lastPage.length,
-                'pageSize:', pageSize,
-                'totalPages:', allPages.length,
-                'hasMore:', hasMore,
-                'nextPage:', nextPage
-            );
-            return nextPage;
-        },
-        initialPageParam: 0
-    });
-
-    console.log(
-        '[useGlobalFeed] Query state -',
-        'isFetching:', result.isFetching,
-        'isFetchingNextPage:', result.isFetchingNextPage,
-        'hasNextPage:', result.hasNextPage,
-        'pages count:', result.data?.pages?.length || 0
-    );
-
-    return result;
-}
-
 // Updated fetch function with pagination and logging
 async function fetchGlobalFeedPage(page: number, pageSize: number) {
     const from = page * pageSize;
@@ -412,6 +490,21 @@ async function fetchGlobalFeedPage(page: number, pageSize: number) {
     // Process posts and update public_image_url if needed
     const processedData = await Promise.all(data.map(updatePostWithPublicUrl));
     return processedData.map(formatPost);
+}
+
+// Reusable query functions
+async function fetchPost(postId: string) {
+    const { data, error } = await supabase
+        .from('posts')
+        .select(POST_SELECT_QUERY)
+        .eq('uuid', postId)
+        .single();
+
+    if (error) throw error;
+
+    // Update public_image_url if needed
+    const processedPost = await updatePostWithPublicUrl(data);
+    return formatPost(processedPost);
 }
 
 // Helper function to update post with public_image_url if it doesn't exist

@@ -10,6 +10,7 @@ import { useRef } from 'react';
 import { Modalize } from 'react-native-modalize';
 import { PostModal } from '@/components/PostModal';
 import type { RootStackParamList, MainTabParamList, DiscoverTabParamList } from '../types';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Import screens
 import { Login } from './screens/auth/Login';
@@ -30,49 +31,51 @@ const TopTab = createMaterialTopTabNavigator<DiscoverTabParamList>();
 function TopTabNavigator() {
   return (
     <Layout>
-      <TopTab.Navigator
-        initialRouteName="Global"
-        screenOptions={{
-          tabBarStyle: { elevation: 0, shadowOpacity: 0 },
-          tabBarIndicatorStyle: { backgroundColor: '#000' },
-          tabBarPressColor: 'transparent',
-          tabBarActiveTintColor: '#000',
-          tabBarInactiveTintColor: '#666',
-          swipeEnabled: true,
-          tabBarItemStyle: { paddingBottom: 0 }
-        }}
-      >
-        <TopTab.Screen
-          name="Global"
-          component={Global}
-          options={{
-            tabBarLabel: '',
-            tabBarIcon: ({ color }) => (
-              <MaterialIcons name="public" size={30} color={color} />
-            ),
+      <ErrorBoundary>
+        <TopTab.Navigator
+          initialRouteName="Global"
+          screenOptions={{
+            tabBarStyle: { elevation: 0, shadowOpacity: 0 },
+            tabBarIndicatorStyle: { backgroundColor: '#000' },
+            tabBarPressColor: 'transparent',
+            tabBarActiveTintColor: '#000',
+            tabBarInactiveTintColor: '#666',
+            swipeEnabled: true,
+            tabBarItemStyle: { paddingBottom: 0 }
           }}
-        />
-        <TopTab.Screen
-          name="Friends"
-          component={Friends}
-          options={{
-            tabBarLabel: '',
-            tabBarIcon: ({ color }) => (
-              <MaterialIcons name="group" size={30} color={color} />
-            ),
-          }}
-        />
-        <TopTab.Screen
-          name="Brands"
-          component={Brands}
-          options={{
-            tabBarLabel: '',
-            tabBarIcon: ({ color }) => (
-              <MaterialIcons name="sell" size={30} color={color} />
-            ),
-          }}
-        />
-      </TopTab.Navigator>
+        >
+          <TopTab.Screen
+            name="Global"
+            component={Global}
+            options={{
+              tabBarLabel: '',
+              tabBarIcon: ({ color }) => (
+                <MaterialIcons name="public" size={30} color={color} />
+              ),
+            }}
+          />
+          <TopTab.Screen
+            name="Friends"
+            component={Friends}
+            options={{
+              tabBarLabel: '',
+              tabBarIcon: ({ color }) => (
+                <MaterialIcons name="group" size={30} color={color} />
+              ),
+            }}
+          />
+          <TopTab.Screen
+            name="Brands"
+            component={Brands}
+            options={{
+              tabBarLabel: '',
+              tabBarIcon: ({ color }) => (
+                <MaterialIcons name="sell" size={30} color={color} />
+              ),
+            }}
+          />
+        </TopTab.Navigator>
+      </ErrorBoundary>
     </Layout>
   );
 }

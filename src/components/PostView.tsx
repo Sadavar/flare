@@ -19,12 +19,11 @@ interface PostViewProps {
     post: Post;
 }
 
-// Update the type for the API response
-type ColorApiResponse = {
-    colors: string[];
-};
-
-export function PostView({ post }: PostViewProps) {
+export function PostView2({ post }: PostViewProps) {
+    const { username: currentUsername } = useSession();
+    const navigation = useNavigation();
+    const [showTags, setShowTags] = useState(true);
+    const [imageHeight, setImageHeight] = useState(undefined);
 
     console.log('post', post);
 
@@ -37,95 +36,22 @@ export function PostView({ post }: PostViewProps) {
     )
 }
 
-export function PostView2(props: PostViewProps) {
+export function PostView({ post }: PostViewProps) {
     const { username: currentUsername } = useSession();
     const navigation = useNavigation();
     const [showTags, setShowTags] = useState(true);
-    const [imageColors, setImageColors] = useState<ColorApiResponse | null>(null);
     const [isImageLoaded, setIsImageLoaded] = useState(false);
     const [imageHeight, setImageHeight] = useState(undefined);
     const loadingStartTimeRef = useRef(Date.now());
 
-    // At the top of the component
-    const isMounted = useRef(true);
-    const pendingRequests = useRef([]);
-
-    // Add to useEffect for lifecycle management
-    useEffect(() => {
-        isMounted.current = true;
-        loadingStartTimeRef.current = Date.now();
-
-        return () => {
-            isMounted.current = false;
-
-            // Cancel any pending color extraction requests
-            pendingRequests.current.forEach((controller: AbortController) => {
-                controller.abort();
-            });
-            pendingRequests.current = [];
-        };
-    }, []);
-
-    // Update handleOnLoad to check mounted state
     const handleOnLoad = useCallback((event) => {
-        if (!isMounted.current) return;
-
-        const loadTime = Date.now() - loadingStartTimeRef.current;
-        console.log(`Image loaded in ${loadTime}ms`);
-
         // Calculate actual height based on natural image dimensions
-        if (event?.source && isMounted.current) {
-            const { width, height } = event.source;
-            const aspectRatio = width / height;
-            const calculatedHeight = SCREEN_WIDTH / aspectRatio;
-            setImageHeight(calculatedHeight);
-        }
+        const { width, height } = event.source;
+        const aspectRatio = width / height;
+        const calculatedHeight = SCREEN_WIDTH / aspectRatio;
+        setImageHeight(calculatedHeight);
 
-        if (isMounted.current) {
-            setIsImageLoaded(true);
-
-            // Only fetch colors if component is still mounted
-            if (props.post?.image_url && isMounted.current) {
-                fetchColors(props.post.image_url);
-            }
-        }
-    }, [props.post?.image_url]);
-
-    // Update fetchColors to be cancelable and check mounted state
-    const fetchColors = async (imageUrl) => {
-        if (!isMounted.current) return;
-
-        const controller = new AbortController();
-        pendingRequests.current.push(controller);
-
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const response = await fetch(
-                'https://yhnamwhotpnhgcicqpmd.supabase.co/functions/v1/extractColors',
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${session?.access_token}`
-                    },
-                    body: JSON.stringify({ image_url: imageUrl }),
-                    signal: controller.signal
-                }
-            );
-
-            if (!isMounted.current) return;
-
-            const data = await response.json();
-            setImageColors(data);
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                console.error('Error getting colors:', err);
-            }
-        } finally {
-            // Remove this controller from pending requests
-            pendingRequests.current = pendingRequests.current.filter(c => c !== controller);
-        }
-    };
+    }, [post?.image_url]);
 
     const handleImageError = useCallback((error) => {
         console.error('Error loading image:', error);
@@ -134,15 +60,7 @@ export function PostView2(props: PostViewProps) {
         setIsImageLoaded(true);
     }, []);
 
-    if (isLoading) {
-        return (
-            <View style={styles.container}>
-                <Text>Loading...</Text>
-            </View>
-        );
-    }
-
-    if (!props.post) {
+    if (!post) {
         return (
             <View style={styles.container}>
                 <Text>Post not found</Text>
@@ -177,20 +95,20 @@ export function PostView2(props: PostViewProps) {
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.userInfo}
-                    onPress={() => handleUserPress(props.post.username)}
+                    onPress={() => handleUserPress(post.username)}
                     activeOpacity={1}
                 >
                     <View style={styles.userIcon}>
                         <MaterialIcons name="person" size={24} color="black" />
                     </View>
-                    <Text style={styles.username}>@{props.post.username}</Text>
+                    <Text style={styles.username}>@{post.username}</Text>
                 </TouchableOpacity>
             </View>
 
             <View style={styles.imageContainer}>
                 {/* Hidden image for preloading that will trigger onLoad/calculate dimensions */}
                 <Image
-                    source={{ uri: props.post.image_url }}
+                    source={{ uri: post.image_url }}
                     style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}
                     onLoad={handleOnLoad}
                     onError={handleImageError}
@@ -198,27 +116,26 @@ export function PostView2(props: PostViewProps) {
                     cachePolicy="memory-disk"
                 />
 
-                {isImageLoaded && (
-                    <TouchableOpacity
-                        onPress={toggleTagsVisibility}
-                        activeOpacity={1}
-                        style={{ width: '100%' }}
-                    >
-                        <Image
-                            source={{ uri: props.post.image_url }}
-                            style={[
-                                styles.image,
-                                { height: imageHeight }
-                            ]}
-                            contentFit="contain"
-                            recyclingKey={props.post.uuid}
-                            transition={200} // Disable transition to prevent resize effect
-                            priority="high"
-                        />
-                    </TouchableOpacity>
-                )}
 
-                {isImageLoaded && showTags && props.post.brands?.map((brand) => (
+                <TouchableOpacity
+                    onPress={toggleTagsVisibility}
+                    activeOpacity={1}
+                    style={{ width: '100%' }}
+                >
+                    <Image
+                        source={{ uri: post.image_url }}
+                        style={[
+                            styles.image,
+                            { height: imageHeight }
+                        ]}
+                        contentFit="contain"
+                        recyclingKey={post.uuid}
+                        transition={200} // Disable transition to prevent resize effect
+                        priority="high"
+                    />
+                </TouchableOpacity>
+
+                {post.brands?.map((brand) => (
                     <TouchableOpacity
                         key={brand.id}
                         style={[
@@ -236,30 +153,10 @@ export function PostView2(props: PostViewProps) {
                 ))}
             </View>
 
-            {/* Color palette section */}
-            {imageColors && (
-                <View style={styles.colorsContainer}>
-                    <Text style={styles.colorsTitle}>Color Palette</Text>
-                    <View style={styles.colorStrip}>
-                        {imageColors?.colors?.slice(0, 5).map((color, index) => (
-                            <View
-                                key={index}
-                                style={[
-                                    styles.colorSwatch,
-                                    { backgroundColor: color }
-                                ]}
-                            >
-                                {/* <Text style={styles.colorText}>{color}</Text> */}
-                            </View>
-                        ))}
-                    </View>
-                </View>
-            )}
-
-            {props.post.description && (
+            {post.description && (
                 <>
                     <Text style={{ fontSize: 14, fontWeight: '600', paddingLeft: 15 }}>Description:</Text>
-                    <Text style={styles.description}>{props.post.description}</Text>
+                    <Text style={styles.description}>{post.description}</Text>
                 </>
             )
             }

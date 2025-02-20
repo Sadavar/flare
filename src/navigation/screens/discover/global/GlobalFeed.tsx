@@ -1,20 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Dimensions, TouchableOpacity } from 'react-native';
-import { MasonryFlashList } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { useGlobalFeed } from '@/hooks/usePostQueries';
 import { useNavigation } from '@react-navigation/native';
-import { Brand } from '@/types';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const DEFAULT_ASPECT_RATIO = 0.8;
+import { Post } from '@/types';
 
 export function GlobalFeed() {
     const onEndReachedCalledDuringMomentum = useRef(false);
-    const isMounted = useRef(true);
-    const [imageAspectRatios, setImageAspectRatios] = useState({});
     const navigation = useNavigation();
-    // Get global feed with pagination (adjust page size as needed)
+
     const {
         data,
         fetchNextPage,
@@ -23,116 +18,71 @@ export function GlobalFeed() {
         isLoading,
         isError,
         refetch
-    } = useGlobalFeed(8); // Use a reasonable page size
+    } = useGlobalFeed(10);
 
     // Flatten posts from all pages
-    const allPosts = useMemo(() => {
-        return data?.pages?.flat() || [];
-    }, [data]);
+    const allPosts = data?.pages?.flat() || [];
 
-    // Handle refresh - should reset to first page only
+    // Handle refresh
     const handleRefresh = useCallback(() => {
-        console.log('[GlobalFeed] Refreshing feed');
-        // Pass true to refetch to indicate we want to reset pagination
         refetch({ refetchPage: (_data, index) => index === 0 });
     }, [refetch]);
 
-    // Keep track of mounted state to prevent updates after unmount
-    useEffect(() => {
-        isMounted.current = true;
-        return () => {
-            isMounted.current = false;
-        };
-    }, []);
-
-    // Handle loading more posts when reaching the end
+    // Handle loading more posts
     const handleLoadMore = useCallback(() => {
-        if (!isMounted.current || isFetchingNextPage || !hasNextPage) return;
-
+        if (isFetchingNextPage || !hasNextPage) return;
         if (onEndReachedCalledDuringMomentum.current) return;
 
-        console.log('[GlobalFeed] Loading next page of posts');
         fetchNextPage().catch(err => {
             console.error('[GlobalFeed] Error loading more posts:', err);
         });
         onEndReachedCalledDuringMomentum.current = true;
     }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-
-    // Pre-calculate aspect ratios when image loads
-    const onImageLoad = useCallback((postId, width, height) => {
-        if (width && height && isMounted.current) {
-            setImageAspectRatios(prev => ({
-                ...prev,
-                [postId]: width / height
-            }));
-        }
-    }, []);
-
-    // Render each post with dynamic height
-    const renderItem = useCallback(({ item, columnIndex }) => {
-        // Calculate column width (accounting for gaps and padding)
-        const columnWidth = (SCREEN_WIDTH - 32) / 2; // 16px padding on each side
-
-        // Use the measured aspect ratio, or default if not available
-        const aspectRatio = imageAspectRatios[item.uuid] || DEFAULT_ASPECT_RATIO;
-
-        // Calculate height based on aspect ratio
-        const itemHeight = columnWidth / aspectRatio;
-
+    // Render each post
+    const renderItem = useCallback(({ item }: { item: Post }) => {
         return (
-            <TouchableOpacity onPress={() => {
-                console.log('Pressed post:', item);
-                navigation.navigate('PostDetails', { post: item });
-            }}>
-                <View style={styles.postContainer}>
-
+            <View>
+                <TouchableOpacity
+                    style={styles.postContainer}
+                    onPress={() => navigation.navigate('PostDetails', { post: item })}
+                >
                     <Image
                         source={{ uri: item.image_url }}
-                        style={[
-                            styles.postImage,
-                            { height: itemHeight }
-                        ]}
+                        style={styles.postImage}
                         contentFit="cover"
                         transition={300}
-                        recyclingKey={item.uuid}
-                        onLoad={({ source: { width, height } }) => {
-                            onImageLoad(item.uuid, width, height);
-                        }}
                     />
+                </TouchableOpacity>
 
-                    {item.username && (
-                        <Text style={styles.username}>@{item.username}</Text>
-                    )}
 
-                    {item.description && (
-                        <Text numberOfLines={2} style={styles.description}>
-                            {item.description}
-                        </Text>
-                    )}
-
-                    {item.brands && item.brands.length > 0 && (
-                        <View style={styles.brandsContainer}>
-                            <Text style={styles.brandsLabel}>Brands</Text>
-                            <View style={styles.brandsList}>
-                                {item.brands.slice(0, 3).map((brand: Brand) => (
-                                    <View key={brand.id} style={styles.brandButton}>
-                                        <Text style={styles.brandText}>{brand.name}</Text>
-                                    </View>
-                                ))}
-                                {item.brands.length > 3 && (
-                                    <View style={styles.brandButton}>
-                                        <Text style={styles.brandText}>+{item.brands.length - 3}</Text>
-                                    </View>
-                                )}
-                            </View>
+                {item.brands && item.brands.length > 0 && (
+                    <View style={styles.brandsContainer}>
+                        <Text style={styles.brandsLabel}>Brands</Text>
+                        <View style={styles.brandsList}>
+                            {item.brands.slice(0, 2).map((brand) => (
+                                <TouchableOpacity
+                                    key={brand.id}
+                                    style={styles.brandButton}
+                                    onPress={() => navigation.navigate('Brands', {
+                                        screen: 'BrandDetails',
+                                        params: { brandId: brand.id, brandName: brand.name }
+                                    })}
+                                >
+                                    <Text style={styles.brandText}>{brand.name}</Text>
+                                </TouchableOpacity>
+                            ))}
+                            {item.brands.length > 2 && (
+                                <View style={styles.brandButton}>
+                                    <Text style={styles.brandText}>+{item.brands.length - 2}</Text>
+                                </View>
+                            )}
                         </View>
-                    )}
-
-                </View>
-            </TouchableOpacity>
-        );
-    }, [imageAspectRatios, onImageLoad]);
+                    </View>
+                )}
+            </View>
+        )
+    }, [navigation]);
 
     // Render loading indicator at bottom during pagination
     const renderFooter = useCallback(() => {
@@ -146,23 +96,7 @@ export function GlobalFeed() {
         );
     }, [isFetchingNextPage]);
 
-    // Calculate estimated text height based on content
-    const getEstimatedTextHeight = useCallback((item) => {
-        let height = 0;
-
-        // Username height
-        if (item.username) height += 30; // Account for text and margins
-
-        // Description height (if present)
-        if (item.description) height += 40; // For up to 2 lines of text
-
-        // Brands section height (if present)
-        if (item.brands && item.brands.length > 0) height += 50;
-
-        return height;
-    }, []);
-
-    // Handle main UI states
+    // Handle loading state
     if (isLoading) {
         return (
             <View style={styles.loadingContainer}>
@@ -172,6 +106,7 @@ export function GlobalFeed() {
         );
     }
 
+    // Handle error state
     if (isError) {
         return (
             <View style={styles.errorContainer}>
@@ -182,6 +117,7 @@ export function GlobalFeed() {
         );
     }
 
+    // Handle empty state
     if (allPosts.length === 0) {
         return (
             <View style={styles.emptyContainer}>
@@ -192,12 +128,12 @@ export function GlobalFeed() {
 
     return (
         <View style={styles.container}>
-            <MasonryFlashList
+            <FlashList
                 data={allPosts}
                 numColumns={2}
                 renderItem={renderItem}
-                estimatedItemSize={300}
-                keyExtractor={item => item.uuid}
+                estimatedItemSize={250}
+                keyExtractor={(item) => item.uuid}
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.5}
                 onMomentumScrollBegin={() => {
@@ -205,36 +141,9 @@ export function GlobalFeed() {
                 }}
                 ListFooterComponent={renderFooter}
                 contentContainerStyle={styles.listContent}
-                optimizeItemArrangement={true}
-                overrideItemLayout={(layout, item, index, maxColumns) => {
-                    // Safe calculation - use default values if data is missing
-                    if (!item || !item.uuid) {
-                        layout.size = 300; // Fallback size
-                        layout.span = 1;
-                        return;
-                    }
-
-                    // Calculate width safely
-                    const columnWidth = (SCREEN_WIDTH - 32) / Math.max(1, maxColumns);
-
-                    // Get aspect ratio with fallback
-                    const aspectRatio = imageAspectRatios[item.uuid] || DEFAULT_ASPECT_RATIO;
-
-                    // Calculate image height
-                    const imageHeight = columnWidth / aspectRatio;
-
-                    // Get text content height estimation
-                    const textContentHeight = getEstimatedTextHeight(item);
-
-                    // Total cell height with some buffer
-                    const totalHeight = imageHeight + textContentHeight + 20; // 20px buffer
-
-                    // Ensure we have a positive, reasonable height
-                    layout.size = Math.max(100, Math.min(1000, totalHeight));
-                    layout.span = 1;
-                }}
                 refreshing={isLoading}
                 onRefresh={handleRefresh}
+                showsVerticalScrollIndicator={false}
             />
         </View>
     );
@@ -246,11 +155,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     listContent: {
-        paddingHorizontal: 16,
+        paddingHorizontal: 8,
         paddingTop: 8,
         paddingBottom: 20,
     },
     postContainer: {
+        flex: 1,
         margin: 6,
         borderRadius: 12,
         backgroundColor: '#fff',
@@ -263,27 +173,12 @@ const styles = StyleSheet.create({
     },
     postImage: {
         width: '100%',
+        aspectRatio: 0.75, // 3:4 aspect ratio (width:height)
         backgroundColor: '#f0f0f0',
-        borderTopLeftRadius: 12,
-        borderTopRightRadius: 12,
-    },
-    username: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#333',
-        marginTop: 8,
-        marginHorizontal: 10,
-    },
-    description: {
-        fontSize: 12,
-        color: '#666',
-        marginHorizontal: 10,
-        marginTop: 4,
-        marginBottom: 6,
+        borderRadius: 12,
     },
     brandsContainer: {
-        marginHorizontal: 10,
-        marginBottom: 10,
+        margin: 10,
     },
     brandsLabel: {
         fontSize: 11,

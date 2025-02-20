@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import type { ProfileStackParamList } from '@/types';
 import { Layout } from '@/components/Layout';
-import { usePost } from '@/hooks/usePostQueries';
+import { usePost, useDeletePost } from '@/hooks/usePostQueries';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -16,10 +16,11 @@ type PostDetailsRouteProp = RouteProp<ProfileStackParamList, 'PostDetails'>;
 export function PostDetails() {
     const route = useRoute<PostDetailsRouteProp>();
     const navigation = useNavigation();
-    const { postId } = route.params;
+    const { post } = route.params;
     const [showTags, setShowTags] = useState(true);
 
-    const { data: post, isLoading } = usePost(postId);
+    const { deletePost } = useDeletePost();
+
     const queryClient = useQueryClient();
 
     const handleDelete = async () => {
@@ -35,35 +36,9 @@ export function PostDetails() {
                     text: 'Delete',
                     style: 'destructive',
                     onPress: async () => {
-                        try {
-                            // Delete post_brands and post_styles entries first
-                            await Promise.all([
-                                supabase
-                                    .from('post_brands')
-                                    .delete()
-                                    .eq('post_uuid', postId),
-                                supabase
-                                    .from('post_styles')
-                                    .delete()
-                                    .eq('post_uuid', postId)
-                            ]);
-
-                            // Then delete the post
-                            const { error } = await supabase
-                                .from('posts')
-                                .delete()
-                                .eq('uuid', postId);
-
-                            if (error) throw error;
-
-                            // Invalidate queries to refresh the profile
-                            queryClient.invalidateQueries({ queryKey: ['userPosts'] });
-
-                            // Navigate back
-                            navigation.goBack();
-                        } catch (error: any) {
-                            Alert.alert('Error', error.message);
-                        }
+                        // Navigate back
+                        await deletePost(post.uuid);
+                        navigation.goBack();
                     },
                 },
             ]
@@ -85,15 +60,7 @@ export function PostDetails() {
         setShowTags((prevState) => !prevState);
     };
 
-    if (isLoading) {
-        return (
-            <Layout>
-                <View style={styles.container}>
-                    <Text>Loading...</Text>
-                </View>
-            </Layout>
-        );
-    }
+
 
     if (!post) {
         return (
@@ -113,6 +80,11 @@ export function PostDetails() {
                         source={{ uri: post.image_url }}
                         style={styles.image}
                         contentFit="contain"
+                        transition={200}
+                        priority="high"
+                        onError={(error) => {
+                            console.error('Error loading image:', error);
+                        }}
                     />
                 </TouchableOpacity>
                 {showTags && post.brands?.map((brand) => (
@@ -170,7 +142,7 @@ export function PostDetails() {
 
                 <TouchableOpacity
                     style={styles.editButton}
-                    onPress={() => navigation.navigate('PostEdit', { postId })}
+                    onPress={() => navigation.navigate('PostEdit', { post })}
                 >
                     <MaterialIcons name="edit" size={24} color="#007AFF" />
                     <Text style={styles.editButtonText}>Edit Post</Text>

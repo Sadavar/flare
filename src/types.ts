@@ -9,7 +9,7 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
     Discover: undefined;
-    Post: { image?: string, postId?: string };
+    Post: { image?: string, post?: Post };
     Profile: {
         screen?: keyof ProfileStackParamList;
         params?: ProfileStackParamList[keyof ProfileStackParamList];
@@ -54,7 +54,7 @@ export type BrandsStackParamList = {
 export type ProfileStackParamList = {
     ProfileMain: undefined;
     PostDetails: { post: Post };
-    PostEdit: { postId: string };
+    PostEdit: { post: Post };
 };
 
 export type PostStackParamList = {

@@ -237,10 +237,15 @@ export function Post() {
 
             if (uploadError) throw uploadError;
 
+            const public_image_url = supabase.storage
+                .from('outfits')
+                .getPublicUrl(fileName);
+
             const { data: postData, error: postError } = await supabase
                 .from('posts')
                 .insert([{
                     image_url: fileName,
+                    public_image_url: public_image_url,
                     description,
                     user_uuid: user.id,
                 }])

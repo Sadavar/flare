@@ -1,13 +1,85 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Dimensions, TouchableOpacity, TextInput } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { useGlobalFeed } from '@/hooks/usePostQueries';
 import { useNavigation } from '@react-navigation/native';
 import { Post } from '@/types';
+import { PaginatedGridList } from '@/components/PaginatedGridList';
+import { MaterialIcons } from '@expo/vector-icons';
+
+function GlobalSearch() {
+
+    const styles = StyleSheet.create({
+
+        searchContainer: {
+
+            flexDirection: 'row',
+
+            alignItems: 'center',
+
+            borderWidth: 0.5,
+
+            borderColor: '#000',
+
+            borderRadius: 20,
+
+            paddingHorizontal: 10,
+
+            margin: 15,
+
+        },
+
+        searchIcon: {
+
+            marginRight: 10,
+
+        },
+
+        searchInput: {
+
+            flex: 1,
+
+            height: 40,
+
+        },
+
+    });
+
+    return (
+        <View style={styles.searchContainer}>
+            <MaterialIcons name="search" size={30} color="#000" style={styles.searchIcon} />
+            <TextInput
+                style={styles.searchInput}
+                placeholder="Search for brands"
+                placeholderTextColor="#666"
+                // value={searchQuery}
+                // onChangeText={setSearchQuery}
+                autoCorrect={false}
+            />
+        </View>
+    );
+}
+
+function Header() {
+    return (
+        <>
+
+            <View style={styles.fixedHeader}>
+
+                <Text style={styles.mainTitle}>Discover Globally</Text>
+
+                <GlobalSearch
+
+                />
+
+            </View>
+
+        </>
+    )
+}
 
 export function GlobalFeed() {
-    const onEndReachedCalledDuringMomentum = useRef(false);
     const navigation = useNavigation();
 
     const {
@@ -22,22 +94,6 @@ export function GlobalFeed() {
 
     // Flatten posts from all pages
     const allPosts = data?.pages?.flat() || [];
-
-    // Handle refresh
-    const handleRefresh = useCallback(() => {
-        refetch({ refetchPage: (_data, index) => index === 0 });
-    }, [refetch]);
-
-    // Handle loading more posts
-    const handleLoadMore = useCallback(() => {
-        if (isFetchingNextPage || !hasNextPage) return;
-        if (onEndReachedCalledDuringMomentum.current) return;
-
-        fetchNextPage().catch(err => {
-            console.error('[GlobalFeed] Error loading more posts:', err);
-        });
-        onEndReachedCalledDuringMomentum.current = true;
-    }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
     // Render each post
     const renderItem = useCallback(({ item }: { item: Post }) => {
@@ -84,68 +140,25 @@ export function GlobalFeed() {
         )
     }, [navigation]);
 
-    // Render loading indicator at bottom during pagination
-    const renderFooter = useCallback(() => {
-        if (!isFetchingNextPage) return null;
 
-        return (
-            <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color="#000" />
-                <Text style={styles.footerText}>Loading more posts...</Text>
-            </View>
-        );
-    }, [isFetchingNextPage]);
-
-    // Handle loading state
-    if (isLoading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#000" />
-                <Text style={styles.loadingText}>Loading posts...</Text>
-            </View>
-        );
-    }
-
-    // Handle error state
-    if (isError) {
-        return (
-            <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>
-                    Error loading posts. Pull down to try again.
-                </Text>
-            </View>
-        );
-    }
-
-    // Handle empty state
-    if (allPosts.length === 0) {
-        return (
-            <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No posts found.</Text>
-            </View>
-        );
-    }
 
     return (
-        <View style={styles.container}>
-            <FlashList
-                data={allPosts}
-                numColumns={2}
-                renderItem={renderItem}
-                estimatedItemSize={250}
-                keyExtractor={(item) => item.uuid}
-                onEndReached={handleLoadMore}
-                onEndReachedThreshold={0.5}
-                onMomentumScrollBegin={() => {
-                    onEndReachedCalledDuringMomentum.current = false;
-                }}
-                ListFooterComponent={renderFooter}
-                contentContainerStyle={styles.listContent}
-                refreshing={isLoading}
-                onRefresh={handleRefresh}
-                showsVerticalScrollIndicator={false}
-            />
-        </View>
+        <PaginatedGridList
+            data={allPosts}
+            header={<Header />}
+            renderItem={renderItem}
+            fetchNextPage={fetchNextPage}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            isLoading={isLoading}
+            isError={isError}
+            refetch={refetch}
+            keyExtractor={(item) => item.uuid}
+            numColumns={2}
+            estimatedItemSize={250}
+            loadingMoreText="Loading more posts..."
+            contentContainerStyle={styles.listContent}
+        />
     );
 }
 
@@ -153,6 +166,16 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+    },
+    fixedHeader: {
+        paddingTop: 10,
+        backgroundColor: '#fff',
+        zIndex: 1,
+    },
+    mainTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        alignSelf: 'center',
     },
     listContent: {
         paddingHorizontal: 8,

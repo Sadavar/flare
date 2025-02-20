@@ -38,7 +38,7 @@ function StyleSearch({ searchQuery, setSearchQuery }: {
         </View>
     );
 }
-export function BrandsScreen() {
+export function BrandsScreen2() {
     return (
         <View>
             <Text>Brands Screen</Text>
@@ -46,7 +46,7 @@ export function BrandsScreen() {
     )
 }
 
-export function BrandsScreen2() {
+export function BrandsScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const [selectedStyles, setSelectedStyles] = useState<number[]>([]);
     const [searchQuery, setSearchQuery] = useState('');

@@ -1,31 +1,54 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSession } from '@/context/SessionContext';
-import { Layout } from '@/components/Layout';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Post, ProfileStackParamList } from '@/types';
 import { useUserPosts } from '@/hooks/usePostQueries';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { PaginatedGridList } from '@/components/PaginatedGridList';
 
 type ProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
 
 export function ProfileMain() {
     const navigation = useNavigation<ProfileNavigationProp>();
     const { user, username = '' } = useSession();
+    const queryClient = useQueryClient();
+    const PAGE_SIZE = 5; // Number of posts per page
 
-    const { data: posts, isLoading } = useUserPosts(username || "")
+    // Get user posts with pagination
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+        isError,
+        refetch
+    } = useUserPosts(username || "", PAGE_SIZE);
 
-    const renderPost = ({ item }: { item: Post }) => (
+    // Flatten posts from all pages
+    const allPosts = data?.pages?.flat() || [];
+
+    // Handle refresh
+    const handleRefresh = useCallback(() => {
+        refetch({ refetchPage: (_data, index) => index === 0 });
+    }, [refetch]);
+
+    // Refetch when profile screen is focused
+    useFocusEffect(
+        useCallback(() => {
+            handleRefresh();
+        }, [handleRefresh])
+    );
+
+    // Render each post
+    const renderPost = useCallback(({ item }: { item: Post }) => (
         <TouchableOpacity
             style={styles.postItem}
-            onPress={() => navigation.navigate('PostDetails', { postId: item.uuid })}
+            onPress={() => navigation.navigate('PostDetails', { post: item })}
         >
             <Image
                 source={{ uri: item.image_url }}
@@ -33,65 +56,70 @@ export function ProfileMain() {
                 contentFit="cover"
             />
         </TouchableOpacity>
-    );
+    ), [navigation]);
 
-    const queryClient = useQueryClient();
+    // Render the profile header
+    const ProfileHeader = useCallback(() => (
+        <View style={styles.header}>
+            <View style={styles.profileSection}>
+                <View style={styles.userIcon}>
+                    <MaterialIcons name="person" size={40} color="black" />
+                </View>
+                <View style={styles.userInfo}>
+                    <Text style={styles.username}>@{username}</Text>
+                    <Text style={styles.bio}>professional frollicker | NYC 📍</Text>
+                </View>
+            </View>
 
-    const onRefresh = useCallback(() => {
-        queryClient.invalidateQueries({ queryKey: ['userPosts', username] });
-    }, [queryClient, username]);
+            <View style={styles.statsContainer}>
+                <View style={styles.statItem}>
+                    <Text style={styles.statNumber}>{allPosts.length || 0}</Text>
+                    <Text style={styles.statLabel}>Posts</Text>
+                </View>
+                <View style={styles.statItem}>
+                    <Text style={styles.statNumber}>1.2K</Text>
+                    <Text style={styles.statLabel}>Followers</Text>
+                </View>
+                <View style={styles.statItem}>
+                    <Text style={styles.statNumber}>45</Text>
+                    <Text style={styles.statLabel}>Brands</Text>
+                </View>
+            </View>
+            <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
+                <MaterialIcons name="refresh" size={24} color="black" />
+            </TouchableOpacity>
+        </View>
+    ), [username, allPosts.length, handleRefresh]);
 
-    useFocusEffect(
-        useCallback(() => {
-            onRefresh();
-        }, [onRefresh])
-    );
+    // Create empty component for user posts
+    const EmptyComponent = useCallback(() => (
+        <Text style={styles.emptyText}>No posts yet</Text>
+    ), []);
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <View style={styles.profileSection}>
-                    <View style={styles.userIcon}>
-                        <MaterialIcons name="person" size={40} color="black" />
-                    </View>
-                    <View style={styles.userInfo}>
-                        <Text style={styles.username}>@{username}</Text>
-                        <Text style={styles.bio}>professional frollicker | NYC 📍</Text>
-                    </View>
-                </View>
+            <ProfileHeader />
 
-                <View style={styles.statsContainer}>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>{posts?.length || 0}</Text>
-                        <Text style={styles.statLabel}>Posts</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>1.2K</Text>
-                        <Text style={styles.statLabel}>Followers</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>45</Text>
-                        <Text style={styles.statLabel}>Brands</Text>
-                    </View>
-                </View>
-                <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-                    <MaterialIcons name="refresh" size={24} color="black" />
-                </TouchableOpacity>
-            </View>
-
-            {isLoading ? (
-                <Text style={styles.loadingText}>Loading...</Text>
-            ) : (
-                <FlashList
-                    data={posts}
-                    renderItem={renderPost}
-                    numColumns={3}
-                    estimatedItemSize={124}
-                    ListEmptyComponent={
-                        <Text style={styles.emptyText}>No posts yet</Text>
-                    }
-                />
-            )}
+            <PaginatedGridList
+                data={allPosts}
+                renderItem={renderPost}
+                fetchNextPage={fetchNextPage}
+                hasNextPage={hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                isLoading={isLoading}
+                isError={isError}
+                refetch={handleRefresh}
+                keyExtractor={(item) => item.uuid}
+                numColumns={3}
+                estimatedItemSize={124}
+                emptyComponent={<EmptyComponent />}
+                loadingMoreText="Loading more posts..."
+                contentContainerStyle={styles.listContent}
+                listProps={{
+                    ListHeaderComponent: null,
+                    showsVerticalScrollIndicator: false,
+                }}
+            />
         </View>
     );
 }
@@ -159,15 +187,14 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
     },
-    loadingText: {
-        textAlign: 'center',
-        marginTop: 20,
-        color: '#666',
+    listContent: {
+        paddingTop: 0,
     },
     emptyText: {
         textAlign: 'center',
-        marginTop: 20,
+        marginTop: 50,
         color: '#666',
+        fontSize: 16,
     },
     refreshButton: {
         position: 'absolute',

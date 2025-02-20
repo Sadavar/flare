@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Brand } from '@/types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const DEFAULT_ASPECT_RATIO = 0.8;
 
 export function GlobalFeed() {
     const onEndReachedCalledDuringMomentum = useRef(false);
@@ -29,6 +30,13 @@ export function GlobalFeed() {
         return data?.pages?.flat() || [];
     }, [data]);
 
+    // Handle refresh - should reset to first page only
+    const handleRefresh = useCallback(() => {
+        console.log('[GlobalFeed] Refreshing feed');
+        // Pass true to refetch to indicate we want to reset pagination
+        refetch({ refetchPage: (_data, index) => index === 0 });
+    }, [refetch]);
+
     // Keep track of mounted state to prevent updates after unmount
     useEffect(() => {
         isMounted.current = true;
@@ -50,6 +58,7 @@ export function GlobalFeed() {
         onEndReachedCalledDuringMomentum.current = true;
     }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
+
     // Pre-calculate aspect ratios when image loads
     const onImageLoad = useCallback((postId, width, height) => {
         if (width && height && isMounted.current) {
@@ -65,9 +74,8 @@ export function GlobalFeed() {
         // Calculate column width (accounting for gaps and padding)
         const columnWidth = (SCREEN_WIDTH - 32) / 2; // 16px padding on each side
 
-        // Use a default aspect ratio until the real one is measured
-        // Most portrait photos are ~0.75 (3:4), landscape ~1.33 (4:3)
-        const aspectRatio = imageAspectRatios[item.uuid] || 0.8;
+        // Use the measured aspect ratio, or default if not available
+        const aspectRatio = imageAspectRatios[item.uuid] || DEFAULT_ASPECT_RATIO;
 
         // Calculate height based on aspect ratio
         const itemHeight = columnWidth / aspectRatio;
@@ -138,6 +146,22 @@ export function GlobalFeed() {
         );
     }, [isFetchingNextPage]);
 
+    // Calculate estimated text height based on content
+    const getEstimatedTextHeight = useCallback((item) => {
+        let height = 0;
+
+        // Username height
+        if (item.username) height += 30; // Account for text and margins
+
+        // Description height (if present)
+        if (item.description) height += 40; // For up to 2 lines of text
+
+        // Brands section height (if present)
+        if (item.brands && item.brands.length > 0) height += 50;
+
+        return height;
+    }, []);
+
     // Handle main UI states
     if (isLoading) {
         return (
@@ -183,19 +207,34 @@ export function GlobalFeed() {
                 contentContainerStyle={styles.listContent}
                 optimizeItemArrangement={true}
                 overrideItemLayout={(layout, item, index, maxColumns) => {
-                    // Required for optimizeItemArrangement
-                    // Get a rough estimate of height - will adjust when measured
-                    const columnWidth = (SCREEN_WIDTH - 32) / maxColumns;
-                    const aspectRatio = imageAspectRatios[item.uuid] || 0.8;
-                    // Add some space for text content
-                    const textContentHeight = item.description ? 80 : 40;
-                    const height = columnWidth / aspectRatio + textContentHeight;
+                    // Safe calculation - use default values if data is missing
+                    if (!item || !item.uuid) {
+                        layout.size = 300; // Fallback size
+                        layout.span = 1;
+                        return;
+                    }
 
-                    layout.size = height;
-                    layout.span = 1; // Each item spans 1 column
+                    // Calculate width safely
+                    const columnWidth = (SCREEN_WIDTH - 32) / Math.max(1, maxColumns);
+
+                    // Get aspect ratio with fallback
+                    const aspectRatio = imageAspectRatios[item.uuid] || DEFAULT_ASPECT_RATIO;
+
+                    // Calculate image height
+                    const imageHeight = columnWidth / aspectRatio;
+
+                    // Get text content height estimation
+                    const textContentHeight = getEstimatedTextHeight(item);
+
+                    // Total cell height with some buffer
+                    const totalHeight = imageHeight + textContentHeight + 20; // 20px buffer
+
+                    // Ensure we have a positive, reasonable height
+                    layout.size = Math.max(100, Math.min(1000, totalHeight));
+                    layout.span = 1;
                 }}
                 refreshing={isLoading}
-                onRefresh={refetch}
+                onRefresh={handleRefresh}
             />
         </View>
     );

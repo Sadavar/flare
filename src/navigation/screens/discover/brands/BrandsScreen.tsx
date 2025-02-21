@@ -38,7 +38,34 @@ function StyleSearch({ searchQuery, setSearchQuery }: {
     );
 }
 
+
 export function BrandsScreen() {
+    const navigation = useNavigation<NativeStackNavigationProp<any>>();
+    const [selectedStyles, setSelectedStyles] = useState<number[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const queryClient = useQueryClient();
+    const PAGE_SIZE = 10;
+
+    // Using the refactored hooks from usePostQueries
+    const { data: brands } = useBrands();
+    const { data: stylesData, isLoading: stylesLoading } = useStyles();
+    const {
+        data: postsData,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading: postsLoading,
+        isError: postsError,
+        refetch: refetchPosts
+    } = useFilteredPostsByStyles(selectedStyles, PAGE_SIZE);
+    return (
+        <View>
+            <Text>Brands Screen</Text>
+        </View>
+    )
+}
+
+export function BrandsScreen2() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const [selectedStyles, setSelectedStyles] = useState<number[]>([]);
     const [searchQuery, setSearchQuery] = useState('');

@@ -24,6 +24,7 @@ import { Modalize } from 'react-native-modalize';
 import type { RouteProp } from '@react-navigation/native';
 import type { MainTabParamList } from '@/types';
 import { Dimensions } from 'react-native';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 type PostScreenRouteProp = RouteProp<MainTabParamList, 'Post'>;
 
@@ -217,10 +218,28 @@ export function Post() {
         setLoading(true);
 
         try {
+            // First, compress and resize the image
+            const manipulatedImage = await ImageManipulator.manipulateAsync(
+                image,
+                [
+                    {
+                        resize: {
+                            width: 1080
+                        }
+                    }
+                ],
+                {
+                    compress: 0.7,
+                    format: ImageManipulator.SaveFormat.JPEG
+                }
+            );
             const file_id = uuid.v4().toString();
             const fileName = `outfits/${user.id}/${file_id}.jpg`;
 
-            const base64 = await fetch(image)
+            console.log("manipulatedImage", manipulatedImage)
+            console.log("fileName", fileName)
+
+            const base64 = await fetch(manipulatedImage.uri)
                 .then(res => res.blob())
                 .then(blob => new Promise<string>((resolve, reject) => {
                     const reader = new FileReader();

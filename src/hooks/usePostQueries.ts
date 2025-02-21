@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import type { Post, Style, Brand } from '@/types';
 import { useIsFocused } from '@react-navigation/native';
+import { Dimensions } from 'react-native';
 
 export const POST_SELECT_QUERY = `
     uuid,
@@ -205,7 +206,11 @@ export function useGlobalFeed(pageSize = 5) {
     const channelRef = useRef<RealtimeChannel | null>(null);
 
     useEffect(() => {
-        if (!isTabFocused) return;
+        // if (!isTabFocused) {
+        //     // Clear the query cache when tab loses focus
+        //     queryClient.removeQueries({ queryKey: ['globalFeed'] });
+        //     return;
+        // }
 
         // Subscribe to all post changes
         channelRef.current = supabase
@@ -225,8 +230,10 @@ export function useGlobalFeed(pageSize = 5) {
 
         return () => {
             console.log('[useGlobalFeed] Cleaning up subscription');
-            channelRef.current?.unsubscribe();
-            channelRef.current = null;
+            if (channelRef.current) {
+                channelRef.current.unsubscribe();
+                channelRef.current = null;
+            }
         };
     }, [isTabFocused, queryClient]);
 
@@ -244,6 +251,7 @@ export function useGlobalFeed(pageSize = 5) {
         enabled: isTabFocused,
         staleTime: 30 * 1000,
         gcTime: 5 * 60 * 1000,
+        refetchOnMount: true,
     });
 }
 
@@ -322,6 +330,14 @@ export function useStyles() {
 // Moved from BrandsScreen - Function to fetch filtered posts by page
 export function useFilteredPostsByStyles(selectedStyles: number[], pageSize = 10) {
     const isTabFocused = useIsTabFocused('Brands');
+    const queryClient = useQueryClient();
+
+    // useEffect(() => {
+    //     if (!isTabFocused) {
+    //         // Clear the query cache when tab loses focus
+    //         queryClient.removeQueries({ queryKey: ['stylePosts', selectedStyles] });
+    //     }
+    // }, [isTabFocused, selectedStyles, queryClient]);
 
     const fetchFilteredPostsPage = useCallback(async (pageParam = 0) => {
         const from = pageParam * pageSize;
@@ -381,6 +397,7 @@ export function useFilteredPostsByStyles(selectedStyles: number[], pageSize = 10
         enabled: isTabFocused,
         staleTime: 30 * 1000,
         gcTime: 5 * 60 * 1000,
+        refetchOnMount: true,
     });
 }
 
@@ -541,11 +558,18 @@ async function updatePostWithPublicUrl(post: any): Promise<any> {
 
 // Helper function to format post data consistently
 export function formatPost(post: any): Post {
+
+    let screen_width = Dimensions.get('window').width;
+
+    let transfomed_image_url = supabase.storage.from('outfits').getPublicUrl(post.image_url, {
+        transform: {
+            width: screen_width,
+        },
+    }).data.publicUrl;
+
     return {
         uuid: post.uuid,
-        image_url: post.public_image_url || supabase.storage
-            .from('outfits')
-            .getPublicUrl(post.image_url).data.publicUrl,
+        image_url: transfomed_image_url,
         description: post.description,
         username: post.profiles.username,
         created_at: post.created_at,

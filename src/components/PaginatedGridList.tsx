@@ -1,6 +1,7 @@
 import React, { useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import { FlatList } from 'react-native';
 
 /**
  * A reusable paginated grid list component that handles common pagination patterns
@@ -129,7 +130,7 @@ export function PaginatedGridList({
                 estimatedItemSize={estimatedItemSize}
                 keyExtractor={keyExtractor}
                 onEndReached={handleLoadMore}
-                onEndReachedThreshold={0.5}
+                onEndReachedThreshold={0.2}
                 ListFooterComponent={footerComponent}
                 refreshing={isLoading}
                 onRefresh={handleRefresh}

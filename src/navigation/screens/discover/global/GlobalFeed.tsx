@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Dimensions, TouchableOpacity, TextInput } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
+// import { Image } from 'react-native';
 import { useGlobalFeed } from '@/hooks/usePostQueries';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { Post } from '@/types';
@@ -79,6 +80,55 @@ function Header() {
     )
 }
 
+export function GlobalFeed2() {
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+        isError,
+        refetch
+    } = useGlobalFeed(5);
+    const allPosts = data?.pages?.flat() || [];
+    return (
+        <PaginatedGridList
+            data={allPosts}
+            renderItem={
+                ({ item, index }) => {
+                    return (
+                        <View style={styles.postContainer}>
+                            <Text>{item.uuid}</Text>
+                            <Text>{item.image_url}</Text>
+                            <Image
+                                // key={index}
+                                source={{ uri: item.image_url }}
+                                // source={{ uri: "https://img.freepik.com/free-photo/woman-beach-with-her-baby-enjoying-sunset_52683-144131.jpg?size=626&ext=jpg" }}
+                                // source={{ uri: "https://yhnamwhotpnhgcicqpmd.supabase.co/storage/v1/object/public/outfits/outfits/d517ed74-5bfe-4e3f-b2ec-e06549ec43ee/9c01e28e-cf03-4ebf-ba7f-0ae0ee41607f.jpg?width=800" }}
+                                style={{ width: 400, height: 200 }}
+                                onError={() => {
+                                    console.log("Error loading image");
+                                }}
+                            />
+                        </View>
+                    )
+                }
+            }
+            fetchNextPage={fetchNextPage}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            isLoading={isLoading}
+            isError={isError}
+            refetch={refetch}
+            keyExtractor={(item) => item.uuid}
+            numColumns={2}
+            estimatedItemSize={250}
+            loadingMoreText="Loading more posts..."
+            contentContainerStyle={styles.listContent}
+        />
+    )
+}
+
 export function GlobalFeed() {
     const navigation = useNavigation();
 
@@ -104,6 +154,7 @@ export function GlobalFeed() {
 
     // Render each post
     const renderItem = useCallback(({ item }: { item: Post }) => {
+        console.log(item.image_url);
         return (
             <View>
                 <TouchableOpacity
@@ -115,6 +166,9 @@ export function GlobalFeed() {
                         style={styles.postImage}
                         contentFit="cover"
                         transition={300}
+                        onError={() => {
+                            console.log("Error loading image");
+                        }}
                     />
                 </TouchableOpacity>
 

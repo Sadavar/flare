@@ -13,5 +13,8 @@ module.exports = {
         ios: {
             bundleIdentifier: 'com.flare.flare',
         },
+        "android": {
+            "package": "com.flare.flare"
+        }
     },
 }; 

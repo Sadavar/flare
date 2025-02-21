@@ -23,7 +23,6 @@
     "@supabase/supabase-js": "^2.39.7",
     "@tanstack/react-query": "^5.24.1",
     "base64-arraybuffer": "^1.0.2",
-    "colorthief": "^2.6.0",
     "expo": "~52.0.11",
     "expo-asset": "~11.0.1",
     "expo-dev-client": "~5.0.12",

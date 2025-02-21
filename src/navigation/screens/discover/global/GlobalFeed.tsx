@@ -80,54 +80,6 @@ function Header() {
     )
 }
 
-export function GlobalFeed2() {
-    const {
-        data,
-        fetchNextPage,
-        hasNextPage,
-        isFetchingNextPage,
-        isLoading,
-        isError,
-        refetch
-    } = useGlobalFeed(5);
-    const allPosts = data?.pages?.flat() || [];
-    return (
-        <PaginatedGridList
-            data={allPosts}
-            renderItem={
-                ({ item, index }) => {
-                    return (
-                        <View style={styles.postContainer}>
-                            <Text>{item.uuid}</Text>
-                            <Text>{item.image_url}</Text>
-                            <Image
-                                // key={index}
-                                source={{ uri: item.image_url }}
-                                // source={{ uri: "https://img.freepik.com/free-photo/woman-beach-with-her-baby-enjoying-sunset_52683-144131.jpg?size=626&ext=jpg" }}
-                                // source={{ uri: "https://yhnamwhotpnhgcicqpmd.supabase.co/storage/v1/object/public/outfits/outfits/d517ed74-5bfe-4e3f-b2ec-e06549ec43ee/9c01e28e-cf03-4ebf-ba7f-0ae0ee41607f.jpg?width=800" }}
-                                style={{ width: 400, height: 200 }}
-                                onError={() => {
-                                    console.log("Error loading image");
-                                }}
-                            />
-                        </View>
-                    )
-                }
-            }
-            fetchNextPage={fetchNextPage}
-            hasNextPage={hasNextPage}
-            isFetchingNextPage={isFetchingNextPage}
-            isLoading={isLoading}
-            isError={isError}
-            refetch={refetch}
-            keyExtractor={(item) => item.uuid}
-            numColumns={2}
-            estimatedItemSize={250}
-            loadingMoreText="Loading more posts..."
-            contentContainerStyle={styles.listContent}
-        />
-    )
-}
 
 export function GlobalFeed() {
     const navigation = useNavigation();
@@ -154,11 +106,9 @@ export function GlobalFeed() {
 
     // Render each post
     const renderItem = useCallback(({ item }: { item: Post }) => {
-        console.log(item.image_url);
         return (
-            <View>
+            <View style={styles.postContainer}>
                 <TouchableOpacity
-                    style={styles.postContainer}
                     onPress={() => navigation.navigate('PostDetails', { post: item })}
                 >
                     <Image
@@ -166,37 +116,57 @@ export function GlobalFeed() {
                         style={styles.postImage}
                         contentFit="cover"
                         transition={300}
-                        onError={() => {
-                            console.log("Error loading image");
-                        }}
                     />
                 </TouchableOpacity>
+                <View style={styles.postDetails}>
 
+                    <View style={styles.actionsRow}>
+                        {/* Colors on the left */}
+                        {item.colors && item.colors.length > 0 && (
+                            <View style={styles.colorDotsContainer}>
+                                {item.colors.slice(0, 3).map((color) => (
+                                    <View
+                                        key={color.id}
+                                        style={[
+                                            styles.colorDot,
+                                            { backgroundColor: color.hex_value }
+                                        ]}
+                                    />
+                                ))}
+                            </View>
+                        )}
 
-                {item.brands && item.brands.length > 0 && (
-                    <View style={styles.brandsContainer}>
-                        <Text style={styles.brandsLabel}>Brands</Text>
-                        <View style={styles.brandsList}>
-                            {item.brands.slice(0, 2).map((brand) => (
-                                <TouchableOpacity
-                                    key={brand.id}
-                                    style={styles.brandButton}
-                                    onPress={() => navigation.navigate('Brands', {
-                                        screen: 'BrandDetails',
-                                        params: { brandId: brand.id, brandName: brand.name }
-                                    })}
-                                >
-                                    <Text style={styles.brandText}>{brand.name}</Text>
-                                </TouchableOpacity>
-                            ))}
-                            {item.brands.length > 2 && (
-                                <View style={styles.brandButton}>
-                                    <Text style={styles.brandText}>+{item.brands.length - 2}</Text>
-                                </View>
-                            )}
-                        </View>
+                        {/* Save icon on the right */}
+                        <TouchableOpacity style={styles.saveButton}>
+                            <MaterialIcons name="bookmark-border" size={20} color="#666" />
+                        </TouchableOpacity>
                     </View>
-                )}
+
+                    {/* Brands below */}
+                    {item.brands && item.brands.length > 0 && (
+                        <View style={styles.brandsContainer}>
+                            <View style={styles.brandsList}>
+                                {item.brands.slice(0, 2).map((brand) => (
+                                    <TouchableOpacity
+                                        key={brand.id}
+                                        style={styles.brandButton}
+                                        onPress={() => navigation.navigate('Brands', {
+                                            screen: 'BrandDetails',
+                                            params: { brandId: brand.id, brandName: brand.name }
+                                        })}
+                                    >
+                                        <Text style={styles.brandText}>{brand.name}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                                {item.brands.length > 2 && (
+                                    <View style={styles.brandButton}>
+                                        <Text style={styles.brandText}>+{item.brands.length - 2}</Text>
+                                    </View>
+                                )}
+                            </View>
+                        </View>
+                    )}
+                </View>
             </View>
         )
     }, [navigation]);
@@ -247,7 +217,7 @@ const styles = StyleSheet.create({
         flex: 1,
         margin: 6,
         borderRadius: 12,
-        backgroundColor: '#fff',
+        backgroundColor: 'grey',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
@@ -258,11 +228,16 @@ const styles = StyleSheet.create({
     postImage: {
         width: '100%',
         aspectRatio: 0.75, // 3:4 aspect ratio (width:height)
-        backgroundColor: '#f0f0f0',
+        backgroundColor: 'white',
         borderRadius: 12,
     },
+    postDetails: {
+        backgroundColor: 'white',
+        width: '100%',
+        paddingHorizontal: 3,
+    },
     brandsContainer: {
-        margin: 10,
+        paddingBottom: 10,
     },
     brandsLabel: {
         fontSize: 11,
@@ -327,5 +302,24 @@ const styles = StyleSheet.create({
         marginTop: 8,
         fontSize: 14,
         color: '#666',
+    },
+    colorDotsContainer: {
+        flexDirection: 'row',
+        gap: 4,
+    },
+    colorDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 3,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.1)',
+    },
+    actionsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    saveButton: {
+        padding: 0,
     },
 });

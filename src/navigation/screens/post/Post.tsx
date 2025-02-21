@@ -258,7 +258,10 @@ export function Post() {
 
             const public_image_url = supabase.storage
                 .from('outfits')
-                .getPublicUrl(fileName);
+                .getPublicUrl(fileName)
+                .data.publicUrl
+
+            console.log("public_image_url", public_image_url)
 
             const { data: postData, error: postError } = await supabase
                 .from('posts')

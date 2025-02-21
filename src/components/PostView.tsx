@@ -153,13 +153,37 @@ export function PostView({ post }: PostViewProps) {
                 ))}
             </View>
 
+            {post.colors && post.colors.length > 0 && (
+                <View style={styles.colorsContainer}>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.colorsList}
+                    >
+                        {post.colors.map((color) => (
+                            <View key={color.id} style={styles.colorCard}>
+                                <View
+                                    style={[
+                                        styles.colorSquare,
+                                        { backgroundColor: color.hex_value }
+                                    ]}
+                                />
+                                <View style={styles.colorInfo}>
+                                    <Text style={styles.colorName}>{color.name}</Text>
+                                    <Text style={styles.colorHex}>{color.hex_value}</Text>
+                                </View>
+                            </View>
+                        ))}
+                    </ScrollView>
+                </View>
+            )}
+
             {post.description && (
                 <>
                     <Text style={{ fontSize: 14, fontWeight: '600', paddingLeft: 15 }}>Description:</Text>
                     <Text style={styles.description}>{post.description}</Text>
                 </>
-            )
-            }
+            )}
 
             <View style={styles.brandsContainer}>
                 <Text style={styles.brandsLabel}>Featured Brands:</Text>
@@ -301,43 +325,47 @@ const styles = StyleSheet.create({
         color: '#000',
     },
     colorsContainer: {
-        padding: 15,
-        backgroundColor: '#fff',
-        marginBottom: 15,
+        paddingVertical: 15,
     },
-    colorsTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 10,
+    colorsList: {
+        paddingHorizontal: 15,
+        paddingBottom: 15,
+        gap: 12,
+        flexDirection: 'row',
+    },
+    colorCard: {
+        width: 100,
+        borderRadius: 6,
+        backgroundColor: 'white',
+        shadowColor: 'black',
+        shadowOffset: {
+            width: 4,   // Horizontal shadow offset (positive for right)
+            height: 0,  // No vertical offset
+        },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,  // The spread of the shadow
+        elevation: 5,      // Shadow for Android
+    },
+
+    colorSquare: {
+        width: '100%',
+        height: 70,
+        borderTopLeftRadius: 6,  // Rounded top-left corner
+        borderTopRightRadius: 6, // Rounded top-right corner
+        overflow: 'hidden',      // Ensure the content stays within the rounded corners
+    },
+    colorInfo: {
+        padding: 8,
+    },
+    colorName: {
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        marginBottom: 4,
         color: '#333',
     },
-    colorStrip: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 8,
-    },
-    colorSwatch: {
-        flex: 1,
-        aspectRatio: 1,
-        borderRadius: 8,
-        padding: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 3,
-    },
-    colorText: {
-        fontSize: 8,
-        color: '#fff',
-        textAlign: 'center',
-        textShadowColor: 'rgba(0, 0, 0, 0.75)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
+    colorHex: {
+        fontSize: 11,
+        color: '#666',
     },
 });

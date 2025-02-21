@@ -11,10 +11,10 @@ module.exports = {
             }
         },
         ios: {
-            bundleIdentifier: 'com.flare.flare',
+            bundleIdentifier: 'com.flareapp.flare',
         },
         "android": {
-            "package": "com.flare.flare"
+            "package": "com.flareapp.flare"
         }
     },
 }; 

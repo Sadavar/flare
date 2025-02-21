@@ -1,29 +1,12 @@
 import React, { useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
-import { FlatList } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
+import { MasonryFlashList } from '@shopify/flash-list';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const GAP_SIZE = 8; // Matches the listContent paddingHorizontal
 
 /**
- * A reusable paginated grid list component that handles common pagination patterns
- * 
- * @param {Object} props
- * @param {Array} props.data - The flattened data array from all pages
- * @param {Function} props.renderItem - Function to render each item
- * @param {Function} props.fetchNextPage - Function to fetch the next page
- * @param {boolean} props.hasNextPage - Whether there are more pages to load
- * @param {boolean} props.isFetchingNextPage - Whether the next page is currently loading
- * @param {boolean} props.isLoading - Whether the initial data is loading
- * @param {boolean} props.isError - Whether there was an error loading data
- * @param {Function} props.refetch - Function to refetch data
- * @param {Function} props.keyExtractor - Function to extract unique key for each item
- * @param {number} props.numColumns - Number of columns to display (default: 2)
- * @param {number} props.estimatedItemSize - Estimated size of each item for virtualization
- * @param {Object} props.emptyComponent - Component to show when there's no data
- * @param {Object} props.errorComponent - Component to show when there's an error
- * @param {Object} props.loadingComponent - Component to show during initial loading
- * @param {Object} props.contentContainerStyle - Style for the content container
- * @param {string} props.loadingMoreText - Text to show when loading more items
- * @param {Object} props.listProps - Additional props to pass to FlashList
+ * A reusable paginated masonry list component that handles common pagination patterns
  */
 export function PaginatedGridList({
     data = [],
@@ -47,15 +30,71 @@ export function PaginatedGridList({
 }) {
     console.log('[PaginatedGridList] Rendering with', data.length, 'items, hasNextPage:', hasNextPage);
 
+    // Keep track of column heights for masonry layout
+    const columnHeights = useRef(Array(numColumns).fill(0));
+
+    // Calculate column width based on screen width, number of columns, and gaps
+    const getColumnWidth = useCallback(() => {
+        const totalGapWidth = GAP_SIZE * (numColumns + 1);
+        return (SCREEN_WIDTH - totalGapWidth) / numColumns;
+    }, [numColumns]);
+
+    // Get the shortest column index for optimal item placement
+    const getShortestColumnIndex = useCallback(() => {
+        return columnHeights.current.indexOf(Math.min(...columnHeights.current));
+    }, []);
+
+    // Calculate item height based on its content
+    const getItemHeight = useCallback((item) => {
+        // If item has a predefined height or aspect ratio, use that
+        if (item.height) return item.height;
+        if (item.aspectRatio) return getColumnWidth() / item.aspectRatio;
+
+        // Default height if no other metrics available
+        return estimatedItemSize;
+    }, [getColumnWidth, estimatedItemSize]);
+
+    // Reset column heights when data changes
+    const resetColumnHeights = useCallback(() => {
+        columnHeights.current = Array(numColumns).fill(0);
+    }, [numColumns]);
+
+    // Enhanced overrideItemLayout for masonry
+    const overrideItemLayout = useCallback(({ item, index }) => {
+        if (!item || !item.image_url || item === undefined || item === null) return null;
+        const columnWidth = getColumnWidth();
+        const itemHeight = getItemHeight(item);
+        const shortestColumnIndex = getShortestColumnIndex();
+
+        // Calculate position
+        const xOffset = GAP_SIZE + (shortestColumnIndex * (columnWidth + GAP_SIZE));
+        const yOffset = columnHeights.current[shortestColumnIndex];
+
+        // Update column height
+        columnHeights.current[shortestColumnIndex] += itemHeight + GAP_SIZE;
+
+        return {
+            length: itemHeight,
+            offset: yOffset,
+            index,
+            // Additional layout information
+            width: columnWidth,
+            columnIndex: shortestColumnIndex,
+            x: xOffset,
+            y: yOffset
+        };
+    }, [getColumnWidth, getItemHeight, getShortestColumnIndex]);
+
     // Handle refresh - resets to first page
     const handleRefresh = useCallback(() => {
         console.log('[PaginatedGridList] Refresh triggered');
+        resetColumnHeights();
         if (refetch) {
             refetch({ refetchPage: (_data, index) => index === 0 });
         }
-    }, [refetch]);
+    }, [refetch, resetColumnHeights]);
 
-    // Handle loading more items - directly pass through to the provided fetchNextPage
+    // Handle loading more items
     const handleLoadMore = useCallback(() => {
         console.log(
             '[PaginatedGridList] onEndReached called -',
@@ -73,7 +112,6 @@ export function PaginatedGridList({
     const renderFooter = useCallback(() => {
         if (!isFetchingNextPage) return null;
 
-        console.log('[PaginatedGridList] Rendering footer loader');
         return (
             <View style={styles.footerLoader}>
                 <ActivityIndicator size="small" color="#000" />
@@ -84,7 +122,6 @@ export function PaginatedGridList({
 
     // Handle loading state
     if (isLoading && data.length === 0) {
-        console.log('[PaginatedGridList] Showing loading state');
         return loadingComponent || (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#000" />
@@ -95,7 +132,6 @@ export function PaginatedGridList({
 
     // Handle error state
     if (isError && data.length === 0) {
-        console.log('[PaginatedGridList] Showing error state');
         return errorComponent || (
             <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>
@@ -105,24 +141,20 @@ export function PaginatedGridList({
         );
     }
 
-    if (data.length === 0 || data == undefined || data == null || data[0] == undefined) {
-        console.log('[PaginatedGridList] Showing empty state');
-        return (
-            <>
-                <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No items found.</Text>
-                </View>
-            </>
+    // Handle empty state
+    if (!data?.length) {
+        return emptyComponent || (
+            <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No items found.</Text>
+            </View>
         );
     }
 
-    // Either use the provided footer or our default one
     const footerComponent = listProps.ListFooterComponent || renderFooter;
 
-    console.log('[PaginatedGridList] Rendering FlashList');
     return (
         <View style={styles.container}>
-            <FlashList
+            <MasonryFlashList
                 data={data}
                 ListHeaderComponent={header}
                 numColumns={numColumns}
@@ -135,6 +167,9 @@ export function PaginatedGridList({
                 refreshing={isLoading}
                 onRefresh={handleRefresh}
                 showsVerticalScrollIndicator={false}
+                optimizeItemArrangement={true}
+                overrideItemLayout={overrideItemLayout}
+                contentContainerStyle={[styles.listContent, contentContainerStyle]}
                 {...listProps}
             />
         </View>
@@ -147,8 +182,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     listContent: {
-        paddingHorizontal: 8,
-        paddingTop: 8,
+        paddingHorizontal: GAP_SIZE,
+        paddingTop: GAP_SIZE,
         paddingBottom: 20,
     },
     loadingContainer: {

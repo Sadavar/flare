@@ -3,9 +3,8 @@ import { useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-quer
 import { supabase } from '@/lib/supabase';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
-import type { Post, Style, Brand } from '@/types';
+import type { Post, Style, Brand, Color } from '@/types';
 import { useIsFocused } from '@react-navigation/native';
-import { Dimensions } from 'react-native';
 
 export const POST_SELECT_QUERY = `
     uuid,
@@ -26,6 +25,13 @@ export const POST_SELECT_QUERY = `
         styles (
             id,
             name
+        )
+    ),
+    post_colors (
+        colors (
+            id,
+            name,
+            hex_value
         )
     )
 `;
@@ -272,7 +278,11 @@ export function useDeletePost() {
                     .eq('post_uuid', postId),
                 supabase.storage
                     .from('outfits')
-                    .remove([postId])
+                    .remove([postId]),
+                supabase
+                    .from('post_colors')
+                    .delete()
+                    .eq('post_uuid', postId)
             ]);
 
             // Then delete the post
@@ -321,6 +331,17 @@ export function useStyles() {
                 .from('styles')
                 .select('id, name')
                 .order('name');
+            if (error) throw error;
+            return data;
+        },
+    });
+}
+
+export function useColors() {
+    return useQuery<Color[]>({
+        queryKey: ['colors'],
+        queryFn: async () => {
+            const { data, error } = await supabase.from('colors').select('id, name, hex_value');
             if (error) throw error;
             return data;
         },
@@ -558,18 +579,9 @@ async function updatePostWithPublicUrl(post: any): Promise<any> {
 
 // Helper function to format post data consistently
 export function formatPost(post: any): Post {
-
-    let screen_width = Dimensions.get('window').width;
-
-    let transfomed_image_url = supabase.storage.from('outfits').getPublicUrl(post.image_url, {
-        transform: {
-            width: screen_width,
-        },
-    }).data.publicUrl;
-
     return {
         uuid: post.uuid,
-        image_url: transfomed_image_url,
+        image_url: post.public_image_url,
         description: post.description,
         username: post.profiles.username,
         created_at: post.created_at,
@@ -582,6 +594,11 @@ export function formatPost(post: any): Post {
         styles: post.post_styles.map((ps: any) => ({
             id: ps.styles.id,
             name: ps.styles.name
+        })),
+        colors: post.post_colors.map((pc: any) => ({
+            id: pc.colors.id,
+            name: pc.colors.name,
+            hex_value: pc.colors.hex_value
         }))
     };
 }

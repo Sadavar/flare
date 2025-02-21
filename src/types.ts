@@ -70,6 +70,7 @@ export interface Post {
     created_at?: string;
     brands?: Brand[];
     styles?: Style[];
+    colors?: Color[];
     user?: {
         username: string;
     };
@@ -85,5 +86,11 @@ export interface Brand {
     name: string;
     x_coord: number | null;
     y_coord: number | null;
+}
+
+export interface Color {
+    id: number;
+    name: string;
+    hex_value: string;
 }
 

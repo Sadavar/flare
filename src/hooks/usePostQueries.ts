@@ -581,6 +581,93 @@ async function updatePostWithPublicUrl(post: any): Promise<any> {
     };
 }
 
+export function usePostsWithBrandFeed(brandId: number, pageSize = 5) {
+    const isTabFocused = useIsTabFocused('Brands');
+    const queryClient = useQueryClient();
+
+    return useInfiniteQuery({
+        queryKey: ['postsWithBrandFeed', brandId],
+        queryFn: async ({ pageParam = 0 }) => {
+            console.log('[usePostsWithBrandFeed] Fetching page:', pageParam);
+            return fetchPostsWithBrandFeedPage(brandId, pageParam, pageSize);
+        },
+        getNextPageParam: (lastPage, allPages) => {
+            const hasMore = lastPage.length === pageSize;
+            return hasMore ? allPages.length : undefined;
+        },
+        initialPageParam: 0,
+        enabled: isTabFocused,
+        staleTime: 30 * 1000,
+        gcTime: 5 * 60 * 1000,
+        refetchOnMount: true,
+    });
+}
+
+async function fetchPostsWithBrandFeedPage(brandId: number, page: number, pageSize: number) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+    console.log('[fetchPostsWithBrandFeedPage] Range request -', 'from:', from, 'to:', to);
+    console.log('[fetchPostsWithBrandFeedPage] Brand ID:', brandId);
+
+    const startTime = Date.now();
+
+    // First get the post UUIDs that have this brand
+    const { data: brandPosts, error: brandError } = await supabase
+        .from('post_brands')
+        .select('post_uuid')
+        .eq('brand_id', brandId);
+
+    if (brandError) {
+        console.error('[fetchPostsWithBrandFeedPage] Error fetching brand posts:', brandError);
+        throw brandError;
+    }
+
+    // Get unique post UUIDs
+    const postUuids = [...new Set(brandPosts.map(post => post.post_uuid))];
+
+    if (postUuids.length === 0) {
+        console.log('[fetchPostsWithBrandFeedPage] No posts found for brand');
+        return [];
+    }
+
+    // Then fetch the full post data for these UUIDs
+    const { data, error, count } = await supabase
+        .from('posts')
+        .select(POST_SELECT_QUERY, { count: 'exact' })
+        .in('uuid', postUuids)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+    const endTime = Date.now();
+
+    if (error) {
+        console.error('[fetchPostsWithBrandFeedPage] Error fetching posts:', error);
+        throw error;
+    }
+
+    console.log(
+        '[fetchPostsWithBrandFeedPage] Response -',
+        'items:', data?.length || 0,
+        'total count:', count,
+        'fetch time:', `${endTime - startTime}ms`
+    );
+
+    // Print the first and last item IDs for debugging
+    if (data?.length > 0) {
+        console.log(
+            '[fetchPostsWithBrandFeedPage] Range verification -',
+            'first item id:', data[0].uuid,
+            'last item id:', data[data.length - 1].uuid
+        );
+    }
+
+    if (!data) return [];
+
+    // Process posts and update public_image_url if needed
+    const processedData = await Promise.all(data.map(updatePostWithPublicUrl));
+    return processedData.map(formatPost);
+}
+
 // Helper function to format post data consistently
 export function formatPost(post: any): Post {
     return {

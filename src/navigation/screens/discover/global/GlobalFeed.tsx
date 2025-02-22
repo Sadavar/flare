@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Dimensions, TouchableOpacity, TextInput } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 // import { Image } from 'react-native';
 import { useGlobalFeed } from '@/hooks/usePostQueries';
@@ -96,11 +95,6 @@ export function GlobalFeed() {
 
     const isFocused = useIsFocused();
 
-    useEffect(() => {
-        if (!isFocused) return;
-        refetch();
-    }, [isFocused]);
-
     // Flatten posts from all pages
     const allPosts = data?.pages?.flat() || [];
 
@@ -184,7 +178,7 @@ export function GlobalFeed() {
             isLoading={isLoading}
             isError={isError}
             refetch={refetch}
-            keyExtractor={(item) => item.uuid}
+            keyExtractor={(item: Post) => item.uuid}
             numColumns={2}
             estimatedItemSize={250}
             loadingMoreText="Loading more posts..."

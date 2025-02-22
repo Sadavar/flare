@@ -122,31 +122,40 @@ export function PaginatedGridList({
 
     // Handle loading state
     if (isLoading && data.length === 0) {
-        return loadingComponent || (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#000" />
-                <Text style={styles.loadingText}>Loading...</Text>
-            </View>
+        return (
+            <>
+                {header}
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#000" />
+                    <Text style={styles.loadingText}>Loading...</Text>
+                </View>
+            </>
         );
     }
 
     // Handle error state
     if (isError && data.length === 0) {
-        return errorComponent || (
-            <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>
-                    Error loading items. Pull down to try again.
-                </Text>
-            </View>
+        return (
+            <>
+                {header}
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>
+                        Error loading items. Pull down to try again.
+                    </Text>
+                </View>
+            </>
         );
     }
 
     // Handle empty state
-    if (!data?.length) {
-        return emptyComponent || (
-            <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No items found.</Text>
-            </View>
+    if (!data?.length || data.length === 0 || data === undefined || data === null) {
+        return (
+            <>
+                {header}
+                <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No items found.</Text>
+                </View>
+            </>
         );
     }
 

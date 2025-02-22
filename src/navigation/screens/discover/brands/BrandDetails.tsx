@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
@@ -10,163 +10,102 @@ import type { BrandsStackParamList } from '@/types';
 import { Layout } from '@/components/Layout';
 import { useNavigation } from '@react-navigation/native';
 import { Post } from '@/types'
+import { PaginatedGridList } from '@/components/PaginatedGridList';
+import PostCard from '@/components/PostCard';
+import { usePostsWithBrandFeed } from '@/hooks/usePostQueries';
 
 
 type BrandDetailsRouteProp = RouteProp<BrandsStackParamList, 'BrandDetails'>;
 
-interface Product {
-    id: string;
-    image_url: string;
-    name: string;
-}
+function Header({ brandName, posts_length }: { brandName: string, posts_length: number }) {
+    return (
+        <View style={styles.header}>
+            <View style={styles.profileSection}>
+                <View style={styles.brandIcon}>
+                    <MaterialIcons name="store" size={40} color="black" />
+                </View>
+                <View style={styles.brandInfo}>
+                    <Text style={styles.brandName}>{brandName}</Text>
+                    <Text style={styles.bio}>Premium fashion brand | Est. 2023</Text>
+                </View>
+            </View>
 
-type TabType = 'products' | 'posts';
+            <View style={styles.statsContainer}>
+                <View style={styles.statItem}>
+                    <Text style={styles.statNumber}>0</Text>
+                    <Text style={styles.statLabel}>Products</Text>
+                </View>
+                <View style={styles.statItem}>
+                    <Text style={styles.statNumber}>2.5K</Text>
+                    <Text style={styles.statLabel}>Followers</Text>
+                </View>
+                <View style={styles.statItem}>
+                    <Text style={styles.statNumber}>{posts_length || 0}</Text>
+                    <Text style={styles.statLabel}>Tags</Text>
+                </View>
+            </View>
+
+            <TouchableOpacity style={styles.followButton}>
+                <Text style={styles.followButtonText}>Follow</Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 16, fontWeight: 'bold', marginTop: 10, textAlign: 'center' }}>Tagged Posts</Text>
+        </View>
+    );
+}
 
 export function BrandDetails() {
     const route = useRoute<BrandDetailsRouteProp>();
     const { brandId, brandName } = route.params;
-    const [activeTab, setActiveTab] = useState<TabType>('products');
     const navigation = useNavigation();
 
-    // Query for brand posts
-    const { data: posts, isLoading: postsLoading } = useQuery({
-        queryKey: ['brandPosts', brandId],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('post_brands')
-                .select(`
-                    posts (
-                        uuid,
-                        image_url,
-                        profiles!posts_user_uuid_fkey (
-                            username
-                        )
-                    )
-                `)
-                .eq('brand_id', brandId);
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+        isError,
+        refetch
+    } = usePostsWithBrandFeed(brandId);
 
-            if (error) throw error;
 
-            return data.map(({ posts }) => ({
-                uuid: posts.uuid,
-                image_url: supabase.storage
-                    .from('outfits')
-                    .getPublicUrl(posts.image_url).data.publicUrl,
-                user: {
-                    username: posts.profiles.username
-                }
-            }));
-        },
-    });
+    // Flatten posts from all pages
+    const allPosts = data?.pages?.flat() || [];
+    console.log('[BrandDetails] All posts:', allPosts.length);
 
-    // Placeholder query for products (implement when you have products table)
-    const { data: products, isLoading: productsLoading } = useQuery({
-        queryKey: ['brandProducts', brandId],
-        queryFn: async () => {
-            // Placeholder data
-            return [] as Product[];
-        },
-    });
-
-    const renderPost = ({ item }: { item: Post }) => (
-        <TouchableOpacity
-            style={styles.gridItem}
-            onPress={() => navigation.navigate('PostDetails', { postId: item.uuid })}
-        >
-            <Image
-                source={{ uri: item.image_url }}
-                style={styles.image}
-                contentFit="cover"
-            />
-        </TouchableOpacity>
-    );
-
-    const renderProduct = ({ item }: { item: Product }) => (
-        <View style={styles.gridItem}>
-            <Image
-                source={{ uri: item.image_url }}
-                style={styles.image}
-                contentFit="cover"
-            />
-        </View>
-    );
+    // Render each post
+    const renderItem = useCallback(({ item }: { item: Post }) => {
+        return (
+            <PostCard post={item} />
+        )
+    }, [navigation]);
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <View style={styles.profileSection}>
-                    <View style={styles.brandIcon}>
-                        <MaterialIcons name="store" size={40} color="black" />
-                    </View>
-                    <View style={styles.brandInfo}>
-                        <Text style={styles.brandName}>{brandName}</Text>
-                        <Text style={styles.bio}>Premium fashion brand | Est. 2023</Text>
-                    </View>
-                </View>
-
-                <View style={styles.statsContainer}>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>{products?.length || 0}</Text>
-                        <Text style={styles.statLabel}>Products</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>2.5K</Text>
-                        <Text style={styles.statLabel}>Followers</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>{posts?.length || 0}</Text>
-                        <Text style={styles.statLabel}>Tags</Text>
-                    </View>
-                </View>
-
-                <TouchableOpacity style={styles.followButton}>
-                    <Text style={styles.followButtonText}>Follow</Text>
-                </TouchableOpacity>
-
-                <View style={styles.tabContainer}>
-                    <Pressable
-                        style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
-                        onPress={() => setActiveTab('posts')}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'posts' && styles.activeTabText]}>Tagged Posts</Text>
-                    </Pressable>
-                </View>
-            </View>
-
-            {activeTab === 'products' ? (
-                productsLoading ? (
-                    <Text style={styles.loadingText}>Loading products...</Text>
-                ) : (
-                    <FlashList
-                        data={products}
-                        renderItem={renderProduct}
-                        numColumns={3}
-                        estimatedItemSize={124}
-                        ListEmptyComponent={
-                            <Text style={styles.emptyText}>No products yet</Text>
-                        }
-                    />
-                )
-            ) : (
-                postsLoading ? (
-                    <Text style={styles.loadingText}>Loading posts...</Text>
-                ) : (
-                    <FlashList
-                        data={posts}
-                        renderItem={renderPost}
-                        numColumns={3}
-                        estimatedItemSize={124}
-                        ListEmptyComponent={
-                            <Text style={styles.emptyText}>No posts yet</Text>
-                        }
-                    />
-                )
-            )}
-        </View>
+        <PaginatedGridList
+            data={allPosts}
+            header={Header({ brandName, posts_length: allPosts.length })}
+            renderItem={renderItem}
+            fetchNextPage={fetchNextPage}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            isLoading={isLoading}
+            isError={isError}
+            refetch={refetch}
+            keyExtractor={(item: Post) => item.uuid}
+            numColumns={2}
+            estimatedItemSize={250}
+            loadingMoreText="Loading more posts..."
+            contentContainerStyle={styles.listContent}
+        />
     );
 }
 
 const styles = StyleSheet.create({
+    listContent: {
+        paddingHorizontal: 8,
+        paddingTop: 8,
+        paddingBottom: 20,
+    },
     container: {
         flex: 1,
         backgroundColor: '#fff',

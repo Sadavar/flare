@@ -11,6 +11,7 @@ import { useUserPosts } from '@/hooks/usePostQueries';
 import { Username } from '@/navigation/screens/auth/Username';
 import { usePost } from '@/hooks/usePostQueries'
 import { getColors } from 'react-native-image-colors';
+import { ColorCard } from '@/components/ColorCard';
 
 // Get screen width
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -161,18 +162,7 @@ export function PostView({ post }: PostViewProps) {
                         contentContainerStyle={styles.colorsList}
                     >
                         {post.colors.map((color) => (
-                            <View key={color.id} style={styles.colorCard}>
-                                <View
-                                    style={[
-                                        styles.colorSquare,
-                                        { backgroundColor: color.hex_value }
-                                    ]}
-                                />
-                                <View style={styles.colorInfo}>
-                                    <Text style={styles.colorName}>{color.name}</Text>
-                                    <Text style={styles.colorHex}>{color.hex_value}</Text>
-                                </View>
-                            </View>
+                            <ColorCard key={color.id} color={color} />
                         ))}
                     </ScrollView>
                 </View>
@@ -332,40 +322,5 @@ const styles = StyleSheet.create({
         paddingBottom: 15,
         gap: 12,
         flexDirection: 'row',
-    },
-    colorCard: {
-        width: 100,
-        borderRadius: 6,
-        backgroundColor: 'white',
-        shadowColor: 'black',
-        shadowOffset: {
-            width: 4,   // Horizontal shadow offset (positive for right)
-            height: 0,  // No vertical offset
-        },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,  // The spread of the shadow
-        elevation: 5,      // Shadow for Android
-    },
-
-    colorSquare: {
-        width: '100%',
-        height: 70,
-        borderTopLeftRadius: 6,  // Rounded top-left corner
-        borderTopRightRadius: 6, // Rounded top-right corner
-        overflow: 'hidden',      // Ensure the content stays within the rounded corners
-    },
-    colorInfo: {
-        padding: 8,
-    },
-    colorName: {
-        fontSize: 12,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        marginBottom: 4,
-        color: '#333',
-    },
-    colorHex: {
-        fontSize: 11,
-        color: '#666',
     },
 });

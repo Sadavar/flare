@@ -26,6 +26,13 @@ import type { MainTabParamList } from '@/types';
 import { Dimensions } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
 
+import { ColorCard } from '@/components/ColorCard';
+import { Color } from '@/types';
+import { useColors } from '@/hooks/usePostQueries';
+import { MaterialIcons } from '@expo/vector-icons';
+import { PostButton } from '@/components/PostButton';
+
+
 type PostScreenRouteProp = RouteProp<MainTabParamList, 'Post'>;
 
 type BrandTag = {
@@ -42,20 +49,32 @@ type Style = {
 export function Post() {
     const route = useRoute<PostScreenRouteProp>();
     const [image, setImage] = useState<string | null>(null);
+
     const [description, setDescription] = useState('');
+    const [selectedStyleIds, setSelectedStyleIds] = useState<number[]>([]);
+
+    const [colorOptions, setColorOptions] = useState<Color[]>([]);
+    const [selectedColorIds, setSelectedColorIds] = useState<number[]>([]);
+    const colorModalizeRef = useRef<Modalize>(null);
+
     const [brandsInput, setBrandsInput] = useState('');
-    const [loading, setLoading] = useState(false);
     const [brandSuggestions, setBrandSuggestions] = useState<string[]>([]);
     const [taggedBrands, setTaggedBrands] = useState<BrandTag[]>([]);
     const [activePosition, setActivePosition] = useState<{ x: number, y: number } | null>(null);
-    const [selectedStyleIds, setSelectedStyleIds] = useState<number[]>([]);
     const [isDragging, setIsDragging] = useState<number | null>(null);
+
+    const [loading, setLoading] = useState(false);
     const modalizeRef = useRef<Modalize>(null);
     const imageRef = useRef<View>(null);
     const navigation = useNavigation();
     const { user } = useSession();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const { data: colors, isLoading: isColorLoading } = useColors();
+
+    const scrollViewRef = useRef<ScrollView>(null);
+    const descriptionRef = useRef<View>(null);
 
     const [imageLayout, setImageLayout] = useState<{
         width: number;
@@ -95,6 +114,9 @@ export function Post() {
             setBrandsInput('');
             setTaggedBrands([]);
             setSelectedStyleIds([]);
+            setSelectedColorIds([]);
+            colorModalizeRef.current?.close();
+            modalizeRef.current?.close();
         }
     }, [route.params?.image]);
 
@@ -213,6 +235,31 @@ export function Post() {
         setTaggedBrands(taggedBrands.filter((_, i) => i !== index));
     };
 
+    const handleColorSelect = (colorId: number) => {
+        setSelectedColorIds(prev => {
+            if (prev.includes(colorId)) {
+                return prev.filter(id => id !== colorId);
+            }
+            if (prev.length < 3) {
+                return [...prev, colorId];
+            }
+            return prev;
+        });
+    };
+
+    // Add handler for description focus
+    const handleDescriptionFocus = () => {
+        if (descriptionRef.current && scrollViewRef.current) {
+            descriptionRef.current.measure((x, y, width, height, pageX, pageY) => {
+                scrollViewRef.current?.scrollTo({
+                    y: pageY,
+                    animated: true
+                });
+            });
+        }
+    };
+
+
     const uploadPost = async () => {
         if (!image || !user) return;
         setLoading(true);
@@ -293,6 +340,23 @@ export function Post() {
                 }
             }
 
+            // Upload colors
+            if (selectedColorIds.length > 0) {
+                const colorRelations = selectedColorIds.map(colorId => ({
+                    post_uuid: postData.uuid,
+                    color_id: colorId,
+                }));
+
+                for (const color of colorRelations) {
+                    const { error: colorError } = await supabase
+                        .from('post_colors')
+                        .insert(color);
+
+                    if (colorError) throw colorError;
+                }
+            }
+
+
             // Upload tagged brands with coordinates
             for (const tag of taggedBrands) {
                 const { data: brandData, error: brandError } = await supabase
@@ -323,74 +387,81 @@ export function Post() {
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <ScrollView style={{ backgroundColor: 'white' }} keyboardShouldPersistTaps='handled'>
-                <KeyboardAvoidingView behavior='position' keyboardVerticalOffset={150} enabled={!isModalOpen} >
-                    <View style={styles.container}>
-                        {image ? (
-                            <>
-                                <Text style={styles.trendingTitle}>Image Preview</Text>
-                                <Text style={styles.tagInstruction}>Tap image to add brands</Text>
-                                <View
-                                    ref={imageRef}
-                                    style={styles.imageContainer}
-                                    onLayout={() => {
-                                        // Re-measure on layout changes
-                                        imageRef.current?.measure((x, y, width, height, pageX, pageY) => {
-                                            setImageLayout({ width, height, pageX, pageY });
-                                        });
-                                    }}
-                                // onLayout={(e) => {
-                                //     const { x, y, width, height } = e.nativeEvent.layout;
-                                //     console.log('Image Container:', { x, y, width, height });
-                                // }}
-                                >
-                                    <TouchableWithoutFeedback onPress={handleImagePress}>
-                                        <Image
-                                            source={{ uri: image }}
-                                            style={styles.image}
-                                            contentFit='contain'
-                                        />
-                                    </TouchableWithoutFeedback>
-                                    {taggedBrands.map((tag, index) => (
+            <ScrollView
+                ref={scrollViewRef}
+                style={{ backgroundColor: 'white' }}
+                keyboardShouldPersistTaps='handled'
+            >
+                <View style={styles.container}>
+
+                    {/* Image Preview */}
+
+                    {image ? (
+                        <>
+                            <Text style={styles.trendingTitle}>Image Preview</Text>
+                            <Text style={styles.tagInstruction}>Tap image to add brands</Text>
+                            <View
+                                ref={imageRef}
+                                style={styles.imageContainer}
+                                onLayout={() => {
+                                    // Re-measure on layout changes
+                                    imageRef.current?.measure((x, y, width, height, pageX, pageY) => {
+                                        setImageLayout({ width, height, pageX, pageY });
+                                    });
+                                }}
+                            // onLayout={(e) => {
+                            //     const { x, y, width, height } = e.nativeEvent.layout;
+                            //     console.log('Image Container:', { x, y, width, height });
+                            // }}
+                            >
+                                <TouchableWithoutFeedback onPress={handleImagePress}>
+                                    <Image
+                                        source={{ uri: image }}
+                                        style={styles.image}
+                                        contentFit='contain'
+                                    />
+                                </TouchableWithoutFeedback>
+                                {taggedBrands.map((tag, index) => (
+                                    <View
+                                        key={index}
+                                        style={[
+                                            styles.tagPill,
+                                            {
+                                                left: `${tag.x}%`,
+                                                top: `${tag.y}%`,
+                                            }
+                                        ]}
+                                        onLayout={(event) => handleTagLayout(index, event)}
+                                    >
                                         <View
-                                            key={index}
-                                            style={[
-                                                styles.tagPill,
-                                                {
-                                                    left: `${tag.x}%`,
-                                                    top: `${tag.y}%`,
-                                                }
-                                            ]}
-                                            onLayout={(event) => handleTagLayout(index, event)}
+                                            style={styles.tagPillContent}
+                                            {...PanResponder.create({
+                                                onStartShouldSetPanResponder: () => true,
+                                                onPanResponderGrant: () => handleTagDragStart(index),
+                                                onPanResponderMove: (e) => handleTagDragMove(e, index),
+                                                onPanResponderRelease: handleTagDragEnd,
+                                            }).panHandlers}
                                         >
-                                            <View
-                                                style={styles.tagPillContent}
-                                                {...PanResponder.create({
-                                                    onStartShouldSetPanResponder: () => true,
-                                                    onPanResponderGrant: () => handleTagDragStart(index),
-                                                    onPanResponderMove: (e) => handleTagDragMove(e, index),
-                                                    onPanResponderRelease: handleTagDragEnd,
-                                                }).panHandlers}
+                                            <Text
+                                                style={styles.tagText}
+                                                numberOfLines={1}
+                                                ellipsizeMode="tail"
                                             >
-                                                <Text
-                                                    style={styles.tagText}
-                                                    numberOfLines={1}
-                                                    ellipsizeMode="tail"
-                                                >
-                                                    {tag.name}
-                                                </Text>
-                                                <TouchableOpacity
-                                                    onPress={() => removeTag(index)}
-                                                    style={styles.removeButton}
-                                                >
-                                                    <Text style={styles.removeButtonText}>×</Text>
-                                                </TouchableOpacity>
-                                            </View>
+                                                {tag.name}
+                                            </Text>
+                                            <TouchableOpacity
+                                                onPress={() => removeTag(index)}
+                                                style={styles.removeButton}
+                                            >
+                                                <Text style={styles.removeButtonText}>×</Text>
+                                            </TouchableOpacity>
                                         </View>
-                                    ))}
-                                </View>
+                                    </View>
+                                ))}
+                            </View>
 
-
+                            {/* Description */}
+                            <View ref={descriptionRef}>
                                 <Text style={styles.trendingTitle}>Description</Text>
                                 <TextInput
                                     style={styles.input}
@@ -398,72 +469,170 @@ export function Post() {
                                     value={description}
                                     onChangeText={setDescription}
                                     multiline
+                                    onFocus={handleDescriptionFocus}
                                 />
-                                <Text style={styles.trendingTitle}>Style</Text>
+                            </View>
 
-                                <ScrollView
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
-                                    contentContainerStyle={styles.styleScrollContainer}
-                                >
-                                    {styleOptions.map((style) => (
+                            {/* Colors */}
+
+                            {colors && (
+                                <View style={styles.colorSection}>
+                                    <View style={styles.colorHeader}>
+                                        <Text style={styles.colorTitle}>Colors</Text>
+                                        <View style={styles.selectedColorPills}>
+                                            {selectedColorIds.map(colorId => {
+                                                const color = colors.find((c: Color) => c.id === colorId);
+                                                if (!color) return null;
+                                                return (
+                                                    <TouchableOpacity
+                                                        key={colorId}
+                                                        onPress={() => handleColorSelect(colorId)}
+                                                        style={styles.colorPillContainer}
+                                                    >
+                                                        <View style={styles.pillWrapper}>
+                                                            <View
+                                                                style={[
+                                                                    styles.colorSquare,
+                                                                    { backgroundColor: color.hex_value }
+                                                                ]}
+                                                            />
+                                                            <View style={styles.closeButtonContainer}>
+                                                                <MaterialIcons name="close" size={12} color="#666" />
+                                                            </View>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                );
+                                            })}
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.quickSelectHeader}>
+                                        <Text style={styles.subtitle}>Quick Select</Text>
                                         <TouchableOpacity
-                                            key={style.id}
-                                            style={[
-                                                styles.styleChip,
-                                                selectedStyleIds.includes(style.id) && styles.selectedStyleChip
-                                            ]}
-                                            onPress={() => {
-                                                if (selectedStyleIds.includes(style.id)) {
-                                                    setSelectedStyleIds(selectedStyleIds.filter(id => id !== style.id));
-                                                } else if (selectedStyleIds.length < 3) {
-                                                    setSelectedStyleIds([...selectedStyleIds, style.id]);
-                                                }
-                                            }}
+                                            onPress={() => colorModalizeRef.current?.open()}
+                                            style={styles.seeAllButton}
                                         >
-                                            <Text style={[
-                                                styles.styleChipText,
-                                                selectedStyleIds.includes(style.id) && styles.selectedStyleChipText
-                                            ]}>
-                                                {style.name}
-                                            </Text>
+                                            <Text style={styles.seeAllText}>See All Colors</Text>
+                                            <MaterialIcons name="chevron-right" size={20} color="#666" />
                                         </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                                <Text style={styles.trendingTitle}>Brands</Text>
-                                <View style={styles.taggedBrandsContainer}>
-                                    {taggedBrands.map((brand, index) => (
-                                        <TouchableOpacity
-                                            key={index}
-                                            style={styles.taggedBrand}
-                                            onPress={() => {
-                                                setTaggedBrands(taggedBrands.filter((_, i) => i !== index));
-                                            }}
-                                        >
-                                            <Text style={styles.taggedBrandText}>{brand.name}</Text>
-                                            <Text style={styles.removeTag}>X</Text>
-                                        </TouchableOpacity>
-                                    ))}
+                                    </View>
+                                    <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        style={styles.quickSelectScroll}
+                                    >
+                                        {colors?.slice(0, 15).map((color: Color) => (
+                                            <ColorCard
+                                                key={color.id}
+                                                color={color}
+                                                size="small"
+                                                isSelected={selectedColorIds.includes(color.id)}
+                                                onPress={() => handleColorSelect(color.id)}
+                                            />
+                                        ))}
+                                    </ScrollView>
                                 </View>
-                                <Button
-                                    title="Post"
-                                    onPress={uploadPost}
-                                    disabled={loading}
-                                />
-                            </>
-                        ) : (
-                            <Text style={styles.placeholder}>Select an image to post</Text>
-                        )}
+                            )}
+
+                            {/* Styles */}
+
+                            <Text style={styles.trendingTitle}>Style</Text>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.styleScrollContainer}
+                            >
+                                {styleOptions.map((style) => (
+                                    <TouchableOpacity
+                                        key={style.id}
+                                        style={[
+                                            styles.styleChip,
+                                            selectedStyleIds.includes(style.id) && styles.selectedStyleChip
+                                        ]}
+                                        onPress={() => {
+                                            if (selectedStyleIds.includes(style.id)) {
+                                                setSelectedStyleIds(selectedStyleIds.filter(id => id !== style.id));
+                                            } else if (selectedStyleIds.length < 3) {
+                                                setSelectedStyleIds([...selectedStyleIds, style.id]);
+                                            }
+                                        }}
+                                    >
+                                        <Text style={[
+                                            styles.styleChipText,
+                                            selectedStyleIds.includes(style.id) && styles.selectedStyleChipText
+                                        ]}>
+                                            {style.name}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+
+                            {/* Brands */}
+
+                            <Text style={styles.trendingTitle}>Brands</Text>
+                            <View style={styles.taggedBrandsContainer}>
+                                {taggedBrands.map((brand, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={styles.taggedBrand}
+                                        onPress={() => {
+                                            setTaggedBrands(taggedBrands.filter((_, i) => i !== index));
+                                        }}
+                                    >
+                                        <Text style={styles.taggedBrandText}>{brand.name}</Text>
+                                        <Text style={styles.removeTag}>X</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Post Button */}
+                            <PostButton
+                                onPress={uploadPost}
+                                loading={loading}
+                            />
+                        </>
+                    ) : (
+                        <Text style={styles.placeholder}>Select an image to post</Text>
+                    )}
+                </View>
+
+                {/* Color Modal */}
+                <Modalize
+                    ref={colorModalizeRef}
+                    modalHeight={500}
+                    modalStyle={styles.modalContainer}
+                    panGestureEnabled={false}
+                    onOpen={() => setIsModalOpen(true)}
+                    onClose={() => setIsModalOpen(false)}
+                >
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>All Colors</Text>
+                        <Text style={styles.modalSubtitle}>
+                            Select up to 3 colors ({selectedColorIds.length}/3)
+                        </Text>
+                        <ScrollView style={styles.colorGrid}>
+                            <View style={styles.gridContainer}>
+                                {colors?.map((color: Color) => (
+                                    <ColorCard
+                                        key={color.id}
+                                        color={color}
+                                        isSelected={selectedColorIds.includes(color.id)}
+                                        onPress={() => handleColorSelect(color.id)}
+                                    />
+                                ))}
+                            </View>
+                        </ScrollView>
                     </View>
-                </KeyboardAvoidingView>
+                </Modalize>
+
+                {/* Brand Modal */}
 
                 <Modalize
                     ref={modalizeRef}
-                    modalHeight={500}
+                    modalHeight={700}
                     onOpen={() => setIsModalOpen(true)}
                     onClose={() => setIsModalOpen(false)}
-                    panGestureEnabled={false} // Disables swipe down to dismiss
-
+                    panGestureEnabled={false}
                 >
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Tag a Brand</Text>
@@ -544,7 +713,7 @@ const styles = StyleSheet.create({
     trendingTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        marginBottom: 10
+        marginBottom: 10,
     },
     suggestionsContainer: {
         position: 'absolute',
@@ -666,5 +835,93 @@ const styles = StyleSheet.create({
     },
     suggestionText: {
         fontSize: 16,
+    },
+    colorSection: {
+        marginBottom: 20,
+    },
+    colorHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        height: 50
+    },
+    colorTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    selectedColorPills: {
+        flexDirection: 'row',
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+        gap: 10,
+        marginLeft: 10,
+    },
+    colorPillContainer: {
+        marginHorizontal: 4,
+    },
+    pillWrapper: {
+        position: 'relative',
+    },
+    closeButtonContainer: {
+        position: 'absolute',
+        top: -6,
+        right: -6,
+        backgroundColor: 'white',
+        borderRadius: 10,
+        width: 16,
+        height: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#ddd',
+    },
+    colorSquare: {
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 1,
+        elevation: 5,
+    },
+    quickSelectHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    subtitle: {
+        fontSize: 14,
+        color: '#666',
+    },
+    seeAllButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    seeAllText: {
+        fontSize: 14,
+        color: '#666',
+        marginRight: 4,
+    },
+    quickSelectScroll: {
+        marginHorizontal: -20,
+        paddingHorizontal: 20,
+    },
+    modalContainer: {
+        padding: 20,
+    },
+    modalSubtitle: {
+        fontSize: 16,
+        color: '#666',
+        marginBottom: 20,
+    },
+    colorGrid: {
+        flex: 1,
+    },
+    gridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        paddingHorizontal: 10,
     },
 });

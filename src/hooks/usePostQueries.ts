@@ -341,7 +341,11 @@ export function useColors() {
     return useQuery<Color[]>({
         queryKey: ['colors'],
         queryFn: async () => {
-            const { data, error } = await supabase.from('colors').select('id, name, hex_value');
+            const { data, error } = await supabase
+                .from('colors')
+                .select('id, name, hex_value')
+                .order('id', { ascending: true });
+
             if (error) throw error;
             return data;
         },

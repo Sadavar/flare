@@ -125,12 +125,6 @@ export function BrandDetails() {
 
                 <View style={styles.tabContainer}>
                     <Pressable
-                        style={[styles.tab, activeTab === 'products' && styles.activeTab]}
-                        onPress={() => setActiveTab('products')}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'products' && styles.activeTabText]}>Products</Text>
-                    </Pressable>
-                    <Pressable
                         style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
                         onPress={() => setActiveTab('posts')}
                     >

@@ -208,40 +208,6 @@ function useIsTabFocused(tabName: string) {
 
 export function useGlobalFeed(pageSize = 5) {
     const isTabFocused = useIsTabFocused('Global');
-    const queryClient = useQueryClient();
-    const channelRef = useRef<RealtimeChannel | null>(null);
-
-    useEffect(() => {
-        // if (!isTabFocused) {
-        //     // Clear the query cache when tab loses focus
-        //     queryClient.removeQueries({ queryKey: ['globalFeed'] });
-        //     return;
-        // }
-
-        // Subscribe to all post changes
-        channelRef.current = supabase
-            .channel('global-posts')
-            .on('postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'posts'
-                },
-                (payload) => {
-                    console.log('[useGlobalFeed] Realtime change detected:', payload.eventType);
-                    queryClient.invalidateQueries({ queryKey: ['globalFeed'] });
-                }
-            )
-            .subscribe();
-
-        return () => {
-            console.log('[useGlobalFeed] Cleaning up subscription');
-            if (channelRef.current) {
-                channelRef.current.unsubscribe();
-                channelRef.current = null;
-            }
-        };
-    }, [isTabFocused, queryClient]);
 
     return useInfiniteQuery({
         queryKey: ['globalFeed'],

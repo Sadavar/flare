@@ -8,6 +8,7 @@ import { usePost, useDeletePost } from '@/hooks/usePostQueries';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Post } from '../post/Post';
 
 
 
@@ -142,7 +143,10 @@ export function PostDetails() {
 
                 <TouchableOpacity
                     style={styles.editButton}
-                    onPress={() => navigation.navigate('PostEdit', { post })}
+                    onPress={() => {
+                        console.log('[PostDetails] Post:', post);
+                        navigation.navigate('PostEdit', { post: post as Post });
+                    }}
                 >
                     <MaterialIcons name="edit" size={24} color="#007AFF" />
                     <Text style={styles.editButtonText}>Edit Post</Text>

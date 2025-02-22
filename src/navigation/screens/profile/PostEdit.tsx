@@ -34,8 +34,7 @@ type BrandTag = {
 
 export function PostEdit() {
     const route = useRoute<PostEditScreenRouteProp>();
-    const { postId } = route.params;
-    const { data: post } = usePost(postId);
+    const { post } = route.params;
 
     const [description, setDescription] = useState('');
     const [brandsInput, setBrandsInput] = useState('');
@@ -209,7 +208,7 @@ export function PostEdit() {
             const { error: updateError } = await supabase
                 .from('posts')
                 .update({ description })
-                .eq('uuid', postId);
+                .eq('uuid', post.uuid);
 
             if (updateError) throw updateError;
 
@@ -217,12 +216,12 @@ export function PostEdit() {
             await supabase
                 .from('post_styles')
                 .delete()
-                .eq('post_uuid', postId);
+                .eq('post_uuid', post.uuid);
 
             // Create new style relationships
             if (selectedStyleIds.length > 0) {
                 const styleRelations = selectedStyleIds.map(styleId => ({
-                    post_uuid: postId,
+                    post_uuid: post.uuid,
                     style_id: styleId,
                 }));
 
@@ -239,7 +238,7 @@ export function PostEdit() {
             await supabase
                 .from('post_brands')
                 .delete()
-                .eq('post_uuid', postId);
+                .eq('post_uuid', post.uuid);
 
             // Create new brand tags
             for (const tag of taggedBrands) {
@@ -254,7 +253,7 @@ export function PostEdit() {
                 await supabase
                     .from('post_brands')
                     .insert([{
-                        post_uuid: postId,
+                        post_uuid: post.uuid,
                         brand_id: brandData.id,
                         x_coord: tag.x,
                         y_coord: tag.y

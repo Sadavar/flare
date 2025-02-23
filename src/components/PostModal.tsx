@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Modalize } from 'react-native-modalize';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,10 +19,13 @@ type PostNavigationProp = CompositeNavigationProp<
 
 export function PostModal({ modalRef }: PostModalProps) {
     const navigation = useNavigation<PostNavigationProp>();
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleImagePick = async (useCamera: boolean) => {
         try {
+            setIsLoading(true);
             let result;
+
             if (useCamera) {
                 const { status } = await ImagePicker.requestCameraPermissionsAsync();
                 if (status !== 'granted') {
@@ -34,6 +37,7 @@ export function PostModal({ modalRef }: PostModalProps) {
                     quality: 1,
                 });
             } else {
+                console.log('launching image library');
                 result = await ImagePicker.launchImageLibraryAsync({
                     mediaTypes: ImagePicker.MediaTypeOptions.Images,
                     quality: 1,
@@ -50,25 +54,36 @@ export function PostModal({ modalRef }: PostModalProps) {
         } catch (error) {
             console.error('Error picking image:', error);
             alert('Error picking image');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
         <View style={styles.content}>
             <Text style={styles.title}>Create Post</Text>
+
             <TouchableOpacity
-                style={styles.option}
-                onPress={() => handleImagePick(false)}
+                style={[styles.option, isLoading && styles.optionDisabled]}
+                onPress={() => !isLoading && handleImagePick(false)}
+                disabled={isLoading}
             >
-                <MaterialIcons name="photo-library" size={24} color="#000" />
-                <Text style={styles.optionText}>Choose from Library</Text>
+                <MaterialIcons name="photo-library" size={24} color={isLoading ? "#999" : "#000"} />
+                <Text style={[styles.optionText, isLoading && styles.optionTextDisabled]}>
+                    Choose from Library
+                </Text>
+                {isLoading && <ActivityIndicator style={styles.loader} color="#666" />}
             </TouchableOpacity>
+
             <TouchableOpacity
-                style={styles.option}
-                onPress={() => handleImagePick(true)}
+                style={[styles.option, isLoading && styles.optionDisabled]}
+                onPress={() => !isLoading && handleImagePick(true)}
+                disabled={isLoading}
             >
-                <MaterialIcons name="camera-alt" size={24} color="#000" />
-                <Text style={styles.optionText}>Take Photo</Text>
+                <MaterialIcons name="camera-alt" size={24} color={isLoading ? "#999" : "#000"} />
+                <Text style={[styles.optionText, isLoading && styles.optionTextDisabled]}>
+                    Take Photo
+                </Text>
             </TouchableOpacity>
         </View>
     );
@@ -91,8 +106,18 @@ const styles = StyleSheet.create({
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: '#ccc',
     },
+    optionDisabled: {
+        opacity: 0.6,
+    },
     optionText: {
         fontSize: 16,
+        marginLeft: 10,
+        flex: 1,
+    },
+    optionTextDisabled: {
+        color: '#999',
+    },
+    loader: {
         marginLeft: 10,
     },
 }); 

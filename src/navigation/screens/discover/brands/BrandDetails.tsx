@@ -83,7 +83,7 @@ export function BrandDetails() {
     return (
         <PaginatedGridList
             data={allPosts}
-            header={Header({ brandName, posts_length: allPosts.length })}
+            header={<Header brandName={brandName} posts_length={allPosts.length} />}
             renderItem={renderItem}
             fetchNextPage={fetchNextPage}
             hasNextPage={hasNextPage}

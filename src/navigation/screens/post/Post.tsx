@@ -536,36 +536,67 @@ export function Post() {
 
                             {/* Styles */}
 
-                            <Text style={styles.trendingTitle}>Style</Text>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                contentContainerStyle={styles.styleScrollContainer}
-                            >
-                                {styleOptions.map((style) => (
-                                    <TouchableOpacity
-                                        key={style.id}
-                                        style={[
-                                            styles.styleChip,
-                                            selectedStyleIds.includes(style.id) && styles.selectedStyleChip
-                                        ]}
-                                        onPress={() => {
-                                            if (selectedStyleIds.includes(style.id)) {
-                                                setSelectedStyleIds(selectedStyleIds.filter(id => id !== style.id));
-                                            } else if (selectedStyleIds.length < 3) {
-                                                setSelectedStyleIds([...selectedStyleIds, style.id]);
-                                            }
-                                        }}
-                                    >
-                                        <Text style={[
-                                            styles.styleChipText,
-                                            selectedStyleIds.includes(style.id) && styles.selectedStyleChipText
-                                        ]}>
-                                            {style.name}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
+                            <View>
+                                <Text style={styles.trendingTitle}>Style</Text>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={styles.styleScrollContainer}
+                                >
+                                    <View style={styles.styleRows}>
+                                        <View style={styles.styleRow}>
+                                            {styleOptions.slice(0, Math.ceil(styleOptions.length / 2)).map((style) => (
+                                                <TouchableOpacity
+                                                    key={style.id}
+                                                    style={[
+                                                        styles.styleChip,
+                                                        selectedStyleIds.includes(style.id) && styles.selectedStyleChip
+                                                    ]}
+                                                    onPress={() => {
+                                                        if (selectedStyleIds.includes(style.id)) {
+                                                            setSelectedStyleIds(selectedStyleIds.filter(id => id !== style.id));
+                                                        } else if (selectedStyleIds.length < 3) {
+                                                            setSelectedStyleIds([...selectedStyleIds, style.id]);
+                                                        }
+                                                    }}
+                                                >
+                                                    <Text style={[
+                                                        styles.styleChipText,
+                                                        selectedStyleIds.includes(style.id) && styles.selectedStyleChipText
+                                                    ]}>
+                                                        {style.name}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                        <View style={styles.styleRow}>
+                                            {styleOptions.slice(Math.ceil(styleOptions.length / 2)).map((style) => (
+                                                <TouchableOpacity
+                                                    key={style.id}
+                                                    style={[
+                                                        styles.styleChip,
+                                                        selectedStyleIds.includes(style.id) && styles.selectedStyleChip
+                                                    ]}
+                                                    onPress={() => {
+                                                        if (selectedStyleIds.includes(style.id)) {
+                                                            setSelectedStyleIds(selectedStyleIds.filter(id => id !== style.id));
+                                                        } else if (selectedStyleIds.length < 3) {
+                                                            setSelectedStyleIds([...selectedStyleIds, style.id]);
+                                                        }
+                                                    }}
+                                                >
+                                                    <Text style={[
+                                                        styles.styleChipText,
+                                                        selectedStyleIds.includes(style.id) && styles.selectedStyleChipText
+                                                    ]}>
+                                                        {style.name}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </View>
+                                </ScrollView>
+                            </View>
 
                             {/* Brands */}
 
@@ -753,14 +784,20 @@ const styles = StyleSheet.create({
     },
     styleScrollContainer: {
         paddingVertical: 10,
-        paddingHorizontal: 5,
+    },
+    styleRows: {
+        flexDirection: 'column',
+        gap: 8,
+    },
+    styleRow: {
+        flexDirection: 'row',
+        gap: 8,
     },
     styleChip: {
         backgroundColor: '#f0f0f0',
         borderRadius: 20,
         paddingHorizontal: 15,
         paddingVertical: 8,
-        marginHorizontal: 5,
     },
     selectedStyleChip: {
         backgroundColor: '#000',

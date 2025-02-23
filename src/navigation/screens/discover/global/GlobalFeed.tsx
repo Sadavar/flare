@@ -170,7 +170,7 @@ export function GlobalFeed() {
     return (
         <PaginatedGridList
             data={allPosts}
-            header={Header}
+            header={<Header />}
             renderItem={renderItem}
             fetchNextPage={fetchNextPage}
             hasNextPage={hasNextPage}

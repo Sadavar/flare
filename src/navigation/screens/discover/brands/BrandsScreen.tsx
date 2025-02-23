@@ -266,8 +266,8 @@ export function BrandsScreen() {
                     keyExtractor={(item: Post) => item.uuid}
                     numColumns={2}
                     estimatedItemSize={280}
-                    emptyComponent={renderEmptyComponent()}
-                    errorComponent={renderErrorComponent()}
+                    // emptyComponent={renderEmptyComponent()}
+                    // errorComponent={renderErrorComponent()}
                     loadingMoreText="Loading more posts..."
                     contentContainerStyle={styles.gridContent}
                 />

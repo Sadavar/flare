@@ -3,9 +3,42 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Post } from '@/types';
 import { Image } from 'expo-image';
+import { useSavePost } from '@/hooks/usePostQueries';
+import { useEffect, useState } from 'react';
+import { CompositeNavigationProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { RootStackParamList, DiscoverTabParamList } from '@/types';
+
+type PostCardNavigationProp = CompositeNavigationProp<
+    BottomTabNavigationProp<DiscoverTabParamList>,
+    NativeStackNavigationProp<RootStackParamList>
+>;
 
 export default function PostCard({ post }: { post: Post }) {
-    const navigation = useNavigation();
+    const navigation = useNavigation<PostCardNavigationProp>();
+
+    const { mutate: toggleSave } = useSavePost();
+    const [isSaved, setIsSaved] = useState(post.saved || false);
+
+    useEffect(() => {
+        if (post && post.saved != undefined && post.saved != null)
+            setIsSaved(post.saved)
+    }, [post])
+
+    console.log(post.saved)
+
+    const handleSave = () => {
+        setIsSaved(!isSaved);
+        toggleSave(
+            { post: post, saved: isSaved },
+            {
+                onError: () => {
+                    setIsSaved(isSaved);
+                }
+            }
+        );
+    };
 
     return (
         <View style={styles.postContainer}>
@@ -20,26 +53,36 @@ export default function PostCard({ post }: { post: Post }) {
                 />
             </TouchableOpacity>
             <View style={styles.postDetails}>
-
                 <View style={styles.actionsRow}>
                     {/* Colors on the left */}
-                    {post.colors && post.colors.length > 0 && (
-                        <View style={styles.colorDotsContainer}>
-                            {post.colors.slice(0, 3).map((color) => (
-                                <View
-                                    key={color.id}
-                                    style={[
-                                        styles.colorDot,
-                                        { backgroundColor: color.hex_value }
-                                    ]}
-                                />
-                            ))}
-                        </View>
-                    )}
+                    <View style={styles.colorDotsContainer}>
+                        {post.colors && post.colors.length > 0 && (
+                            <View style={styles.colorDotsContainer}>
+                                {
+                                    post.colors.slice(0, 3).map((color) => (
+                                        <View
+                                            key={color.id}
+                                            style={[
+                                                styles.colorDot,
+                                                { backgroundColor: color.hex_value }
+                                            ]}
+                                        />
+                                    ))
+                                }
+                            </View>
+                        )}
+                    </View>
 
                     {/* Save icon on the right */}
-                    <TouchableOpacity style={styles.saveButton}>
-                        <MaterialIcons name="bookmark-border" size={20} color="#666" />
+                    <TouchableOpacity
+                        style={styles.saveButton}
+                        onPress={handleSave}
+                    >
+                        <MaterialIcons
+                            name={isSaved ? "bookmark" : "bookmark-border"}
+                            size={25}
+                            color="#666"
+                        />
                     </TouchableOpacity>
                 </View>
 
@@ -96,13 +139,12 @@ const styles = StyleSheet.create({
         flex: 1,
         margin: 6,
         borderRadius: 12,
-        backgroundColor: 'grey',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 2,
-        overflow: 'hidden',
+        // overflow: 'hidden',
     },
     postImage: {
         width: '100%',
@@ -111,9 +153,8 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     postDetails: {
-        backgroundColor: 'white',
         width: '100%',
-        paddingHorizontal: 3,
+        paddingHorizontal: 3
     },
     brandsContainer: {
         paddingBottom: 10,
@@ -187,8 +228,8 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     colorDot: {
-        width: 12,
-        height: 12,
+        width: 14,
+        height: 14,
         borderRadius: 3,
         borderWidth: 1,
         borderColor: 'rgba(0,0,0,0.1)',

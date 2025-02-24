@@ -5,6 +5,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import type { Post, Style, Brand, Color } from '@/types';
 import { useIsFocused } from '@react-navigation/native';
+import { useSession } from '@/context/SessionContext';
+import { useMutation } from '@tanstack/react-query';
 
 export const POST_SELECT_QUERY = `
     uuid,
@@ -78,6 +80,43 @@ export function usePost(postId: string) {
         refetchOnWindowFocus: 'always',
         // Don't refetch on reconnect unless stale
         refetchOnReconnect: false
+    });
+}
+
+export function useUserPostsAll(username) {
+    const { user } = useSession();
+    const queryClient = useQueryClient();
+
+    return useQuery({
+        queryKey: ['userPostsAll', username],
+        queryFn: async () => {
+            if (!username) return [];
+
+            // First get the user's UUID from their username
+            const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('username', username)
+                .single();
+
+            if (profileError) throw profileError;
+            if (!profileData?.id) return [];
+
+            // Fetch all posts for the user
+            const { data: posts, error } = await supabase
+                .from('posts')
+                .select(POST_SELECT_QUERY)
+                .eq('user_uuid', profileData.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            if (!posts) return [];
+
+            // Get saved status for these posts if there's a logged-in user
+            const postsWithSavedStatus = await checkSavedStatus(posts, user?.id);
+            return postsWithSavedStatus.map(formatPost);
+        },
+        enabled: !!username
     });
 }
 
@@ -161,7 +200,7 @@ export function useUserPosts(username: string, pageSize = 12) {
                 console.log('[useUserPosts] No username provided, returning empty array');
                 return [];
             }
-            const posts = await fetchUserPostsPage(username, pageParam, pageSize);
+            const posts = await fetchUserPostsPage(username, pageParam, pageSize, userUuid);
             console.log('[useUserPosts] Fetched page', pageParam, 'got', posts.length, 'posts');
             return posts;
         },
@@ -206,14 +245,16 @@ function useIsTabFocused(tabName: string) {
     return isFocused && isTabMounted;
 }
 
+// Modify the useGlobalFeed hook to pass the user
 export function useGlobalFeed(pageSize = 5) {
     const isTabFocused = useIsTabFocused('Global');
+    const { user } = useSession();  // Get user here in the hook
 
     return useInfiniteQuery({
         queryKey: ['globalFeed'],
         queryFn: async ({ pageParam = 0 }) => {
             console.log('[useGlobalFeed] Fetching page:', pageParam);
-            return fetchGlobalFeedPage(pageParam, pageSize);
+            return fetchGlobalFeedPage(pageParam, pageSize, user?.id);
         },
         getNextPageParam: (lastPage, allPages) => {
             const hasMore = lastPage.length === pageSize;
@@ -395,7 +436,7 @@ export function useFilteredPostsByStyles(selectedStyles: number[], pageSize = 10
 // Helper functions
 
 // New function to fetch paginated user posts with debugging
-async function fetchUserPostsPage(username: string, page: number, pageSize: number) {
+async function fetchUserPostsPage(username: string, page: number, pageSize: number, userId: string) {
     const from = page * pageSize;
     const to = from + pageSize - 1;
 
@@ -454,16 +495,16 @@ async function fetchUserPostsPage(username: string, page: number, pageSize: numb
         );
     }
 
-    // Process posts and update public_image_url if needed
-    const processedData = await Promise.all(data.map(updatePostWithPublicUrl));
-    return processedData.map(formatPost);
+    const postsWithSavedStatus = await checkSavedStatus(data, userId);
+    return postsWithSavedStatus.map(formatPost);
 }
 
-// Updated fetch function with pagination and logging
-async function fetchGlobalFeedPage(page: number, pageSize: number) {
+
+// Modify the fetch function to accept userId
+async function fetchGlobalFeedPage(page: number, pageSize: number, userId?: string) {
+    console.log("fetching with userId:", userId);
     const from = page * pageSize;
     const to = from + pageSize - 1;
-
     console.log('[fetchGlobalFeedPage] Range request -', 'from:', from, 'to:', to);
 
     const startTime = Date.now();
@@ -486,7 +527,6 @@ async function fetchGlobalFeedPage(page: number, pageSize: number) {
         'fetch time:', `${endTime - startTime}ms`
     );
 
-    // Print the first and last item IDs for debugging
     if (data.length > 0) {
         console.log(
             '[fetchGlobalFeedPage] Range verification -',
@@ -494,10 +534,9 @@ async function fetchGlobalFeedPage(page: number, pageSize: number) {
             'last item id:', data[data.length - 1].uuid
         );
     }
-
-    // Process posts and update public_image_url if needed
-    const processedData = await Promise.all(data.map(updatePostWithPublicUrl));
-    return processedData.map(formatPost);
+    console.log("going to check saved status")
+    const postsWithSavedStatus = await checkSavedStatus(data, userId);
+    return postsWithSavedStatus.map(formatPost);
 }
 
 // Reusable query functions
@@ -630,8 +669,7 @@ async function fetchPostsWithBrandFeedPage(brandId: number, page: number, pageSi
     if (!data) return [];
 
     // Process posts and update public_image_url if needed
-    const processedData = await Promise.all(data.map(updatePostWithPublicUrl));
-    return processedData.map(formatPost);
+    return data.map(formatPost);
 }
 
 // Helper function to format post data consistently
@@ -640,6 +678,7 @@ export function formatPost(post: any): Post {
         uuid: post.uuid,
         image_url: post.public_image_url,
         description: post.description,
+        // user_uuid: post.
         username: post.profiles.username,
         created_at: post.created_at,
         brands: post.post_brands.map((pb: any) => ({
@@ -656,6 +695,155 @@ export function formatPost(post: any): Post {
             id: pc.colors.id,
             name: pc.colors.name,
             hex_value: pc.colors.hex_value
-        }))
+        })),
+        saved: post.saved || false
     };
+}
+
+// Add this utility function
+async function getSavedPosts(userId: string, postUuids?: string[]) {
+    if (!userId) return [];
+
+    let query = supabase
+        .from('saved_posts')
+        .select(`
+            post_uuid,
+            posts (
+                ${POST_SELECT_QUERY}
+            )
+        `)
+        .eq('user_uuid', userId);
+
+    // If postUuids is provided, filter to only those posts
+    if (postUuids && postUuids.length > 0) {
+        query = query.in('post_uuid', postUuids);
+    }
+
+    const { data: savedPosts, error } = await query;
+
+    if (error) {
+        console.error('Error fetching saved posts:', error);
+        throw error;
+    }
+
+    return savedPosts || [];
+}
+
+// Update checkSavedStatus to use getSavedPosts
+async function checkSavedStatus(posts: any[], userId: string | undefined) {
+    console.log('checkSavedStatus called with:', {
+        numberOfPosts: posts?.length || 0,
+        userId: userId || 'undefined'
+    });
+
+    if (!userId || !posts.length) {
+        console.log('Early return due to:', {
+            noUserId: !userId,
+            noPosts: !posts.length
+        });
+        return posts;
+    }
+
+    // Log post UUIDs being checked
+    console.log('Checking saved status for posts:', posts.map(post => post.uuid));
+
+    // Get saved status using getSavedPosts
+    const savedPosts = await getSavedPosts(userId, posts.map(post => post.uuid));
+    console.log('Retrieved saved posts:', {
+        count: savedPosts.length,
+        savedPosts
+    });
+
+    // Create a Set of saved post UUIDs for efficient lookup
+    const savedPostIds = new Set(savedPosts.map(sp => sp.post_uuid));
+    console.log('Created Set of saved post IDs:', {
+        count: savedPostIds.size,
+        savedPostIds: Array.from(savedPostIds)
+    });
+
+    // Add saved status to each post
+    const posts_with_save = posts.map(post => {
+        const isSaved = savedPostIds.has(post.uuid);
+        console.log(`Post ${post.uuid} saved status:`, isSaved);
+        return {
+            ...post,
+            saved: isSaved
+        };
+    });
+
+    console.log('Returning posts with save status:', {
+        count: posts_with_save.length,
+        posts: posts_with_save
+    });
+
+    return posts_with_save;
+}
+// Add a hook to get a user's saved posts
+export function useGetSavedPosts(userId: string | undefined) {
+    return useQuery({
+        queryKey: ['savedPosts', userId],
+        queryFn: async () => {
+            if (!userId) {
+                console.log('No userId provided to useGetSavedPosts');
+                return [];
+            }
+
+            try {
+                // Get saved posts with their full post data
+                const savedPosts = await getSavedPosts(userId);
+                if (!savedPosts) return [];
+
+                // Extract just the posts and ensure they exist
+                const posts = savedPosts
+                    .map(sp => sp.posts)
+                    .filter(Boolean);
+
+                // These posts are all saved since they come from saved_posts table
+                const formattedPosts = posts.map(post => formatPost({
+                    ...post,
+                    saved: true
+                }));
+
+                console.log("Formatted saved posts:", formattedPosts);
+                return formattedPosts;
+            } catch (error) {
+                console.error('Error in useGetSavedPosts:', error);
+                return [];
+            }
+        },
+        enabled: !!userId
+    });
+}
+
+export function useSavePost() {
+    const { user, username } = useSession();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ post, saved }: { post: Post; saved: boolean }) => {
+            if (!user) throw new Error('Must be logged in to save posts');
+            if (post.username === username) throw new Error('You cannot save your own post');
+
+            if (saved) {
+                await supabase
+                    .from('saved_posts')
+                    .delete()
+                    .eq('post_uuid', post.uuid)
+                    .eq('user_uuid', user.id);
+            } else {
+                await supabase
+                    .from('saved_posts')
+                    .insert({ post_uuid: post.uuid, user_uuid: user.id });
+            }
+        },
+        onSuccess: () => {
+            // Invalidate both saved posts and global feed queries
+            queryClient.invalidateQueries({ queryKey: ['savedPosts'] });
+            queryClient.invalidateQueries({ queryKey: ['globalFeed'] });
+
+            // Also invalidate user posts if they exist
+            queryClient.invalidateQueries({ queryKey: ['userPosts'] });
+            queryClient.invalidateQueries({ queryKey: ['userPostsAll'] });
+        }
+    });
 }

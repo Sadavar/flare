@@ -7,34 +7,18 @@ import { supabase } from '@/lib/supabase';
 import { useSession } from '@/context/SessionContext';
 import { useNavigation } from '@react-navigation/native';
 import type { Post } from '@/types';
-import { useUserPosts } from '@/hooks/usePostQueries';
+import { useSavePost, useUserPosts } from '@/hooks/usePostQueries';
 import { Username } from '@/navigation/screens/auth/Username';
 import { usePost } from '@/hooks/usePostQueries'
 import { getColors } from 'react-native-image-colors';
 import { ColorCard } from '@/components/ColorCard';
+import ColorDisplay from './ColorDisplay';
 
 // Get screen width
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface PostViewProps {
     post: Post;
-}
-
-export function PostView2({ post }: PostViewProps) {
-    const { username: currentUsername } = useSession();
-    const navigation = useNavigation();
-    const [showTags, setShowTags] = useState(true);
-    const [imageHeight, setImageHeight] = useState(undefined);
-
-    console.log('post', post);
-
-    return (
-        <Image
-            source={{ uri: post?.image_url }}
-            style={{ width: '100%', height: 200 }}
-            priority="high"
-        />
-    )
 }
 
 export function PostView({ post }: PostViewProps) {
@@ -44,6 +28,28 @@ export function PostView({ post }: PostViewProps) {
     const [isImageLoaded, setIsImageLoaded] = useState(false);
     const [imageHeight, setImageHeight] = useState(undefined);
     const loadingStartTimeRef = useRef(Date.now());
+
+    const { mutate: toggleSave } = useSavePost();
+    const [isSaved, setIsSaved] = useState(post.saved || false);
+
+    useEffect(() => {
+        if (post && post.saved != undefined && post.saved != null)
+            setIsSaved(post.saved)
+    }, [post])
+
+    console.log(post.saved)
+
+    const handleSave = () => {
+        setIsSaved(!isSaved);
+        toggleSave(
+            { post: post, saved: isSaved },
+            {
+                onError: () => {
+                    setIsSaved(isSaved);
+                }
+            }
+        );
+    };
 
     const handleOnLoad = useCallback((event) => {
         // Calculate actual height based on natural image dimensions
@@ -154,19 +160,7 @@ export function PostView({ post }: PostViewProps) {
                 ))}
             </View>
 
-            {post.colors && post.colors.length > 0 && (
-                <View style={styles.colorsContainer}>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.colorsList}
-                    >
-                        {post.colors.map((color) => (
-                            <ColorCard key={color.id} color={color} />
-                        ))}
-                    </ScrollView>
-                </View>
-            )}
+            <ColorDisplay post={post} />
 
             {post.description && (
                 <>
@@ -203,6 +197,23 @@ export function PostView({ post }: PostViewProps) {
                     </View>
                 </View>
             )}
+
+            {post.username !== currentUsername && (
+                <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={handleSave}
+                >
+                    <MaterialIcons
+                        name={isSaved ? "bookmark" : "bookmark-outline"}
+                        size={24}
+                        color="#007AFF"
+                    />
+                    <Text style={styles.saveButtonText}>
+                        {isSaved ? "Unsave" : "Save"}
+                    </Text>
+                </TouchableOpacity>
+            )}
+
         </ScrollView >
     );
 }
@@ -314,13 +325,20 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#000',
     },
-    colorsContainer: {
-        paddingVertical: 15,
-    },
-    colorsList: {
-        paddingHorizontal: 15,
-        paddingBottom: 15,
-        gap: 12,
+
+
+    saveButton: {
         flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 10,
+        marginBottom: 10,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 8,
+    },
+    saveButtonText: {
+        marginLeft: 8,
+        color: '#007AFF',
+        fontSize: 16,
     },
 });

@@ -17,38 +17,34 @@ import { usePostsWithBrandFeed } from '@/hooks/usePostQueries';
 
 type BrandDetailsRouteProp = RouteProp<BrandsStackParamList, 'BrandDetails'>;
 
-function Header({ brandName, posts_length }: { brandName: string, posts_length: number }) {
+function Header({ brandName }: { brandName: string }) {
     return (
         <View style={styles.header}>
-            <View style={styles.profileSection}>
+            <View style={styles.brandInfo}>
+                {/* Brand Icon */}
                 <View style={styles.brandIcon}>
-                    <MaterialIcons name="store" size={40} color="black" />
+                    <MaterialIcons name="store" size={32} color="#666" />
                 </View>
-                <View style={styles.brandInfo}>
-                    <Text style={styles.brandName}>{brandName}</Text>
-                    <Text style={styles.bio}>Premium fashion brand | Est. 2023</Text>
-                </View>
+
+                {/* Brand Name */}
+                <Text style={styles.brandName}>{brandName}</Text>
             </View>
 
-            <View style={styles.statsContainer}>
-                <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>0</Text>
-                    <Text style={styles.statLabel}>Products</Text>
-                </View>
-                <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>2.5K</Text>
-                    <Text style={styles.statLabel}>Followers</Text>
-                </View>
-                <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>{posts_length || 0}</Text>
-                    <Text style={styles.statLabel}>Tags</Text>
-                </View>
+            {/* Social Links */}
+            <View style={styles.socialLinks}>
+                <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={() => {/* TODO: Link to website */ }}
+                >
+                    <MaterialIcons name="language" size={24} color="#666" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={() => {/* TODO: Link to Instagram */ }}
+                >
+                    <MaterialIcons name="alternate-email" size={24} color="#666" />
+                </TouchableOpacity>
             </View>
-
-            <TouchableOpacity style={styles.followButton}>
-                <Text style={styles.followButtonText}>Follow</Text>
-            </TouchableOpacity>
-            <Text style={{ fontSize: 16, fontWeight: 'bold', marginTop: 10, textAlign: 'center' }}>Tagged Posts</Text>
         </View>
     );
 }
@@ -111,9 +107,25 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     header: {
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignContent: 'center',
         padding: 20,
         borderBottomWidth: 1,
         borderBottomColor: '#f0f0f0',
+    },
+    socialLinks: {
+        flexDirection: 'row',
+        gap: 16,
+    },
+    socialButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#f5f5f5',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     profileSection: {
         flexDirection: 'row',
@@ -121,16 +133,19 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     brandIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#f0f0f0',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#f5f5f5',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 15,
+        marginRight: 16,
     },
     brandInfo: {
-        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+        width: '100%',
     },
     brandName: {
         fontSize: 20,

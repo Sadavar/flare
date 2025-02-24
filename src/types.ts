@@ -18,7 +18,11 @@ export type MainTabParamList = {
 
 export type GlobalStackParamList = {
     GlobalFeed: undefined;
-    UserProfile: { username: string };
+    UserProfile: {
+        username: string;
+        initialScreen?: 'PostDetails';
+        postData?: Post;
+    };
     PostDetails: { post: Post };
 };
 
@@ -41,6 +45,7 @@ export type DiscoverTabParamList = {
         screen?: keyof BrandsStackParamList;
         params?: BrandsStackParamList[keyof BrandsStackParamList];
     };
+    PostDetails: { post: Post };
     UserProfile: { username: string };
 };
 
@@ -66,14 +71,13 @@ export interface Post {
     uuid: string;
     image_url: string;
     description?: string;
+    user_uuid?: string;
     username?: string;
     created_at?: string;
     brands?: Brand[];
     styles?: Style[];
     colors?: Color[];
-    user?: {
-        username: string;
-    };
+    saved?: boolean;
 }
 
 export interface Style {

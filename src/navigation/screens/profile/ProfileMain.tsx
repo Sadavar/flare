@@ -1,62 +1,42 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSession } from '@/context/SessionContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { Post, ProfileStackParamList } from '@/types';
-import { useUserPosts } from '@/hooks/usePostQueries';
+import type { Color, Post, ProfileStackParamList } from '@/types';
+import { useGetSavedPosts, useUserPostsAll } from '@/hooks/usePostQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { PaginatedGridList } from '@/components/PaginatedGridList';
-
+import PostCard from '@/components/PostCard';
+import RecentPosts from './RecentPosts';
+import SavedPosts from './SavedPosts';
 type ProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
 
 export function ProfileMain() {
     const navigation = useNavigation<ProfileNavigationProp>();
     const { user, username = '' } = useSession();
     const queryClient = useQueryClient();
-    const PAGE_SIZE = 5; // Number of posts per page
 
-    // Get user posts with pagination
-    const {
-        data,
-        fetchNextPage,
-        hasNextPage,
-        isFetchingNextPage,
-        isLoading,
-        isError,
-        refetch
-    } = useUserPosts(username || "", PAGE_SIZE);
+    // Get all user posts
+    const { data: allPosts = [], refetch } = useUserPostsAll(username);
 
-    // Flatten posts from all pages
-    const allPosts = data?.pages?.flat() || [];
+    const { data: savedPosts = [] } = useGetSavedPosts(user.id);
+
+    // Filter saved posts
+    console.log("saved posts: ", savedPosts)
+    console.log(allPosts.length, savedPosts.length)
 
     // Handle refresh
     const handleRefresh = useCallback(() => {
-        refetch({ refetchPage: (_data, index) => index === 0 });
+        refetch();
     }, [refetch]);
 
-    // Refetch when profile screen is focused
-    useFocusEffect(
-        useCallback(() => {
-            handleRefresh();
-        }, [handleRefresh])
-    );
-
-    // Render each post
-    const renderPost = useCallback(({ item }: { item: Post }) => (
-        <TouchableOpacity
-            style={styles.postItem}
-            onPress={() => navigation.navigate('PostDetails', { post: item })}
-        >
-            <Image
-                source={{ uri: item.image_url }}
-                style={styles.image}
-                contentFit="cover"
-            />
-        </TouchableOpacity>
-    ), [navigation]);
+    const handleSeeAllPosts = useCallback(() => {
+        // You can navigate to a grid view of all posts or implement your desired behavior
+        navigation.navigate('AllPosts'); // Make sure to define this route in your navigation
+    }, [navigation]);
 
     // Render the profile header
     const ProfileHeader = useCallback(() => (
@@ -77,12 +57,8 @@ export function ProfileMain() {
                     <Text style={styles.statLabel}>Posts</Text>
                 </View>
                 <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>1.2K</Text>
-                    <Text style={styles.statLabel}>Followers</Text>
-                </View>
-                <View style={styles.statItem}>
                     <Text style={styles.statNumber}>45</Text>
-                    <Text style={styles.statLabel}>Brands</Text>
+                    <Text style={styles.statLabel}>Saves</Text>
                 </View>
             </View>
             <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
@@ -91,42 +67,30 @@ export function ProfileMain() {
         </View>
     ), [username, allPosts.length, handleRefresh]);
 
-    // Create empty component for user posts
-    const EmptyComponent = useCallback(() => (
-        <Text style={styles.emptyText}>No posts yet</Text>
-    ), []);
-
     return (
-        <View style={styles.container}>
+        <ScrollView
+            style={styles.container}
+            refreshControl={
+                <RefreshControl
+                    refreshing={false}
+                    onRefresh={handleRefresh}
+                    tintColor="#007AFF"
+                    title="Pull to refresh..."
+                />
+            }
+        >
             <ProfileHeader />
-
-            <PaginatedGridList
-                data={allPosts}
-                renderItem={renderPost}
-                fetchNextPage={fetchNextPage}
-                hasNextPage={hasNextPage}
-                isFetchingNextPage={isFetchingNextPage}
-                isLoading={isLoading}
-                isError={isError}
-                refetch={handleRefresh}
-                keyExtractor={(item) => item.uuid}
-                numColumns={3}
-                estimatedItemSize={124}
-                emptyComponent={<EmptyComponent />}
-                loadingMoreText="Loading more posts..."
-                contentContainerStyle={styles.listContent}
-                listProps={{
-                    ListHeaderComponent: null,
-                    showsVerticalScrollIndicator: false,
-                }}
+            <RecentPosts data={allPosts} onSeeAll={handleSeeAllPosts} />
+            <SavedPosts
+                data={savedPosts}
+                onSeeAll={() => { console.log('see all saved posts clicked') }}
             />
-        </View>
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         backgroundColor: '#fff',
     },
     header: {

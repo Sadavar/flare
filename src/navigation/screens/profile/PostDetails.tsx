@@ -4,11 +4,13 @@ import { Image } from 'expo-image';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import type { ProfileStackParamList } from '@/types';
 import { Layout } from '@/components/Layout';
-import { usePost, useDeletePost } from '@/hooks/usePostQueries';
+import { usePost, useDeletePost, useSavePost } from '@/hooks/usePostQueries';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Post } from '../post/Post';
+import { useSession } from '@/context/SessionContext';
+import ColorDisplay from '@/components/ColorDisplay';
 
 
 
@@ -20,9 +22,41 @@ export function PostDetails() {
     const { post } = route.params;
     const [showTags, setShowTags] = useState(true);
 
-    const { deletePost } = useDeletePost();
+    const { username: currentUsername } = useSession()
 
-    const queryClient = useQueryClient();
+    const { deletePost } = useDeletePost();
+    const { mutate: toggleSave } = useSavePost();
+    const [isSaved, setIsSaved] = useState(post.saved || false);
+
+    console.log("Saved post!:", post)
+
+    const handleSave = () => {
+        setIsSaved(!isSaved);
+        toggleSave(
+            { post: post, saved: isSaved },
+            {
+                onError: () => {
+                    setIsSaved(isSaved);
+                }
+            }
+        );
+    };
+
+    const handleUserPress = (username: string) => {
+        if (username === currentUsername) {
+            navigation.getParent()?.navigate('Profile', { screen: 'ProfileMain' });
+        } else {
+            navigation.getParent()?.navigate('Discover', {
+                screen: 'Global',
+                params: {
+                    screen: 'UserProfile',
+                    params: { username }
+                }
+            });
+        }
+    };
+
+
 
     const handleDelete = async () => {
         Alert.alert(
@@ -61,8 +95,6 @@ export function PostDetails() {
         setShowTags((prevState) => !prevState);
     };
 
-
-
     if (!post) {
         return (
             <Layout>
@@ -75,6 +107,21 @@ export function PostDetails() {
 
     return (
         <ScrollView style={styles.container}>
+            {post.username !== currentUsername &&
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        style={styles.userInfo}
+                        onPress={() => handleUserPress(post.username || '')}
+                        activeOpacity={1}
+                    >
+                        <View style={styles.userIcon}>
+                            <MaterialIcons name="person" size={24} color="black" />
+                        </View>
+                        <Text style={styles.username}>@{post.username}</Text>
+                    </TouchableOpacity>
+                </View>
+            }
+
             <View style={styles.imageContainer}>
                 <TouchableOpacity onPress={toggleTagsVisibility} activeOpacity={1}>
                     <Image
@@ -104,10 +151,12 @@ export function PostDetails() {
                 ))}
             </View>
 
+            <ColorDisplay post={post} />
+
             <View style={styles.detailsContainer}>
-                {/* <Text style={styles.date}>
-                        {new Date(post.created_at).toLocaleDateString()}
-                    </Text> */}
+                <Text style={styles.date}>
+                    {new Date(post.created_at as string).toLocaleDateString()}
+                </Text>
                 <Text style={styles.brandsLabel}>Description:</Text>
                 {post.description && (
                     <Text style={styles.description}>{post.description}</Text>
@@ -141,22 +190,45 @@ export function PostDetails() {
                     </View>
                 )}
 
-                <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={() => {
-                        console.log('[PostDetails] Post:', post);
-                        navigation.navigate('PostEdit', { post: post as Post });
-                    }}
-                >
-                    <MaterialIcons name="edit" size={24} color="#007AFF" />
-                    <Text style={styles.editButtonText}>Edit Post</Text>
-                </TouchableOpacity>
+                {/* Save Toggle Button */}
+                {post.username !== currentUsername && (
+                    <TouchableOpacity
+                        style={styles.saveButton}
+                        onPress={handleSave}
+                    >
+                        <MaterialIcons
+                            name={isSaved ? "bookmark" : "bookmark-outline"}
+                            size={24}
+                            color="#007AFF"
+                        />
+                        <Text style={styles.saveButtonText}>
+                            {isSaved ? "Unsave" : "Save"}
+                        </Text>
+                    </TouchableOpacity>
+                )}
 
-                <Button
-                    title="Delete Post"
-                    onPress={handleDelete}
-                    color="#FF3B30"
-                />
+
+                {/* Action Buttons*/}
+                {post.username === currentUsername &&
+                    <>
+                        <TouchableOpacity
+                            style={styles.editButton}
+                            onPress={() => {
+                                console.log('[PostDetails] Post:', post);
+                                navigation.navigate('PostEdit', { post: post as Post });
+                            }}
+                        >
+                            <MaterialIcons name="edit" size={24} color="#007AFF" />
+                            <Text style={styles.editButtonText}>Edit Post</Text>
+                        </TouchableOpacity>
+
+                        <Button
+                            title="Delete Post"
+                            onPress={handleDelete}
+                            color="#FF3B30"
+                        />
+                    </>
+                }
             </View>
         </ScrollView>
     );
@@ -166,6 +238,28 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 15,
+    },
+    userInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    userIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 8,
+    },
+    username: {
+        fontSize: 14,
+        fontWeight: '600',
     },
     imageContainer: {
         position: 'relative',
@@ -254,6 +348,20 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     editButtonText: {
+        marginLeft: 8,
+        color: '#007AFF',
+        fontSize: 16,
+    },
+    saveButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 10,
+        marginBottom: 10,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 8,
+    },
+    saveButtonText: {
         marginLeft: 8,
         color: '#007AFF',
         fontSize: 16,

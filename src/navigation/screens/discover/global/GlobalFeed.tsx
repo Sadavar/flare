@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Dimensions, TouchableOpacity, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 // import { Image } from 'react-native';
-import { useGlobalFeed } from '@/hooks/usePostQueries';
+import { useGlobalFeed, useSavedPostStatus } from '@/hooks/usePostQueries';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { Post } from '@/types';
 import { PaginatedGridList } from '@/components/PaginatedGridList';
 import { MaterialIcons } from '@expo/vector-icons';
+import PostCard from '@/components/PostCard';
 
 function GlobalSearch() {
 
@@ -97,75 +98,14 @@ export function GlobalFeed() {
 
     // Flatten posts from all pages
     const allPosts = data?.pages?.flat() || [];
+    console.log("got all posts", allPosts)
 
     // Render each post
     const renderItem = useCallback(({ item }: { item: Post }) => {
         return (
-            <View style={styles.postContainer}>
-                <TouchableOpacity
-                    onPress={() => navigation.navigate('PostDetails', { post: item })}
-                >
-                    <Image
-                        source={{ uri: item.image_url }}
-                        style={styles.postImage}
-                        contentFit="cover"
-                        transition={300}
-                    />
-                </TouchableOpacity>
-                <View style={styles.postDetails}>
-
-                    <View style={styles.actionsRow}>
-                        {/* Colors on the left */}
-                        {item.colors && item.colors.length > 0 && (
-                            <View style={styles.colorDotsContainer}>
-                                {item.colors.slice(0, 3).map((color) => (
-                                    <View
-                                        key={color.id}
-                                        style={[
-                                            styles.colorDot,
-                                            { backgroundColor: color.hex_value }
-                                        ]}
-                                    />
-                                ))}
-                            </View>
-                        )}
-
-                        {/* Save icon on the right */}
-                        <TouchableOpacity style={styles.saveButton}>
-                            <MaterialIcons name="bookmark-border" size={20} color="#666" />
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Brands below */}
-                    {item.brands && item.brands.length > 0 && (
-                        <View style={styles.brandsContainer}>
-                            <View style={styles.brandsList}>
-                                {item.brands.slice(0, 2).map((brand) => (
-                                    <TouchableOpacity
-                                        key={brand.id}
-                                        style={styles.brandButton}
-                                        onPress={() => navigation.navigate('Brands', {
-                                            screen: 'BrandDetails',
-                                            params: { brandId: brand.id, brandName: brand.name }
-                                        })}
-                                    >
-                                        <Text style={styles.brandText}>{brand.name}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                                {item.brands.length > 2 && (
-                                    <View style={styles.brandButton}>
-                                        <Text style={styles.brandText}>+{item.brands.length - 2}</Text>
-                                    </View>
-                                )}
-                            </View>
-                        </View>
-                    )}
-                </View>
-            </View>
+            <PostCard post={item} />
         )
     }, [navigation]);
-
-
 
     return (
         <PaginatedGridList
@@ -177,7 +117,10 @@ export function GlobalFeed() {
             isFetchingNextPage={isFetchingNextPage}
             isLoading={isLoading}
             isError={isError}
-            refetch={refetch}
+            refetch={() => {
+                console.log("refetching")
+                refetch()
+            }}
             keyExtractor={(item: Post) => item.uuid}
             numColumns={2}
             estimatedItemSize={250}

@@ -4,6 +4,7 @@ import type { ProfileStackParamList } from '@/types';
 import { ProfileMain } from './ProfileMain';
 import { PostDetails } from './PostDetails';
 import { PostEdit } from './PostEdit';
+import { theme } from '@/context/ThemeContext';
 
 const Stack = createNativeStackNavigator<ProfileStackParamList>();
 
@@ -11,12 +12,11 @@ export function Profile() {
     return (
         <Stack.Navigator
             screenOptions={{
-                headerShown: true,
+                headerShown: false,
                 headerTitle: 'Profile',
                 headerStyle: {
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.background,
                 },
-                headerTintColor: 'black',
                 headerTitleStyle: {
                     fontWeight: 'bold',
                 },

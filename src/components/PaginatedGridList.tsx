@@ -1,5 +1,5 @@
 import React, { useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Dimensions, RefreshControl, ScrollView } from 'react-native';
 import { MasonryFlashList } from '@shopify/flash-list';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -188,7 +188,6 @@ export function PaginatedGridList({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
     },
     listContent: {
         paddingHorizontal: GAP_SIZE,
@@ -199,7 +198,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#fff',
     },
     loadingText: {
         marginTop: 12,
@@ -220,9 +218,9 @@ const styles = StyleSheet.create({
     },
     emptyContainer: {
         flex: 1,
-        justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        justifyContent: 'center',
+        minHeight: '100%',
     },
     emptyText: {
         fontSize: 16,

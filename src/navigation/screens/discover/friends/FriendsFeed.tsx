@@ -1,198 +1,128 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
-import { Image } from 'expo-image';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet, TextInput, TouchableOpacity, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { FriendsStackParamList, Post } from '@/types';
+import { useFollowingFeed } from '@/hooks/usePostQueries';
+import { useUserSearch } from '@/hooks/useUserSearch';
+import { PaginatedGridList } from '@/components/PaginatedGridList';
+import { PostView } from '@/components/PostView';
+import debounce from 'lodash/debounce';
 import { useSession } from '@/context/SessionContext';
-
-type FriendsFeedNavigationProp = NativeStackNavigationProp<FriendsStackParamList, 'FriendsFeed'>;
-
-function FriendsSearch() {
-    const styles = StyleSheet.create({
-        searchContainer: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            borderWidth: 0.5,
-            borderColor: '#000',
-            borderRadius: 20,
-            paddingHorizontal: 10,
-            margin: 15,
-        },
-        searchIcon: {
-            marginRight: 10,
-        },
-        searchInput: {
-            flex: 1,
-            height: 40,
-        },
-    });
-
-    return (
-        <View style={styles.searchContainer}>
-            <MaterialIcons name="search" size={30} color="#000" style={styles.searchIcon} />
-            <TextInput
-                style={styles.searchInput}
-                placeholder="Search for friends"
-                placeholderTextColor="#666"
-                // value={searchQuery}
-                // onChangeText={setSearchQuery}
-                autoCorrect={false}
-            />
-        </View>
-    );
-}
+import { theme, useTheme } from '@/context/ThemeContext';
+import { CustomText } from '@/components/CustomText';
 
 export function FriendsFeed() {
-    return (
-        <View>
-            <Text>Friends Feed</Text>
-        </View>
-    )
-}
-export function FriendsFeed2() {
-    const navigation = useNavigation<FriendsFeedNavigationProp>();
-    const { user: currentUser, username: currentUsername } = useSession();
+    const navigation = useNavigation();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
+    const { username: currentUsername } = useSession();
+    const { theme } = useTheme();
 
-    const { data: posts, isLoading } = useQuery<Post[], boolean>({
-        queryKey: ['friendsFeed'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('posts')
-                .select(`
-                    uuid,
-                    image_url,
-                    description,
-                    created_at,
-                    user_uuid,
-                    profiles!posts_user_uuid_fkey (username),
-                    post_brands (
-                        brands (
-                            id,
-                            name
-                        )
-                    )
-                `)
-                .order('created_at', { ascending: false });
+    const {
+        data: feedData,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading: isFeedLoading,
+        isError: isFeedError,
+        refetch: refetchFeed
+    } = useFollowingFeed();
 
-            if (error) throw error;
+    const {
+        data: searchResults = [],
+        isLoading: isSearchLoading
+    } = useUserSearch(searchQuery);
 
-            return data.map(post => ({
-                uuid: post.uuid,
-                image_url: supabase.storage
-                    .from('outfits')
-                    .getPublicUrl(post.image_url).data.publicUrl,
-                description: post.description,
-                username: post.profiles?.username, // Directly assign username
-                user: {
-                    username: post.profiles?.username
-                },
-                brands: post.post_brands.map((pb: any) => ({
-                    id: pb.brands.id,
-                    name: pb.brands.name,
-                    x_coord: 0,
-                    y_coord: 0
-                }))
-            }));
-        },
-    });
+    // Debounce search to avoid too many requests
+    const handleSearch = debounce((text: string) => {
+        setSearchQuery(text);
+    }, 300);
 
-    const handleBrandPress = (brandId: number, brandName: string) => {
-        navigation.getParent()?.navigate('Brands', {
-            screen: 'BrandDetails',
-            params: { brandId, brandName }
-        });
-    };
+    const handleUserPress = useCallback((username: string) => {
+        setIsSearching(false);
+        setSearchQuery('');
 
-    const handleProfilePress = (username: string) => {
+        console.log('yuh')
+        console.log(username, currentUsername)
+        // If it's the current user's profile, navigate to Profile tab
         if (username === currentUsername) {
+            console.log('same username')
             navigation.getParent()?.navigate('Profile', {
                 screen: 'ProfileMain'
             });
         } else {
+            // Otherwise navigate to UserProfile in Discover stack
             navigation.navigate('UserProfile', { username });
         }
-    };
+    }, [navigation, currentUsername]);
+    const renderSearchResults = () => (
+        <View style={styles.searchResults}>
+            {searchResults.map(user => (
+                <TouchableOpacity
+                    key={user.id}
+                    style={styles.searchResult}
+                    onPress={() => handleUserPress(user.username)}
+                >
+                    <MaterialIcons name="person" size={24} color="#666" />
+                    <CustomText style={styles.searchResultText}>@{user.username}</CustomText>
+                </TouchableOpacity>
+            ))}
+        </View>
+    );
 
-    function renderPost({ item }: { item: Post }) {
-        console.log(item);
-        console.log("friends feed");
-        return (
-            <View style={styles.postContainer}>
-                <View style={styles.postHeader}>
-                    <TouchableOpacity
-                        style={styles.userInfo}
-                        onPress={() => handleProfilePress(item.user.username)}
-                    >
-                        <View style={styles.userIcon}>
-                            <MaterialIcons name="person" size={24} color="black" />
-                        </View>
-                        <Text style={styles.username}>@{item.user.username}</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <Image
-                    source={{ uri: item.image_url }}
-                    style={styles.postImage}
-                    contentFit="cover"
-                    transition={0}
-                />
-
-                <View style={styles.brandsContainer}>
-                    <Text style={styles.brandsLabel}>Featured Brands:</Text>
-                    <View style={styles.brandsList}>
-                        {item.brands.map(brand => (
-                            <TouchableOpacity
-                                key={brand.id}
-                                style={styles.brandButton}
-                                onPress={() => handleBrandPress(brand.id, brand.name)}
-                            >
-                                <Text style={styles.brandText}>{brand.name}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
-
-                <Text style={styles.description}>{item.description}</Text>
-            </View>
-        );
-    }
-
-    if (isLoading) {
-        return (
-            <View style={styles.container}>
-                <Text>Loading...</Text>
-            </View>
-        );
-    }
-
-    if (!posts?.length) {
-        return (
-            <View style={styles.container}>
-                <Text>No posts yet</Text>
-            </View>
-        );
-    }
+    // Flatten posts from all pages
+    const allPosts = feedData?.pages?.flat() || [];
 
     return (
         <View style={styles.container}>
-            <FlashList
-                ListHeaderComponent={
-                    <>
-                        <View style={styles.fixedHeader}>
-                            <Text style={styles.mainTitle}>Discover Friends</Text>
-                            <FriendsSearch />
-                        </View>
-                    </>
-                }
-                data={posts}
-                renderItem={renderPost}
-                estimatedItemSize={400}
-            />
+            <CustomText style={[styles.mainTitle, { color: theme.colors.text }]}>
+                Discover Friends
+            </CustomText>
+
+            <View style={[styles.searchContainer, {
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.searchBar,
+            }]}>
+                <MaterialIcons name="search" size={30} color={theme.colors.light_background_2} />
+                <TextInput
+                    style={[styles.searchInput, { color: theme.colors.text }]}
+                    placeholder="Search users..."
+                    placeholderTextColor={theme.colors.subtext}
+                    onChangeText={(text) => {
+                        handleSearch(text);
+                        setIsSearching(!!text);
+                    }}
+                    onFocus={() => setIsSearching(true)}
+                />
+                {isSearching && (
+                    <TouchableOpacity
+                        onPress={() => {
+                            setIsSearching(false);
+                            setSearchQuery('');
+                        }}
+                    >
+                        <MaterialIcons name="close" size={24} color={theme.colors.subtext} />
+                    </TouchableOpacity>
+                )}
+            </View>
+
+            {isSearching ? (
+                renderSearchResults()
+            ) : (
+                <PaginatedGridList
+                    data={allPosts}
+                    renderItem={({ item }) => <PostView post={item} />}
+                    fetchNextPage={fetchNextPage}
+                    hasNextPage={hasNextPage}
+                    isFetchingNextPage={isFetchingNextPage}
+                    isLoading={isFeedLoading}
+                    isError={isFeedError}
+                    refetch={refetchFeed}
+                    emptyComponent={<CustomText style={styles.emptyText}>No following posts found, try following more people!</CustomText>}
+                    numColumns={1}
+                    keyExtractor={(item) => item.uuid}
+                />
+            )}
         </View>
     );
 }
@@ -200,81 +130,45 @@ export function FriendsFeed2() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
-        marginTop: 0
-    },
-    fixedHeader: {
-        paddingTop: 10,
-        backgroundColor: '#fff',
-        zIndex: 1,
     },
     mainTitle: {
         fontSize: 18,
         fontWeight: 'bold',
         alignSelf: 'center',
+        paddingTop: 10,
     },
-    postContainer: {
-        marginBottom: 20,
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    postHeader: {
+    searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        borderWidth: 0.5,
+        borderRadius: 20,
+        paddingHorizontal: 10,
+        margin: 15,
+    },
+    searchIcon: {
+        marginRight: 10,
+    },
+    searchInput: {
+        flex: 1,
+        height: 40,
+    },
+    searchResults: {
+        flex: 1,
         padding: 10,
     },
-    userInfo: {
+    searchResult: {
         flexDirection: 'row',
         alignItems: 'center',
+        padding: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
     },
-    userIcon: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#f0f0f0',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 8,
+    searchResultText: {
+        marginLeft: 10,
+        fontSize: 16,
     },
-    username: {
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    postImage: {
-        width: '100%',
-        aspectRatio: 1,
-    },
-    brandsContainer: {
-        padding: 10,
-    },
-    brandsLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        marginBottom: 5,
-    },
-    brandsList: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 5,
-    },
-    brandButton: {
-        backgroundColor: '#f0f0f0',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 15,
-    },
-    brandText: {
-        fontSize: 12,
-        color: '#000',
-    },
-    description: {
-        padding: 10,
-        fontSize: 14,
+    emptyText: {
+        fontSize: 16,
         color: '#666',
     },
-});
+}); 

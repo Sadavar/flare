@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import MiniPostCard from '../../../components/MiniPostCard';
+import { CustomText } from '@/components/CustomText';
 
 function SavedPosts({ data, onSeeAll }) {
     const allPosts = data
@@ -10,9 +11,9 @@ function SavedPosts({ data, onSeeAll }) {
         return (
             <View style={styles.section}>
                 <View style={styles.header}>
-                    <Text style={styles.title}>Saved Posts</Text>
+                    <CustomText style={styles.title}>Saved Posts</CustomText>
                 </View>
-                <Text style={styles.emptyText}>No Saved Posts Yet</Text>
+                <CustomText style={styles.emptyText}>No Saved Posts Yet</CustomText>
             </View>
         );
     }
@@ -20,12 +21,12 @@ function SavedPosts({ data, onSeeAll }) {
     return (
         <View style={styles.section}>
             <View style={styles.header}>
-                <Text style={styles.title}>Saved Posts</Text>
+                <CustomText style={styles.title}>Saved Posts</CustomText>
                 <TouchableOpacity
                     style={styles.seeAllButton}
                     onPress={onSeeAll}
                 >
-                    <Text style={styles.seeAllText}>See All Saved</Text>
+                    <CustomText style={styles.seeAllText}>See All Saved</CustomText>
                     <MaterialIcons name="chevron-right" size={20} color="#666" />
                 </TouchableOpacity>
             </View>

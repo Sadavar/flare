@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { Color } from '@/types';
+import { theme } from '@/context/ThemeContext';
 
 interface ColorCardProps {
     color: Color;
@@ -44,13 +45,13 @@ const createStyles = (size: 'small' | 'normal') => StyleSheet.create({
         width: size === 'normal' ? 100 : 80,
         height: size === 'normal' ? 120 : 100,
         borderRadius: 8,
-        backgroundColor: 'white',
+        backgroundColor: theme.colors.light_background_1,
         shadowColor: '#000',
         shadowOffset: {
             width: 5,
             height: 2,
         },
-        shadowOpacity: 0.25,
+        shadowOpacity: 0.9,
         shadowRadius: 4,
         elevation: 5,
         margin: 5,
@@ -78,10 +79,10 @@ const createStyles = (size: 'small' | 'normal') => StyleSheet.create({
         fontWeight: '800',
         textTransform: 'uppercase',
         marginBottom: 4,
-        color: '#333',
+        color: theme.colors.light_background_3,
     },
     colorHex: {
         fontSize: size === 'normal' ? 11 : 9,
-        color: '#666',
+        color: theme.colors.light_background_2,
     },
 });

@@ -8,48 +8,34 @@ import { Post } from '@/types';
 import { PaginatedGridList } from '@/components/PaginatedGridList';
 import { MaterialIcons } from '@expo/vector-icons';
 import PostCard from '@/components/PostCard';
+import { CustomText } from '@/components/CustomText';
+import { theme } from '@/context/ThemeContext';
+
 
 function GlobalSearch() {
-
     const styles = StyleSheet.create({
-
         searchContainer: {
-
             flexDirection: 'row',
-
             alignItems: 'center',
-
             borderWidth: 0.5,
-
             borderColor: '#000',
-
             borderRadius: 20,
-
             paddingHorizontal: 10,
-
+            backgroundColor: theme.colors.light_background_1,
             margin: 15,
-
         },
-
         searchIcon: {
-
             marginRight: 10,
-
         },
-
         searchInput: {
-
             flex: 1,
-
             height: 40,
-
         },
-
     });
 
     return (
         <View style={styles.searchContainer}>
-            <MaterialIcons name="search" size={30} color="#000" style={styles.searchIcon} />
+            <MaterialIcons name="search" size={30} color={theme.colors.light_background_2} style={styles.searchIcon} />
             <TextInput
                 style={styles.searchInput}
                 placeholder="Search for brands"
@@ -68,7 +54,7 @@ function Header() {
 
             <View style={styles.fixedHeader}>
 
-                <Text style={styles.mainTitle}>Discover Globally</Text>
+                <CustomText style={styles.mainTitle}>Discover Globally</CustomText>
 
                 <GlobalSearch
 
@@ -133,11 +119,9 @@ export function GlobalFeed() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
     },
     fixedHeader: {
         paddingTop: 10,
-        backgroundColor: '#fff',
         zIndex: 1,
     },
     mainTitle: {

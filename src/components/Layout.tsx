@@ -1,18 +1,21 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, StyleSheet, SafeAreaView } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
 
 interface LayoutProps {
     children: React.ReactNode;
-    style?: any;
 }
 
-export function Layout({ children, style }: LayoutProps) {
+export function Layout({ children }: LayoutProps) {
+    const { theme } = useTheme();
+
     return (
-        <SafeAreaView style={[styles.safe, style]} edges={['top']}>
-            <View style={styles.container}>
-                {children}
-            </View>
+        <SafeAreaView style={[
+            styles.safe,
+            styles.container,
+            { backgroundColor: theme.colors.background }
+        ]}>
+            {children}
         </SafeAreaView>
     );
 }
@@ -20,7 +23,6 @@ export function Layout({ children, style }: LayoutProps) {
 const styles = StyleSheet.create({
     safe: {
         flex: 1,
-        backgroundColor: '#ffffff',
     },
     container: {
         flex: 1,

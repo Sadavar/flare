@@ -7,6 +7,8 @@ import { useNavigation, CompositeNavigationProp } from '@react-navigation/native
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MainTabParamList, RootStackParamList } from '@/types';
+import { CustomText } from '@/components/CustomText'
+import { theme } from '@/context/ThemeContext';
 
 interface PostModalProps {
     modalRef: React.RefObject<Modalize>;
@@ -61,17 +63,17 @@ export function PostModal({ modalRef }: PostModalProps) {
 
     return (
         <View style={styles.content}>
-            <Text style={styles.title}>Create Post</Text>
+            <CustomText style={styles.title}>Create Post</CustomText>
 
             <TouchableOpacity
                 style={[styles.option, isLoading && styles.optionDisabled]}
                 onPress={() => !isLoading && handleImagePick(false)}
                 disabled={isLoading}
             >
-                <MaterialIcons name="photo-library" size={24} color={isLoading ? "#999" : "#000"} />
-                <Text style={[styles.optionText, isLoading && styles.optionTextDisabled]}>
+                <MaterialIcons name="photo-library" size={24} color={isLoading ? theme.colors.light_background_2 : "white"} />
+                <CustomText style={[styles.optionText, isLoading && styles.optionTextDisabled]}>
                     Choose from Library
-                </Text>
+                </CustomText>
                 {isLoading && <ActivityIndicator style={styles.loader} color="#666" />}
             </TouchableOpacity>
 
@@ -80,10 +82,10 @@ export function PostModal({ modalRef }: PostModalProps) {
                 onPress={() => !isLoading && handleImagePick(true)}
                 disabled={isLoading}
             >
-                <MaterialIcons name="camera-alt" size={24} color={isLoading ? "#999" : "#000"} />
-                <Text style={[styles.optionText, isLoading && styles.optionTextDisabled]}>
+                <MaterialIcons name="camera-alt" size={24} color={isLoading ? theme.colors.light_background_2 : "white"} />
+                <CustomText style={[styles.optionText, isLoading && styles.optionTextDisabled]}>
                     Take Photo
-                </Text>
+                </CustomText>
             </TouchableOpacity>
         </View>
     );
@@ -104,7 +106,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 15,
         borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: '#ccc',
+        borderBottomColor: theme.colors.light_background_1,
     },
     optionDisabled: {
         opacity: 0.6,

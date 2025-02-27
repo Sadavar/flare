@@ -1,3 +1,4 @@
+import { theme } from '@/context/ThemeContext';
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
@@ -38,7 +39,7 @@ export const PostButton = ({
 
 const styles = StyleSheet.create({
     button: {
-        backgroundColor: 'navy',
+        backgroundColor: theme.colors.primary,
         height: 50,
         borderRadius: 25,
         alignItems: 'center',

@@ -9,8 +9,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRef } from 'react';
 import { Modalize } from 'react-native-modalize';
 import { PostModal } from '@/components/PostModal';
-import type { RootStackParamList, MainTabParamList, DiscoverTabParamList } from '../types';
+import type { RootStackParamList, MainTabParamList, DiscoverTabParamList, ProfileStackParamList } from '../types';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { theme } from '@/context/ThemeContext';
 
 // Import screens
 import { Login } from './screens/auth/Login';
@@ -22,10 +23,16 @@ import { Friends } from './screens/discover/friends/Friends';
 import { Brands } from './screens/discover/brands/Brands';
 import { Layout } from '@/components/Layout';
 import { UserProfile } from './screens/discover/UserProfile';
+import { ProfileMain } from './screens/profile/ProfileMain';
+import { PostDetails } from './screens/profile/PostDetails';
+import { PostEdit } from './screens/profile/PostEdit';
+import { FollowList } from './screens/profile/FollowList';
+import { AllPosts } from './screens/profile/AllPosts';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const BottomTab = createBottomTabNavigator<MainTabParamList>();
 const TopTab = createMaterialTopTabNavigator<DiscoverTabParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 
 // Top Tab Navigator for Discover section
 function TopTabNavigator() {
@@ -35,13 +42,19 @@ function TopTabNavigator() {
         <TopTab.Navigator
           initialRouteName="Global"
           screenOptions={{
-            tabBarStyle: { elevation: 0, shadowOpacity: 0 },
-            tabBarIndicatorStyle: { backgroundColor: '#000' },
+            tabBarIndicatorStyle: { backgroundColor: 'white' },
             tabBarPressColor: 'transparent',
-            tabBarActiveTintColor: '#000',
-            tabBarInactiveTintColor: '#666',
             swipeEnabled: true,
-            tabBarItemStyle: { paddingBottom: 0 }
+            tabBarStyle: {
+              elevation: 0,
+              shadowOpacity: 0,
+              borderTopWidth: 1,
+              borderTopColor: theme.colors.background,
+              backgroundColor: theme.colors.background,
+              paddingBottom: 0,
+            },
+            tabBarActiveTintColor: theme.colors.primary,
+            tabBarInactiveTintColor: theme.colors.tabBarInactive,
           }}
         >
           <TopTab.Screen
@@ -94,9 +107,11 @@ function MainTabs() {
           tabBarStyle: {
             elevation: 0,
             borderTopWidth: 1,
-            borderTopColor: '#f0f0f0',
-            backgroundColor: 'white',
+            borderTopColor: theme.colors.background,
+            backgroundColor: theme.colors.background,
           },
+          tabBarActiveTintColor: theme.colors.primary,
+          tabBarInactiveTintColor: theme.colors.tabBarInactive,
         }}
       >
         <BottomTab.Screen
@@ -114,6 +129,11 @@ function MainTabs() {
           options={{
             headerShown: true,
             title: 'Create Post',
+            headerStyle: {
+              backgroundColor: theme.colors.background,
+              borderBottomWidth: 1,
+              borderBottomColor: theme.colors.light_background_1,
+            },
             tabBarIcon: ({ color }) => (
               <MaterialIcons name="add-box" size={30} color={color} />
             ),
@@ -129,7 +149,7 @@ function MainTabs() {
         />
         <BottomTab.Screen
           name="Profile"
-          component={Profile}
+          component={ProfileNavigator}
           options={{
             tabBarIcon: ({ color }) => (
               <MaterialIcons name="person" size={30} color={color} />
@@ -140,11 +160,59 @@ function MainTabs() {
       <Modalize
         ref={modalRef}
         adjustToContentHeight
-        modalStyle={{ backgroundColor: 'white' }}
+        modalStyle={{ backgroundColor: theme.colors.background }}
       >
         <PostModal modalRef={modalRef} />
       </Modalize>
     </>
+  );
+}
+
+function ProfileNavigator() {
+  return (
+    <Layout>
+      <ProfileStack.Navigator
+        screenOptions={{
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          contentStyle: {
+            borderTopColor: theme.colors.light_background_1,
+            borderTopWidth: 1,
+          },
+        }}
+      >
+        <ProfileStack.Screen
+          name="ProfileMain"
+          component={ProfileMain}
+          options={{ title: 'Profile' }}
+
+        />
+        <ProfileStack.Screen
+          name="PostDetails"
+          component={PostDetails}
+          options={{ title: 'Post Details' }}
+        />
+        <ProfileStack.Screen
+          name="PostEdit"
+          component={PostEdit}
+          options={{ title: 'Edit Post' }}
+        />
+        <ProfileStack.Screen
+          name="FollowList"
+          component={FollowList}
+          options={{ title: 'Friends' }}
+        />
+        <ProfileStack.Screen
+          name="AllPosts"
+          component={AllPosts}
+          options={({ route }) => ({
+            title: route.params?.type === 'saved' ? 'Saved Posts' : 'All Posts'
+          })}
+        />
+      </ProfileStack.Navigator>
+    </Layout>
   );
 }
 

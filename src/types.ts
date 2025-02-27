@@ -60,6 +60,10 @@ export type ProfileStackParamList = {
     ProfileMain: undefined;
     PostDetails: { post: Post };
     PostEdit: { post: Post };
+    AllPosts: {
+        type: 'posts' | 'saved';
+    };
+    FollowList: undefined;
 };
 
 export type PostStackParamList = {

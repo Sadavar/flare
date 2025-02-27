@@ -9,6 +9,11 @@ import type { DiscoverTabParamList, Post } from '@/types';
 import { useUserPostsAll } from '@/hooks/usePostQueries';
 import { useSession } from '@/context/SessionContext';
 import RecentPosts from '../profile/RecentPosts';
+import { useIsFollowing, useFollowUser } from '@/hooks/useFollowQueries';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { CustomText } from '@/components/CustomText';
+import { theme } from '@/context/ThemeContext';
 
 type UserProfileRouteProp = RouteProp<DiscoverTabParamList, 'UserProfile'>;
 
@@ -16,8 +21,29 @@ export function UserProfile() {
     const route = useRoute<UserProfileRouteProp>();
     const navigation = useNavigation();
     const { username, initialScreen, postData } = route.params || {};
+    const { user: currentUser } = useSession();
 
     const { data: allPosts = [], isLoading: postsLoading, refetch } = useUserPostsAll(username || '');
+
+    // Get target user's ID
+    const { data: targetUser } = useQuery({
+        queryKey: ['user', username],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, username')
+                .eq('username', username)
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        enabled: !!username
+    });
+
+    // Check if following
+    const { data: isFollowing = false } = useIsFollowing(targetUser?.id);
+    const { mutate: toggleFollow } = useFollowUser();
 
     // Handle initial navigation if needed
     useEffect(() => {
@@ -31,6 +57,23 @@ export function UserProfile() {
         refetch();
     }, [refetch]);
 
+    const handleFollowPress = () => {
+        if (!targetUser?.id) return;
+
+        toggleFollow(
+            {
+                targetUserId: targetUser.id,
+                isFollowing
+            },
+            {
+                onError: (error) => {
+                    console.error('Error toggling follow:', error);
+                    // You might want to show an error toast here
+                }
+            }
+        );
+    };
+
     // Render the profile header
     const ProfileHeader = useCallback(() => (
         <View style={styles.header}>
@@ -39,19 +82,19 @@ export function UserProfile() {
                     <MaterialIcons name="person" size={40} color="black" />
                 </View>
                 <View style={styles.userInfo}>
-                    <Text style={styles.username}>@{username}</Text>
-                    <Text style={styles.bio}>professional frollicker | NYC 📍</Text>
+                    <CustomText style={styles.username}>@{username}</CustomText>
+                    <CustomText style={styles.bio}>professional frollicker | NYC 📍</CustomText>
                 </View>
             </View>
 
             <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>{allPosts?.length || 0}</Text>
-                    <Text style={styles.statLabel}>Posts</Text>
+                    <CustomText style={styles.statNumber}>{allPosts?.length || 0}</CustomText>
+                    <CustomText style={styles.statLabel}>Posts</CustomText>
                 </View>
                 <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>45</Text>
-                    <Text style={styles.statLabel}>Saves</Text>
+                    <CustomText style={styles.statNumber}>45</CustomText>
+                    <CustomText style={styles.statLabel}>Saves</CustomText>
                 </View>
             </View>
             <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
@@ -64,7 +107,7 @@ export function UserProfile() {
         return (
             <Layout>
                 <View style={styles.container}>
-                    <Text>User not found</Text>
+                    <CustomText>User not found</CustomText>
                 </View>
             </Layout>
         );
@@ -73,6 +116,22 @@ export function UserProfile() {
     return (
         <ScrollView style={styles.container}>
             <ProfileHeader />
+            {currentUser && username !== currentUser.username && (
+                <TouchableOpacity
+                    style={[
+                        styles.followButton,
+                        isFollowing && styles.followingButton
+                    ]}
+                    onPress={handleFollowPress}
+                >
+                    <CustomText style={[
+                        styles.followButtonText,
+                        isFollowing && styles.followingButtonText
+                    ]}>
+                        {isFollowing ? 'Following' : 'Follow'}
+                    </CustomText>
+                </TouchableOpacity>
+            )}
             <RecentPosts data={allPosts} onSeeAll={() => console.log("see all clicked")} />
             {/* <SavedPosts
                 data={savedPosts}
@@ -84,12 +143,11 @@ export function UserProfile() {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#fff',
     },
     header: {
         padding: 20,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: theme.colors.light_background_1,
     },
     profileSection: {
         flexDirection: 'row',
@@ -115,7 +173,6 @@ const styles = StyleSheet.create({
     },
     bio: {
         fontSize: 14,
-        color: '#666',
         lineHeight: 20,
     },
     statsContainer: {
@@ -132,7 +189,6 @@ const styles = StyleSheet.create({
     },
     statLabel: {
         fontSize: 12,
-        color: '#666',
         marginTop: 4,
     },
     postItem: {
@@ -160,5 +216,26 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 20,
         backgroundColor: '#f0f0f0',
+    },
+    followButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 10,
+        marginHorizontal: 20,
+        marginVertical: 10,
+        backgroundColor: theme.colors.primary,
+        borderRadius: 8,
+    },
+    followingButton: {
+        backgroundColor: theme.colors.light_background_1,
+    },
+    followButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    followingButtonText: {
+        color: 'white',
     },
 });

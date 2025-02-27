@@ -9,6 +9,7 @@ import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { RootStackParamList, DiscoverTabParamList } from '@/types';
+import { theme } from '@/context/ThemeContext';
 
 type PostCardNavigationProp = CompositeNavigationProp<
     BottomTabNavigationProp<DiscoverTabParamList>,
@@ -49,7 +50,7 @@ export default function PostCard({ post }: { post: Post }) {
                     source={{ uri: post.image_url }}
                     style={styles.postImage}
                     contentFit="cover"
-                    transition={300}
+                    transition={500}
                 />
             </TouchableOpacity>
             <View style={styles.postDetails}>
@@ -81,7 +82,7 @@ export default function PostCard({ post }: { post: Post }) {
                         <MaterialIcons
                             name={isSaved ? "bookmark" : "bookmark-border"}
                             size={25}
-                            color="#666"
+                            color={theme.colors.light_background_2}
                         />
                     </TouchableOpacity>
                 </View>
@@ -118,7 +119,6 @@ export default function PostCard({ post }: { post: Post }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
     },
     fixedHeader: {
         paddingTop: 10,
@@ -139,11 +139,12 @@ const styles = StyleSheet.create({
         flex: 1,
         margin: 6,
         borderRadius: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        shadowColor: 'black',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.9,
+        shadowRadius: 8,
         elevation: 2,
+        backgroundColor: theme.colors.light_background_1
         // overflow: 'hidden',
     },
     postImage: {
@@ -173,12 +174,12 @@ const styles = StyleSheet.create({
     brandButton: {
         paddingHorizontal: 8,
         paddingVertical: 4,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: theme.colors.light_background_2,
         borderRadius: 6,
     },
     brandText: {
         fontSize: 10,
-        color: '#555',
+        color: 'white',
     },
     loadingContainer: {
         flex: 1,
@@ -230,9 +231,12 @@ const styles = StyleSheet.create({
     colorDot: {
         width: 14,
         height: 14,
-        borderRadius: 3,
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.1)',
+        borderRadius: 4,
+        shadowColor: 'black',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.4,
+        shadowRadius: 5,
+        elevation: 2,
     },
     actionsRow: {
         flexDirection: 'row',

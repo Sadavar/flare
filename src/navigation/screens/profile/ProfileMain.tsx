@@ -12,6 +12,11 @@ import { PaginatedGridList } from '@/components/PaginatedGridList';
 import PostCard from '@/components/PostCard';
 import RecentPosts from './RecentPosts';
 import SavedPosts from './SavedPosts';
+import { FollowList } from './FollowList';
+import { Layout } from '@/components/Layout';
+import { CustomText } from '@/components/CustomText';
+import { theme } from '@/context/ThemeContext';
+
 type ProfileNavigationProp = NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
 
 export function ProfileMain() {
@@ -34,8 +39,11 @@ export function ProfileMain() {
     }, [refetch]);
 
     const handleSeeAllPosts = useCallback(() => {
-        // You can navigate to a grid view of all posts or implement your desired behavior
-        navigation.navigate('AllPosts'); // Make sure to define this route in your navigation
+        navigation.navigate('AllPosts', { type: 'posts' });
+    }, [navigation]);
+
+    const handleSeeAllSavedPosts = useCallback(() => {
+        navigation.navigate('AllPosts', { type: 'saved' });
     }, [navigation]);
 
     // Render the profile header
@@ -46,30 +54,33 @@ export function ProfileMain() {
                     <MaterialIcons name="person" size={40} color="black" />
                 </View>
                 <View style={styles.userInfo}>
-                    <Text style={styles.username}>@{username}</Text>
-                    <Text style={styles.bio}>professional frollicker | NYC 📍</Text>
+                    <CustomText style={styles.username}>@{username}</CustomText>
+                    <CustomText style={styles.bio}>professional frollicker | NYC 📍</CustomText>
                 </View>
             </View>
 
             <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>{allPosts.length || 0}</Text>
-                    <Text style={styles.statLabel}>Posts</Text>
+                    <CustomText style={styles.statNumber}>{allPosts.length || 0}</CustomText>
+                    <CustomText style={styles.statLabel}>Posts</CustomText>
                 </View>
-                <View style={styles.statItem}>
-                    <Text style={styles.statNumber}>45</Text>
-                    <Text style={styles.statLabel}>Saves</Text>
-                </View>
+                <TouchableOpacity
+                    style={styles.statItem}
+                    onPress={() => navigation.navigate('FollowList')}
+                >
+                    <MaterialIcons name="people" size={24} color={theme.colors.text} />
+                    <CustomText style={styles.statLabel}>Friends</CustomText>
+                </TouchableOpacity>
             </View>
             <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
                 <MaterialIcons name="refresh" size={24} color="black" />
             </TouchableOpacity>
         </View>
-    ), [username, allPosts.length, handleRefresh]);
+    ), [username, allPosts.length, handleRefresh, navigation]);
 
     return (
         <ScrollView
-            style={styles.container}
+
             refreshControl={
                 <RefreshControl
                     refreshing={false}
@@ -83,20 +94,17 @@ export function ProfileMain() {
             <RecentPosts data={allPosts} onSeeAll={handleSeeAllPosts} />
             <SavedPosts
                 data={savedPosts}
-                onSeeAll={() => { console.log('see all saved posts clicked') }}
+                onSeeAll={handleSeeAllSavedPosts}
             />
         </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        backgroundColor: '#fff',
-    },
     header: {
         padding: 20,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: theme.colors.light_background_1,
     },
     profileSection: {
         flexDirection: 'row',
@@ -122,7 +130,7 @@ const styles = StyleSheet.create({
     },
     bio: {
         fontSize: 14,
-        color: '#666',
+        color: theme.colors.light_background_2,
         lineHeight: 20,
     },
     statsContainer: {
@@ -139,7 +147,7 @@ const styles = StyleSheet.create({
     },
     statLabel: {
         fontSize: 12,
-        color: '#666',
+        color: theme.colors.light_background_3,
         marginTop: 4,
     },
     postItem: {

@@ -18,6 +18,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Brand, Post } from '@/types';
 import { useBrands, useStyles, useFilteredPostsByStyles } from '@/hooks/usePostQueries';
 import { PaginatedGridList } from '@/components/PaginatedGridList';
+import { CustomText } from '@/components/CustomText';
+import { theme } from '@/context/ThemeContext';
+import PostCard from '@/components/PostCard';
 
 function StyleSearch({ searchQuery, setSearchQuery }: {
     searchQuery: string;
@@ -25,7 +28,7 @@ function StyleSearch({ searchQuery, setSearchQuery }: {
 }) {
     return (
         <View style={styles.searchContainer}>
-            <MaterialIcons name="search" size={30} color="#000" style={styles.searchIcon} />
+            <MaterialIcons name="search" size={30} color={theme.colors.light_background_2} style={styles.searchIcon} />
             <TextInput
                 style={styles.searchInput}
                 placeholder="Search for styles"
@@ -92,54 +95,28 @@ export function BrandsScreen() {
                 brandName: item.name,
             })}
         >
-            <Text style={styles.brandIcon}>{item.name.charAt(0)}</Text>
-            <Text style={styles.brandName}>{item.name}</Text>
+            <CustomText style={styles.brandIcon}>{item.name.charAt(0)}</CustomText>
+            <CustomText style={styles.brandName}>{item.name}</CustomText>
         </TouchableOpacity>
     );
 
     const renderPostItem = ({ item }: { item: Post }) => {
         return (
-            <View style={styles.postContainer}>
-                <TouchableOpacity
-                    onPress={() => navigation.navigate('PostDetails', { post: item })}
-                >
-                    <Image
-                        source={{ uri: item.image_url }}
-                        style={styles.postImage}
-                        contentFit="cover"
-                    />
-                </TouchableOpacity>
-
-                {item.styles && (
-                    <View style={styles.stylesContainer}>
-                        <Text style={styles.stylesLabel}>Styles:</Text>
-                        <View style={styles.stylesList}>
-                            {item.styles.map((style) => (
-                                <View
-                                    key={style.id}
-                                    style={styles.styleChip}
-                                >
-                                    <Text style={styles.styleText}>{style.name}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    </View>
-                )}
-            </View>
-        );
+            <PostCard post={item} />
+        )
     };
 
     // Header component for PaginatedGridList
     const renderHeader = () => {
         return (
             <View>
-                <Text style={styles.mainTitle}>Discover Styles</Text>
+                <CustomText style={styles.mainTitle}>Discover Styles</CustomText>
                 <StyleSearch
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
                 />
 
-                <Text style={styles.trendingTitle}>Trending Brands</Text>
+                <CustomText style={styles.trendingTitle}>Trending Brands</CustomText>
                 <FlatList
                     horizontal
                     data={brands ? brands.slice(0, 10) : []}
@@ -149,7 +126,7 @@ export function BrandsScreen() {
                     keyExtractor={item => item.id.toString()}
                 />
 
-                <Text style={styles.trendingTitle}>Filter by Style</Text>
+                <CustomText style={styles.trendingTitle}>Filter by Style</CustomText>
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -164,10 +141,10 @@ export function BrandsScreen() {
                         ]}
                         onPress={handleAllStylesPress}
                     >
-                        <Text style={[
+                        <CustomText style={[
                             styles.chipText,
                             selectedStyles.length === 0 && styles.chipTextSelected
-                        ]}>All Styles</Text>
+                        ]}>All Styles</CustomText>
                     </TouchableOpacity>
 
                     {stylesData?.map((style) => (
@@ -179,10 +156,10 @@ export function BrandsScreen() {
                             ]}
                             onPress={() => handleStylePress(style.id)}
                         >
-                            <Text style={[
+                            <CustomText style={[
                                 styles.chipText,
                                 selectedStyles.includes(style.id) && styles.chipTextSelected
-                            ]}>{style.name}</Text>
+                            ]}>{style.name}</CustomText>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
@@ -193,20 +170,20 @@ export function BrandsScreen() {
     // Custom empty component
     const renderEmptyComponent = () => (
         <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
+            <CustomText style={styles.emptyText}>
                 {selectedStyles.length > 0
                     ? "No posts found with the selected styles. Try selecting different styles."
                     : "No posts found."}
-            </Text>
+            </CustomText>
         </View>
     );
 
     // Custom error component
     const renderErrorComponent = () => (
         <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>
+            <CustomText style={styles.errorText}>
                 Error loading posts. Pull down to try again.
-            </Text>
+            </CustomText>
         </View>
     );
 
@@ -214,7 +191,7 @@ export function BrandsScreen() {
     if (stylesLoading) {
         return (
             <View style={styles.container}>
-                <Text>Loading styles...</Text>
+                <CustomText>Loading styles...</CustomText>
             </View>
         );
     }
@@ -230,7 +207,7 @@ export function BrandsScreen() {
                     data={filteredStyles}
                     ListHeaderComponent={() => (
                         <View style={styles.fixedHeader}>
-                            <Text style={styles.mainTitle}>Discover Styles</Text>
+                            <CustomText style={styles.mainTitle}>Discover Styles</CustomText>
                             <StyleSearch
                                 searchQuery={searchQuery}
                                 setSearchQuery={setSearchQuery}
@@ -246,7 +223,7 @@ export function BrandsScreen() {
                                 setSearchQuery('');
                             }}
                         >
-                            <Text style={styles.suggestionText}>{item.name}</Text>
+                            <CustomText style={styles.suggestionText}>{item.name}</CustomText>
                         </TouchableOpacity>
                     )}
                     keyExtractor={(item) => item.id.toString()}
@@ -280,7 +257,6 @@ export function BrandsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
         marginTop: 0
     },
     fixedHeader: {
@@ -301,6 +277,7 @@ const styles = StyleSheet.create({
         borderColor: '#000',
         borderRadius: 20,
         paddingHorizontal: 10,
+        backgroundColor: theme.colors.light_background_1,
         margin: 15,
     },
     searchIcon: {
@@ -323,12 +300,17 @@ const styles = StyleSheet.create({
     trendingCard: {
         width: 130,
         height: 130,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.light_background_1,
         borderRadius: 10,
         marginHorizontal: 10,
         padding: 10,
         alignItems: 'center',
         justifyContent: 'center',
+        shadowColor: 'black',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.9,
+        shadowRadius: 7,
+        elevation: 2,
     },
     brandIcon: {
         fontSize: 40,
@@ -360,16 +342,14 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#ddd',
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.light_background_1,
     },
     chipSelected: {
-        backgroundColor: '#000',
+        backgroundColor: 'black',
         borderColor: '#000',
     },
     chipText: {
         fontSize: 14,
-        color: '#666',
     },
     chipTextSelected: {
         color: '#fff',
@@ -393,7 +373,6 @@ const styles = StyleSheet.create({
     },
     stylesLabel: {
         fontWeight: '600',
-        color: '#333',
         fontSize: 12,
         marginBottom: 4,
     },
@@ -403,14 +382,13 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     styleChip: {
-        backgroundColor: '#e0e0e0',
+        backgroundColor: theme.colors.light_background_2,
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 8,
     },
     styleText: {
         fontSize: 12,
-        color: '#444',
     },
     emptyContainer: {
         paddingTop: 50,

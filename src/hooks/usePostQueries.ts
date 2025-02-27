@@ -847,3 +847,58 @@ export function useSavePost() {
         }
     });
 }
+
+export function useFollowingFeed(pageSize = 10) {
+    const { user } = useSession();
+
+    return useInfiniteQuery({
+        queryKey: ['followingFeed', user?.id],
+        queryFn: async ({ pageParam = 0 }) => {
+            if (!user?.id) return [];
+
+            // First get all users we're following
+            const { data: following } = await supabase
+                .from('follows')
+                .select('following_id')
+                .eq('follower_id', user.id);
+
+            if (!following?.length) {
+                console.log('User is not following anyone');
+                return [];
+            }
+
+            const followingIds = following.map(f => f.following_id);
+            console.log('Following IDs:', followingIds);
+
+            // Then get posts from those users
+            const { data: posts, error } = await supabase
+                .from('posts')
+                .select(POST_SELECT_QUERY)
+                .in('user_uuid', followingIds) // Only get posts from followed users
+                .order('created_at', { ascending: false })
+                .range(pageParam * pageSize, (pageParam + 1) * pageSize - 1);
+
+            if (error) {
+                console.error('Error fetching following feed:', error);
+                return [];
+            }
+
+            if (!posts || posts.length === 0) {
+                console.log('No posts found from followed users');
+                return [];
+            }
+
+            console.log(`Found ${posts.length} posts from followed users`);
+
+            // Add saved status
+            const postsWithSavedStatus = await checkSavedStatus(posts, user.id);
+            return postsWithSavedStatus.map(formatPost);
+        },
+        getNextPageParam: (lastPage, allPages) => {
+            const hasMore = lastPage.length === pageSize;
+            return hasMore ? allPages.length : undefined;
+        },
+        initialPageParam: 0,
+        enabled: !!user?.id
+    });
+}

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { MaterialIcons } from '@expo/vector-icons';
 import MiniPostCard from '../../../components/MiniPostCard';
 import { Post } from '@/types';
+import { CustomText } from '@/components/CustomText';
 
 function RecentPosts({ data, onSeeAll }: { data: Post[], onSeeAll: any }) {
     const allPosts = data
@@ -12,9 +13,9 @@ function RecentPosts({ data, onSeeAll }: { data: Post[], onSeeAll: any }) {
         return (
             <View style={styles.section}>
                 <View style={styles.header}>
-                    <Text style={styles.title}>Recent Posts</Text>
+                    <CustomText style={styles.title}>Recent Posts</CustomText>
                 </View>
-                <Text style={styles.emptyText}>No Posts Yet</Text>
+                <CustomText style={styles.emptyText}>No Posts Yet</CustomText>
             </View>
         );
     }
@@ -22,12 +23,12 @@ function RecentPosts({ data, onSeeAll }: { data: Post[], onSeeAll: any }) {
     return (
         <View style={styles.section}>
             <View style={styles.header}>
-                <Text style={styles.title}>Recent Posts</Text>
+                <CustomText style={styles.title}>Recent Posts</CustomText>
                 <TouchableOpacity
                     style={styles.seeAllButton}
                     onPress={onSeeAll}
                 >
-                    <Text style={styles.seeAllText}>See All Posts</Text>
+                    <CustomText style={styles.seeAllText}>See All Posts</CustomText>
                     <MaterialIcons name="chevron-right" size={20} color="#666" />
                 </TouchableOpacity>
             </View>

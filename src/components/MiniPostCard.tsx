@@ -15,6 +15,8 @@ import type {
     Post
 } from '@/types';
 import { useSession } from '@/context/SessionContext';
+import { theme } from '@/context/ThemeContext';
+import { CustomText } from './CustomText';
 
 // Create a composite navigation type that can access all needed stacks
 type MiniPostNavigationProp = CompositeNavigationProp<
@@ -113,18 +115,18 @@ function MiniPostCard({ post }: { post: Post }) {
                 {/* Brands */}
                 {post.brands && post.brands.length > 0 && (
                     <View style={styles.brandsContainer}>
-                        {post.brands.slice(0, 2).map((brand) => (
+                        {post.brands.slice(0, 1).map((brand) => (
                             <TouchableOpacity
                                 key={brand.id}
                                 style={styles.brandPill}
                                 onPress={() => handleBrandPress(brand.id, brand.name)}
                             >
-                                <Text style={styles.brandText}>{brand.name}</Text>
+                                <CustomText style={styles.brandText}>{brand.name}</CustomText>
                             </TouchableOpacity>
                         ))}
-                        {post.brands.length > 2 && (
+                        {post.brands.length > 1 && (
                             <View style={styles.brandPill}>
-                                <Text style={styles.brandText}>+{post.brands.length - 2}</Text>
+                                <CustomText style={styles.brandText}>+{post.brands.length - 1}</CustomText>
                             </View>
                         )}
                     </View>
@@ -139,18 +141,17 @@ const styles = StyleSheet.create({
         width: 120,
         marginRight: 12,
         borderRadius: 12,
-        backgroundColor: 'white',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        backgroundColor: theme.colors.light_background_1,
+        shadowColor: 'black',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.9,
+        shadowRadius: 8,
         elevation: 2,
-        overflow: 'hidden',
+        // overflow: 'hidden',
     },
     image: {
         width: '100%',
         aspectRatio: 0.75, // 3:4 aspect ratio
-        backgroundColor: '#f5f5f5',
         borderRadius: 12
     },
     details: {
@@ -164,24 +165,27 @@ const styles = StyleSheet.create({
     colorDot: {
         width: 12,
         height: 12,
-        borderRadius: 3,
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.1)',
+        borderRadius: 4,
+        shadowColor: theme.colors.light_background_2,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.25,
+        shadowRadius: 5,
+        elevation: 5,
     },
     brandsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 4,
+
     },
     brandPill: {
         paddingHorizontal: 8,
         paddingVertical: 4,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: theme.colors.light_background_2,
         borderRadius: 6,
     },
     brandText: {
         fontSize: 10,
-        color: '#555',
     },
 });
 

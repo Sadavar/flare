@@ -13,6 +13,8 @@ import { usePost } from '@/hooks/usePostQueries'
 import { getColors } from 'react-native-image-colors';
 import { ColorCard } from '@/components/ColorCard';
 import ColorDisplay from './ColorDisplay';
+import { theme } from '@/context/ThemeContext';
+import { CustomText } from './CustomText';
 
 // Get screen width
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -70,7 +72,7 @@ export function PostView({ post }: PostViewProps) {
     if (!post) {
         return (
             <View style={styles.container}>
-                <Text>Post not found</Text>
+                <CustomText>Post not found</CustomText>
             </View>
         );
     }
@@ -108,7 +110,7 @@ export function PostView({ post }: PostViewProps) {
                     <View style={styles.userIcon}>
                         <MaterialIcons name="person" size={24} color="black" />
                     </View>
-                    <Text style={styles.username}>@{post.username}</Text>
+                    <CustomText style={styles.username}>@{post.username}</CustomText>
                 </TouchableOpacity>
             </View>
 
@@ -155,7 +157,7 @@ export function PostView({ post }: PostViewProps) {
                         onPress={() => handleBrandPress(brand.id, brand.name)}
                         activeOpacity={1}
                     >
-                        <Text style={styles.tagText}>{brand.name}</Text>
+                        <CustomText style={styles.tagText}>{brand.name}</CustomText>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -164,13 +166,13 @@ export function PostView({ post }: PostViewProps) {
 
             {post.description && (
                 <>
-                    <Text style={{ fontSize: 14, fontWeight: '600', paddingLeft: 15 }}>Description:</Text>
-                    <Text style={styles.description}>{post.description}</Text>
+                    <CustomText style={{ fontSize: 14, fontWeight: '600', paddingLeft: 15 }}>Description:</CustomText>
+                    <CustomText style={styles.description}>{post.description}</CustomText>
                 </>
             )}
 
             <View style={styles.brandsContainer}>
-                <Text style={styles.brandsLabel}>Featured Brands:</Text>
+                <CustomText style={styles.brandsLabel}>Featured Brands:</CustomText>
                 <View style={styles.brandsList}>
                     {post.brands?.map((brand) => (
                         <TouchableOpacity
@@ -179,7 +181,7 @@ export function PostView({ post }: PostViewProps) {
                             onPress={() => handleBrandPress(brand.id, brand.name)}
                             activeOpacity={1}
                         >
-                            <Text style={styles.brandText}>{brand.name}</Text>
+                            <CustomText style={styles.brandText}>{brand.name}</CustomText>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -187,11 +189,11 @@ export function PostView({ post }: PostViewProps) {
 
             {post.styles && post.styles.length > 0 && (
                 <View style={styles.stylesContainer}>
-                    <Text style={styles.stylesLabel}>Styles:</Text>
+                    <CustomText style={styles.stylesLabel}>Styles:</CustomText>
                     <View style={styles.stylesList}>
                         {post.styles.map((style) => (
                             <View key={style.id} style={styles.styleChip}>
-                                <Text style={styles.styleText}>{style.name}</Text>
+                                <CustomText style={styles.styleText}>{style.name}</CustomText>
                             </View>
                         ))}
                     </View>
@@ -206,11 +208,11 @@ export function PostView({ post }: PostViewProps) {
                     <MaterialIcons
                         name={isSaved ? "bookmark" : "bookmark-outline"}
                         size={24}
-                        color="#007AFF"
+                        color={theme.colors.light_background_3}
                     />
-                    <Text style={styles.saveButtonText}>
+                    <CustomText style={styles.saveButtonText}>
                         {isSaved ? "Unsave" : "Save"}
-                    </Text>
+                    </CustomText>
                 </TouchableOpacity>
             )}
 
@@ -221,7 +223,6 @@ export function PostView({ post }: PostViewProps) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
     },
     header: {
         flexDirection: 'row',
@@ -280,26 +281,24 @@ const styles = StyleSheet.create({
         gap: 5,
     },
     brandButton: {
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.light_background_2,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 15,
     },
     brandText: {
         fontSize: 12,
-        color: '#000',
     },
     tag: {
         position: 'absolute',
         transform: [{ translateX: -50 }, { translateY: -50 }],
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: theme.colors.light_background_1,
         borderRadius: 15,
         paddingVertical: 4,
         paddingHorizontal: 8,
         zIndex: 1,
     },
     tagText: {
-        color: '#fff',
         fontSize: 12,
     },
     stylesContainer: {
@@ -316,16 +315,14 @@ const styles = StyleSheet.create({
         gap: 5,
     },
     styleChip: {
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.light_background_2,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 15,
     },
     styleText: {
         fontSize: 12,
-        color: '#000',
     },
-
 
     saveButton: {
         flexDirection: 'row',
@@ -333,12 +330,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         padding: 10,
         marginBottom: 10,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.light_background_1,
         borderRadius: 8,
     },
     saveButtonText: {
         marginLeft: 8,
-        color: '#007AFF',
         fontSize: 16,
     },
 });

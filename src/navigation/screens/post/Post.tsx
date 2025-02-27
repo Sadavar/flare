@@ -31,6 +31,8 @@ import { Color } from '@/types';
 import { useColors } from '@/hooks/usePostQueries';
 import { MaterialIcons } from '@expo/vector-icons';
 import { PostButton } from '@/components/PostButton';
+import { theme } from '@/context/ThemeContext';
+import { CustomText } from '@/components/CustomText';
 
 
 type PostScreenRouteProp = RouteProp<MainTabParamList, 'Post'>;
@@ -389,7 +391,6 @@ export function Post() {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
             <ScrollView
                 ref={scrollViewRef}
-                style={{ backgroundColor: 'white' }}
                 keyboardShouldPersistTaps='handled'
             >
                 <View style={styles.container}>
@@ -398,8 +399,8 @@ export function Post() {
 
                     {image ? (
                         <>
-                            <Text style={styles.trendingTitle}>Image Preview</Text>
-                            <Text style={styles.tagInstruction}>Tap image to add brands</Text>
+                            <CustomText style={styles.trendingTitle}>Image Preview</CustomText>
+                            <CustomText style={styles.tagInstruction}>Tap image to add brands</CustomText>
                             <View
                                 ref={imageRef}
                                 style={styles.imageContainer}
@@ -442,18 +443,18 @@ export function Post() {
                                                 onPanResponderRelease: handleTagDragEnd,
                                             }).panHandlers}
                                         >
-                                            <Text
+                                            <CustomText
                                                 style={styles.tagText}
                                                 numberOfLines={1}
                                                 ellipsizeMode="tail"
                                             >
                                                 {tag.name}
-                                            </Text>
+                                            </CustomText>
                                             <TouchableOpacity
                                                 onPress={() => removeTag(index)}
                                                 style={styles.removeButton}
                                             >
-                                                <Text style={styles.removeButtonText}>×</Text>
+                                                <CustomText style={styles.removeButtonText}>×</CustomText>
                                             </TouchableOpacity>
                                         </View>
                                     </View>
@@ -462,9 +463,10 @@ export function Post() {
 
                             {/* Description */}
                             <View ref={descriptionRef}>
-                                <Text style={styles.trendingTitle}>Description</Text>
+                                <CustomText style={styles.trendingTitle}>Description</CustomText>
                                 <TextInput
                                     style={styles.input}
+                                    placeholderTextColor={theme.colors.light_background_2}
                                     placeholder="Add a description..."
                                     value={description}
                                     onChangeText={setDescription}
@@ -478,7 +480,7 @@ export function Post() {
                             {colors && (
                                 <View style={styles.colorSection}>
                                     <View style={styles.colorHeader}>
-                                        <Text style={styles.colorTitle}>Colors</Text>
+                                        <CustomText style={styles.colorTitle}>Colors</CustomText>
                                         <View style={styles.selectedColorPills}>
                                             {selectedColorIds.map(colorId => {
                                                 const color = colors.find((c: Color) => c.id === colorId);
@@ -507,12 +509,12 @@ export function Post() {
                                     </View>
 
                                     <View style={styles.quickSelectHeader}>
-                                        <Text style={styles.subtitle}>Quick Select</Text>
+                                        <CustomText style={styles.subtitle}>Quick Select</CustomText>
                                         <TouchableOpacity
                                             onPress={() => colorModalizeRef.current?.open()}
                                             style={styles.seeAllButton}
                                         >
-                                            <Text style={styles.seeAllText}>See All Colors</Text>
+                                            <CustomText style={styles.seeAllText}>See All Colors</CustomText>
                                             <MaterialIcons name="chevron-right" size={20} color="#666" />
                                         </TouchableOpacity>
                                     </View>
@@ -537,7 +539,7 @@ export function Post() {
                             {/* Styles */}
 
                             <View>
-                                <Text style={styles.trendingTitle}>Style</Text>
+                                <CustomText style={styles.trendingTitle}>Style</CustomText>
                                 <ScrollView
                                     horizontal
                                     showsHorizontalScrollIndicator={false}
@@ -560,12 +562,12 @@ export function Post() {
                                                         }
                                                     }}
                                                 >
-                                                    <Text style={[
+                                                    <CustomText style={[
                                                         styles.styleChipText,
                                                         selectedStyleIds.includes(style.id) && styles.selectedStyleChipText
                                                     ]}>
                                                         {style.name}
-                                                    </Text>
+                                                    </CustomText>
                                                 </TouchableOpacity>
                                             ))}
                                         </View>
@@ -585,12 +587,12 @@ export function Post() {
                                                         }
                                                     }}
                                                 >
-                                                    <Text style={[
+                                                    <CustomText style={[
                                                         styles.styleChipText,
                                                         selectedStyleIds.includes(style.id) && styles.selectedStyleChipText
                                                     ]}>
                                                         {style.name}
-                                                    </Text>
+                                                    </CustomText>
                                                 </TouchableOpacity>
                                             ))}
                                         </View>
@@ -600,7 +602,7 @@ export function Post() {
 
                             {/* Brands */}
 
-                            <Text style={styles.trendingTitle}>Brands</Text>
+                            <CustomText style={styles.trendingTitle}>Brands</CustomText>
                             <View style={styles.taggedBrandsContainer}>
                                 {taggedBrands.map((brand, index) => (
                                     <TouchableOpacity
@@ -610,8 +612,8 @@ export function Post() {
                                             setTaggedBrands(taggedBrands.filter((_, i) => i !== index));
                                         }}
                                     >
-                                        <Text style={styles.taggedBrandText}>{brand.name}</Text>
-                                        <Text style={styles.removeTag}>X</Text>
+                                        <CustomText style={styles.taggedBrandText}>{brand.name}</CustomText>
+                                        <CustomText style={styles.removeTag}>X</CustomText>
                                     </TouchableOpacity>
                                 ))}
                             </View>
@@ -623,7 +625,7 @@ export function Post() {
                             />
                         </>
                     ) : (
-                        <Text style={styles.placeholder}>Select an image to post</Text>
+                        <CustomText style={styles.placeholder}>Select an image to post</CustomText>
                     )}
                 </View>
 
@@ -637,10 +639,10 @@ export function Post() {
                     onClose={() => setIsModalOpen(false)}
                 >
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>All Colors</Text>
-                        <Text style={styles.modalSubtitle}>
+                        <CustomText style={styles.modalTitle}>All Colors</CustomText>
+                        <CustomText style={styles.modalSubtitle}>
                             Select up to 3 colors ({selectedColorIds.length}/3)
-                        </Text>
+                        </CustomText>
                         <ScrollView style={styles.colorGrid}>
                             <View style={styles.gridContainer}>
                                 {colors?.map((color: Color) => (
@@ -660,16 +662,18 @@ export function Post() {
 
                 <Modalize
                     ref={modalizeRef}
+                    modalStyle={styles.modalContainer}
                     modalHeight={700}
                     onOpen={() => setIsModalOpen(true)}
                     onClose={() => setIsModalOpen(false)}
                     panGestureEnabled={false}
                 >
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Tag a Brand</Text>
+                        <CustomText style={styles.modalTitle}>Tag a Brand</CustomText>
                         <TextInput
                             style={styles.searchInput}
                             placeholder="Search brands..."
+                            placeholderTextColor={theme.colors.light_background_2}
                             value={brandsInput}
                             onChangeText={async (text) => {
                                 setBrandsInput(text);
@@ -697,7 +701,7 @@ export function Post() {
                                     style={styles.suggestionItem}
                                     onPress={() => handleBrandSelect(brand)}
                                 >
-                                    <Text style={styles.suggestionText}>{brand}</Text>
+                                    <CustomText style={styles.suggestionText}>{brand}</CustomText>
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
@@ -713,7 +717,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 20,
-        backgroundColor: '#fff',
+        // backgroundColor: theme.colors.background
     },
     imageContainer: {
         position: 'relative',
@@ -721,7 +725,7 @@ const styles = StyleSheet.create({
     },
     image: {
         height: 300,
-        marginBottom: 15
+        marginBottom: 15,
     },
     tagInstruction: {
         textAlign: 'center',
@@ -731,15 +735,16 @@ const styles = StyleSheet.create({
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: theme.colors.light_background_1,
         padding: 10,
         marginBottom: 20,
-        borderRadius: 5,
+        borderRadius: 8,
+
     },
     placeholder: {
         textAlign: 'center',
         marginTop: 20,
-        color: '#999',
+        color: theme.colors.light_background_2,
     },
     trendingTitle: {
         fontSize: 18,
@@ -794,16 +799,15 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     styleChip: {
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.light_background_1,
         borderRadius: 20,
         paddingHorizontal: 15,
         paddingVertical: 8,
     },
     selectedStyleChip: {
-        backgroundColor: '#000',
+        backgroundColor: theme.colors.light_background_2,
     },
     styleChipText: {
-        color: '#666',
         fontSize: 14,
     },
     selectedStyleChipText: {
@@ -856,7 +860,8 @@ const styles = StyleSheet.create({
     },
     searchInput: {
         borderWidth: 1,
-        borderColor: '#ddd',
+        color: theme.colors.light_background_3,
+        borderColor: theme.colors.light_background_1,
         borderRadius: 8,
         padding: 10,
         marginBottom: 10,
@@ -872,6 +877,7 @@ const styles = StyleSheet.create({
     },
     suggestionText: {
         fontSize: 16,
+        color: theme.colors.light_background_3
     },
     colorSection: {
         marginBottom: 20,
@@ -946,6 +952,7 @@ const styles = StyleSheet.create({
     },
     modalContainer: {
         padding: 20,
+        backgroundColor: theme.colors.background
     },
     modalSubtitle: {
         fontSize: 16,

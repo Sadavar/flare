@@ -11,6 +11,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Post } from '../post/Post';
 import { useSession } from '@/context/SessionContext';
 import ColorDisplay from '@/components/ColorDisplay';
+import { CustomText } from '@/components/CustomText';
+import { theme } from '@/context/ThemeContext';
 
 
 
@@ -99,7 +101,7 @@ export function PostDetails() {
         return (
             <Layout>
                 <View style={styles.container}>
-                    <Text>Post not found</Text>
+                    <CustomText>Post not found</CustomText>
                 </View>
             </Layout>
         );
@@ -117,7 +119,7 @@ export function PostDetails() {
                         <View style={styles.userIcon}>
                             <MaterialIcons name="person" size={24} color="black" />
                         </View>
-                        <Text style={styles.username}>@{post.username}</Text>
+                        <CustomText style={styles.username}>@{post.username}</CustomText>
                     </TouchableOpacity>
                 </View>
             }
@@ -146,7 +148,7 @@ export function PostDetails() {
                             },
                         ]}
                     >
-                        <Text style={styles.tagText}>{brand.name}</Text>
+                        <CustomText style={styles.tagText}>{brand.name}</CustomText>
                     </View>
                 ))}
             </View>
@@ -154,15 +156,15 @@ export function PostDetails() {
             <ColorDisplay post={post} />
 
             <View style={styles.detailsContainer}>
-                <Text style={styles.date}>
+                <CustomText style={styles.date}>
                     {new Date(post.created_at as string).toLocaleDateString()}
-                </Text>
-                <Text style={styles.brandsLabel}>Description:</Text>
+                </CustomText>
+                <CustomText style={styles.brandsLabel}>Description:</CustomText>
                 {post.description && (
-                    <Text style={styles.description}>{post.description}</Text>
+                    <CustomText style={styles.description}>{post.description}</CustomText>
                 )}
                 <View style={styles.brandsContainer}>
-                    <Text style={styles.brandsLabel}>Featured Brands:</Text>
+                    <CustomText style={styles.brandsLabel}>Featured Brands:</CustomText>
                     <View style={styles.brandsList}>
                         {post.brands?.map((brand) => (
                             <TouchableOpacity
@@ -171,7 +173,7 @@ export function PostDetails() {
                                 onPress={() => handleBrandPress(brand.id, brand.name)}
                                 activeOpacity={1}
                             >
-                                <Text style={styles.brandText}>{brand.name}</Text>
+                                <CustomText style={styles.brandText}>{brand.name}</CustomText>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -179,11 +181,11 @@ export function PostDetails() {
 
                 {post.styles && post.styles.length > 0 && (
                     <View style={styles.stylesContainer}>
-                        <Text style={styles.stylesLabel}>Styles:</Text>
+                        <CustomText style={styles.stylesLabel}>Styles:</CustomText>
                         <View style={styles.stylesList}>
                             {post.styles.map((style) => (
                                 <View key={style.id} style={styles.styleChip}>
-                                    <Text style={styles.styleText}>{style.name}</Text>
+                                    <CustomText style={styles.styleText}>{style.name}</CustomText>
                                 </View>
                             ))}
                         </View>
@@ -201,9 +203,9 @@ export function PostDetails() {
                             size={24}
                             color="#007AFF"
                         />
-                        <Text style={styles.saveButtonText}>
+                        <CustomText style={styles.saveButtonText}>
                             {isSaved ? "Unsave" : "Save"}
-                        </Text>
+                        </CustomText>
                     </TouchableOpacity>
                 )}
 
@@ -219,7 +221,7 @@ export function PostDetails() {
                             }}
                         >
                             <MaterialIcons name="edit" size={24} color="#007AFF" />
-                            <Text style={styles.editButtonText}>Edit Post</Text>
+                            <CustomText style={styles.editButtonText}>Edit Post</CustomText>
                         </TouchableOpacity>
 
                         <Button
@@ -237,7 +239,6 @@ export function PostDetails() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
     },
     header: {
         flexDirection: 'row',
@@ -271,14 +272,12 @@ const styles = StyleSheet.create({
     tag: {
         position: 'absolute',
         transform: [{ translateX: -50 }, { translateY: -50 }],
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        borderRadius: 15,
+        backgroundColor: theme.colors.light_background_1, borderRadius: 15,
         paddingVertical: 4,
         paddingHorizontal: 8,
         zIndex: 1,
     },
     tagText: {
-        color: '#fff',
         fontSize: 12,
     },
     detailsContainer: {
@@ -306,14 +305,13 @@ const styles = StyleSheet.create({
         gap: 5,
     },
     brandButton: {
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.light_background_1,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 15,
     },
     brandText: {
         fontSize: 12,
-        color: '#000',
     },
     stylesContainer: {
         marginBottom: 20,
@@ -329,14 +327,13 @@ const styles = StyleSheet.create({
         gap: 5,
     },
     styleChip: {
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.light_background_1,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 15,
     },
     styleText: {
         fontSize: 12,
-        color: '#000',
     },
     editButton: {
         flexDirection: 'row',
@@ -344,7 +341,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         padding: 10,
         marginBottom: 10,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.light_background_1,
         borderRadius: 8,
     },
     editButtonText: {
@@ -358,12 +355,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         padding: 10,
         marginBottom: 10,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.light_background_1,
         borderRadius: 8,
     },
     saveButtonText: {
         marginLeft: 8,
-        color: '#007AFF',
         fontSize: 16,
     },
 });

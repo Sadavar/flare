@@ -7,6 +7,8 @@ import { BrandsScreen } from './BrandsScreen';
 import { BrandDetails } from './BrandDetails';
 import { PostDetails } from '../PostDetails';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { theme } from '@/context/ThemeContext';
+import { CustomText } from '@/components/CustomText';
 
 const Stack = createNativeStackNavigator<BrandsStackParamList>();
 
@@ -21,13 +23,16 @@ export function Brands() {
                     options={({ navigation }) => ({
                         headerShown: true,
                         headerTitle: '',
+                        headerStyle: {
+                            backgroundColor: theme.colors.background
+                        },
                         headerLeft: () => (
                             <TouchableOpacity
                                 onPress={() => navigation.goBack()}
                                 style={{ flexDirection: 'row', alignItems: 'center' }}
                             >
-                                <MaterialIcons name="arrow-back" size={24} color="black" />
-                                <Text style={{ marginLeft: 8, fontSize: 16 }}>Brands</Text>
+                                <MaterialIcons name="arrow-back" size={24} color={theme.colors.text} />
+                                <CustomText style={{ marginLeft: 8, fontSize: 16 }}>Brands</CustomText>
                             </TouchableOpacity>
                         ),
                     })}

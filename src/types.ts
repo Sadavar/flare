@@ -94,6 +94,8 @@ export interface Brand {
     name: string;
     x_coord: number | null;
     y_coord: number | null;
+    website_url?: string | null;
+    instagram_url?: string | null;
 }
 
 export interface Color {

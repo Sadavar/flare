@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, Button, TouchableOpacity, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
@@ -14,15 +14,25 @@ import ColorDisplay from '@/components/ColorDisplay';
 import { CustomText } from '@/components/CustomText';
 import { theme } from '@/context/ThemeContext';
 
-
-
 type PostDetailsRouteProp = RouteProp<ProfileStackParamList, 'PostDetails'>;
+
+// Define a type for pending brands
+type PendingBrand = {
+    id: number;
+    brand_name: string;
+    x_coord: number;
+    y_coord: number;
+    website_url?: string;
+    instagram_url?: string;
+};
 
 export function PostDetails() {
     const route = useRoute<PostDetailsRouteProp>();
     const navigation = useNavigation();
     const { post } = route.params;
     const [showTags, setShowTags] = useState(true);
+    const [pendingBrands, setPendingBrands] = useState<PendingBrand[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
     const { username: currentUsername } = useSession()
 
@@ -30,7 +40,54 @@ export function PostDetails() {
     const { mutate: toggleSave } = useSavePost();
     const [isSaved, setIsSaved] = useState(post.saved || false);
 
-    console.log("Saved post!:", post)
+    // Fetch pending brands when component mounts
+    useEffect(() => {
+        const fetchPendingBrands = async () => {
+            setIsLoading(true);
+            try {
+                const { data, error } = await supabase
+                    .from('post_pending_brands')
+                    .select(`
+                        id, 
+                        brand_id,
+                        x_coord, 
+                        y_coord,
+                        pending_brands:brand_id(
+                            id,
+                            brand_name,
+                            website_url,
+                            instagram_url
+                        )
+                    `)
+                    .eq('post_uuid', post.uuid);
+
+                if (error) {
+                    console.error('Error fetching pending brands:', error);
+                    return;
+                }
+
+                if (data) {
+                    // Transform the data to match our PendingBrand type
+                    const transformedData: PendingBrand[] = data.map(item => ({
+                        id: item.brand_id,
+                        brand_name: item.pending_brands.brand_name,
+                        x_coord: item.x_coord,
+                        y_coord: item.y_coord,
+                        website_url: item.pending_brands.website_url,
+                        instagram_url: item.pending_brands.instagram_url
+                    }));
+
+                    setPendingBrands(transformedData);
+                }
+            } catch (error) {
+                console.error('Error in fetchPendingBrands:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchPendingBrands();
+    }, [post.uuid]);
 
     const handleSave = () => {
         setIsSaved(!isSaved);
@@ -57,8 +114,6 @@ export function PostDetails() {
             });
         }
     };
-
-
 
     const handleDelete = async () => {
         Alert.alert(
@@ -91,7 +146,6 @@ export function PostDetails() {
             }
         });
     };
-
 
     const toggleTagsVisibility = () => {
         setShowTags((prevState) => !prevState);
@@ -137,20 +191,44 @@ export function PostDetails() {
                         }}
                     />
                 </TouchableOpacity>
-                {showTags && post.brands?.map((brand) => (
-                    <View
-                        key={brand.id}
-                        style={[
-                            styles.tag,
-                            {
-                                left: `${brand.x_coord}%`,
-                                top: `${brand.y_coord}%`,
-                            },
-                        ]}
-                    >
-                        <CustomText style={styles.tagText}>{brand.name}</CustomText>
-                    </View>
-                ))}
+                {showTags && (
+                    <>
+                        {/* Regular brands */}
+                        {post.brands?.map((brand) => (
+                            <View
+                                key={`brand-${brand.id}`}
+                                style={[
+                                    styles.tag,
+                                    {
+                                        left: `${brand.x_coord}%`,
+                                        top: `${brand.y_coord}%`,
+                                    },
+                                ]}
+                            >
+                                <CustomText style={styles.tagText}>{brand.name}</CustomText>
+                            </View>
+                        ))}
+
+                        {/* Pending brands */}
+                        {pendingBrands.map((brand) => (
+                            <View
+                                key={`pending-${brand.id}`}
+                                style={[
+                                    styles.tag,
+                                    styles.pendingTag,
+                                    {
+                                        left: `${brand.x_coord}%`,
+                                        top: `${brand.y_coord}%`,
+                                    },
+                                ]}
+                            >
+                                <CustomText style={styles.pendingTagText}>
+                                    {brand.brand_name} (Pending)
+                                </CustomText>
+                            </View>
+                        ))}
+                    </>
+                )}
             </View>
 
             <ColorDisplay post={post} />
@@ -166,15 +244,28 @@ export function PostDetails() {
                 <View style={styles.brandsContainer}>
                     <CustomText style={styles.brandsLabel}>Featured Brands:</CustomText>
                     <View style={styles.brandsList}>
+                        {/* Regular brands */}
                         {post.brands?.map((brand) => (
                             <TouchableOpacity
-                                key={brand.id}
+                                key={`brand-${brand.id}`}
                                 style={styles.brandButton}
                                 onPress={() => handleBrandPress(brand.id, brand.name)}
                                 activeOpacity={1}
                             >
                                 <CustomText style={styles.brandText}>{brand.name}</CustomText>
                             </TouchableOpacity>
+                        ))}
+
+                        {/* Pending brands */}
+                        {pendingBrands.map((brand) => (
+                            <View
+                                key={`pending-${brand.id}`}
+                                style={styles.pendingBrandButton}
+                            >
+                                <CustomText style={styles.pendingBrandText}>
+                                    {brand.brand_name} (Pending)
+                                </CustomText>
+                            </View>
                         ))}
                     </View>
                 </View>
@@ -208,7 +299,6 @@ export function PostDetails() {
                         </CustomText>
                     </TouchableOpacity>
                 )}
-
 
                 {/* Action Buttons*/}
                 {post.username === currentUsername &&
@@ -272,13 +362,21 @@ const styles = StyleSheet.create({
     tag: {
         position: 'absolute',
         transform: [{ translateX: -50 }, { translateY: -50 }],
-        backgroundColor: theme.colors.light_background_1, borderRadius: 15,
+        backgroundColor: theme.colors.light_background_1,
+        borderRadius: 15,
         paddingVertical: 4,
         paddingHorizontal: 8,
         zIndex: 1,
     },
+    pendingTag: {
+        backgroundColor: 'rgba(255, 215, 0, 0.8)', // Yellow background for pending tags
+    },
     tagText: {
         fontSize: 12,
+    },
+    pendingTagText: {
+        fontSize: 12,
+        fontWeight: '500',
     },
     detailsContainer: {
         padding: 20,
@@ -310,8 +408,18 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 15,
     },
+    pendingBrandButton: {
+        backgroundColor: 'rgba(255, 215, 0, 0.8)', // Yellow background for pending brands
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 15,
+    },
     brandText: {
         fontSize: 12,
+    },
+    pendingBrandText: {
+        fontSize: 12,
+        fontWeight: '500',
     },
     stylesContainer: {
         marginBottom: 20,

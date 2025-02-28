@@ -13,6 +13,7 @@ import {
     PanResponder,
     GestureResponderEvent,
     LayoutChangeEvent,
+    Modal,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -41,6 +42,9 @@ type BrandTag = {
     name: string;
     x: number;
     y: number;
+    isPending?: boolean;
+    website_url?: string;
+    instagram_url?: string;
 };
 
 type Style = {
@@ -64,6 +68,12 @@ export function Post() {
     const [taggedBrands, setTaggedBrands] = useState<BrandTag[]>([]);
     const [activePosition, setActivePosition] = useState<{ x: number, y: number } | null>(null);
     const [isDragging, setIsDragging] = useState<number | null>(null);
+
+    // New state for pending brand creation
+    const [showAddBrandModal, setShowAddBrandModal] = useState(false);
+    const [newBrandName, setNewBrandName] = useState('');
+    const [newBrandWebsite, setNewBrandWebsite] = useState('');
+    const [newBrandInstagram, setNewBrandInstagram] = useState('');
 
     const [loading, setLoading] = useState(false);
     const modalizeRef = useRef<Modalize>(null);
@@ -180,6 +190,29 @@ export function Post() {
                 x: activePosition.x,
                 y: activePosition.y
             }]);
+            modalizeRef.current?.close();
+            setActivePosition(null);
+            setBrandsInput('');
+        }
+    };
+
+    // New handler for adding a pending brand
+    const handleAddPendingBrand = () => {
+        if (activePosition && newBrandName.trim()) {
+            setTaggedBrands([...taggedBrands, {
+                name: newBrandName,
+                x: activePosition.x,
+                y: activePosition.y,
+                isPending: true,
+                website_url: newBrandWebsite,
+                instagram_url: newBrandInstagram
+            }]);
+
+            // Reset the form
+            setNewBrandName('');
+            setNewBrandWebsite('');
+            setNewBrandInstagram('');
+            setShowAddBrandModal(false);
             modalizeRef.current?.close();
             setActivePosition(null);
             setBrandsInput('');
@@ -358,25 +391,51 @@ export function Post() {
                 }
             }
 
-
-            // Upload tagged brands with coordinates
+            // Process tagged brands
             for (const tag of taggedBrands) {
-                const { data: brandData, error: brandError } = await supabase
-                    .from('brands')
-                    .upsert([{ name: tag.name }], { onConflict: 'name' })
-                    .select('id')
-                    .single();
+                if (tag.isPending) {
+                    // Insert into pending_brands table
+                    const { data: pendingBrandData, error: pendingBrandError } = await supabase
+                        .from('pending_brands')
+                        .insert([{
+                            brand_name: tag.name,
+                            website_url: tag.website_url || '',
+                            instagram_url: tag.instagram_url || '',
+                            user_id: user.id
+                        }])
+                        .select('id')
+                        .single();
 
-                if (brandError) throw brandError;
+                    if (pendingBrandError) throw pendingBrandError;
 
-                await supabase
-                    .from('post_brands')
-                    .insert([{
-                        post_uuid: postData.uuid,
-                        brand_id: brandData.id,
-                        x_coord: tag.x,
-                        y_coord: tag.y
-                    }]);
+                    // Create association in post_pending_brands table
+                    await supabase
+                        .from('post_pending_brands')
+                        .insert([{
+                            post_uuid: postData.uuid,
+                            brand_id: pendingBrandData.id,
+                            x_coord: tag.x,
+                            y_coord: tag.y
+                        }]);
+                } else {
+                    // Process existing brands as before
+                    const { data: brandData, error: brandError } = await supabase
+                        .from('brands')
+                        .upsert([{ name: tag.name }], { onConflict: 'name' })
+                        .select('id')
+                        .single();
+
+                    if (brandError) throw brandError;
+
+                    await supabase
+                        .from('post_brands')
+                        .insert([{
+                            post_uuid: postData.uuid,
+                            brand_id: brandData.id,
+                            x_coord: tag.x,
+                            y_coord: tag.y
+                        }]);
+                }
             }
 
             navigation.navigate('Profile' as never);
@@ -410,10 +469,6 @@ export function Post() {
                                         setImageLayout({ width, height, pageX, pageY });
                                     });
                                 }}
-                            // onLayout={(e) => {
-                            //     const { x, y, width, height } = e.nativeEvent.layout;
-                            //     console.log('Image Container:', { x, y, width, height });
-                            // }}
                             >
                                 <TouchableWithoutFeedback onPress={handleImagePress}>
                                     <Image
@@ -435,7 +490,10 @@ export function Post() {
                                         onLayout={(event) => handleTagLayout(index, event)}
                                     >
                                         <View
-                                            style={styles.tagPillContent}
+                                            style={[
+                                                styles.tagPillContent,
+                                                tag.isPending && styles.pendingTagPill
+                                            ]}
                                             {...PanResponder.create({
                                                 onStartShouldSetPanResponder: () => true,
                                                 onPanResponderGrant: () => handleTagDragStart(index),
@@ -607,12 +665,17 @@ export function Post() {
                                 {taggedBrands.map((brand, index) => (
                                     <TouchableOpacity
                                         key={index}
-                                        style={styles.taggedBrand}
+                                        style={[
+                                            styles.taggedBrand,
+                                            brand.isPending && styles.pendingTaggedBrand
+                                        ]}
                                         onPress={() => {
                                             setTaggedBrands(taggedBrands.filter((_, i) => i !== index));
                                         }}
                                     >
-                                        <CustomText style={styles.taggedBrandText}>{brand.name}</CustomText>
+                                        <CustomText style={styles.taggedBrandText}>
+                                            {brand.name} {brand.isPending && '(Pending)'}
+                                        </CustomText>
                                         <CustomText style={styles.removeTag}>X</CustomText>
                                     </TouchableOpacity>
                                 ))}
@@ -665,46 +728,125 @@ export function Post() {
                     modalStyle={styles.modalContainer}
                     modalHeight={700}
                     onOpen={() => setIsModalOpen(true)}
-                    onClose={() => setIsModalOpen(false)}
+                    onClose={() => {
+                        setIsModalOpen(false);
+                        setShowAddBrandModal(false);
+                        setNewBrandName('');
+                        setNewBrandWebsite('');
+                        setNewBrandInstagram('');
+                    }}
                     panGestureEnabled={false}
                 >
                     <View style={styles.modalContent}>
                         <CustomText style={styles.modalTitle}>Tag a Brand</CustomText>
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Search brands..."
-                            placeholderTextColor={theme.colors.light_background_2}
-                            value={brandsInput}
-                            onChangeText={async (text) => {
-                                setBrandsInput(text);
-                                if (text.length > 0) {
-                                    const { data, error } = await supabase
-                                        .from('brands')
-                                        .select('name')
-                                        .ilike('name', `%${text}%`)
-                                        .limit(5);
+                        {!showAddBrandModal ? (
+                            <>
+                                <TextInput
+                                    style={styles.searchInput}
+                                    placeholder="Search brands..."
+                                    placeholderTextColor={theme.colors.light_background_2}
+                                    value={brandsInput}
+                                    onChangeText={async (text) => {
+                                        setBrandsInput(text);
+                                        if (text.length > 0) {
+                                            const { data, error } = await supabase
+                                                .from('brands')
+                                                .select('name')
+                                                .ilike('name', `%${text}%`)
+                                                .limit(5);
 
-                                    if (error) {
-                                        console.error('Error fetching brands:', error);
-                                    } else {
-                                        setBrandSuggestions(data.map(item => item.name));
-                                    }
-                                } else {
-                                    setBrandSuggestions([]);
-                                }
-                            }}
-                        />
-                        <ScrollView style={styles.suggestionsList}>
-                            {brandSuggestions.map((brand, index) => (
-                                <TouchableOpacity
-                                    key={index}
-                                    style={styles.suggestionItem}
-                                    onPress={() => handleBrandSelect(brand)}
-                                >
-                                    <CustomText style={styles.suggestionText}>{brand}</CustomText>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
+                                            if (error) {
+                                                console.error('Error fetching brands:', error);
+                                            } else {
+                                                setBrandSuggestions(data.map(item => item.name));
+                                            }
+                                        } else {
+                                            setBrandSuggestions([]);
+                                        }
+                                    }}
+                                />
+                                <ScrollView style={styles.suggestionsList}>
+                                    {brandSuggestions.length > 0 ? (
+                                        brandSuggestions.map((brand, index) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                style={styles.suggestionItem}
+                                                onPress={() => handleBrandSelect(brand)}
+                                            >
+                                                <CustomText style={styles.suggestionText}>{brand}</CustomText>
+                                            </TouchableOpacity>
+                                        ))
+                                    ) : (
+                                        <View style={styles.noResultsContainer}>
+                                            <CustomText style={styles.noResultsText}>
+                                                No brands found matching your search.
+                                            </CustomText>
+                                            <TouchableOpacity
+                                                style={styles.addBrandButton}
+                                                onPress={() => {
+                                                    setShowAddBrandModal(true);
+                                                    setNewBrandName(brandsInput);
+                                                }}
+                                            >
+                                                <CustomText style={styles.addBrandButtonText}>
+                                                    Add Brand
+                                                </CustomText>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                </ScrollView>
+                            </>
+                        ) : (
+                            // Form for adding a new brand
+                            <View style={styles.addBrandForm}>
+                                <CustomText style={styles.formLabel}>Brand Name*</CustomText>
+                                <TextInput
+                                    style={styles.formInput}
+                                    value={newBrandName}
+                                    onChangeText={setNewBrandName}
+                                    placeholder="Enter brand name"
+                                    placeholderTextColor={theme.colors.light_background_2}
+                                />
+
+                                <CustomText style={styles.formLabel}>Website (optional)</CustomText>
+                                <TextInput
+                                    style={styles.formInput}
+                                    value={newBrandWebsite}
+                                    onChangeText={setNewBrandWebsite}
+                                    placeholder="https://..."
+                                    placeholderTextColor={theme.colors.light_background_2}
+                                />
+
+                                <CustomText style={styles.formLabel}>Instagram (optional)</CustomText>
+                                <TextInput
+                                    style={styles.formInput}
+                                    value={newBrandInstagram}
+                                    onChangeText={setNewBrandInstagram}
+                                    placeholder="@username"
+                                    placeholderTextColor={theme.colors.light_background_2}
+                                />
+
+                                <View style={styles.formButtons}>
+                                    <TouchableOpacity
+                                        style={styles.cancelButton}
+                                        onPress={() => setShowAddBrandModal(false)}
+                                    >
+                                        <CustomText style={styles.cancelButtonText}>Cancel</CustomText>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.submitButton,
+                                            !newBrandName.trim() && styles.disabledButton
+                                        ]}
+                                        onPress={handleAddPendingBrand}
+                                        disabled={!newBrandName.trim()}
+                                    >
+                                        <CustomText style={styles.submitButtonText}>Add Brand</CustomText>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
                     </View>
                 </Modalize>
 
@@ -739,7 +881,7 @@ const styles = StyleSheet.create({
         padding: 10,
         marginBottom: 20,
         borderRadius: 8,
-
+        color: theme.colors.text,
     },
     placeholder: {
         textAlign: 'center',
@@ -773,12 +915,15 @@ const styles = StyleSheet.create({
     taggedBrand: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#e0e0e0',
+        backgroundColor: theme.colors.light_background_1,
         borderRadius: 20,
         paddingVertical: 5,
         paddingHorizontal: 10,
         marginRight: 5,
         marginBottom: 5,
+    },
+    pendingTaggedBrand: {
+        backgroundColor: theme.colors.light_background_2,
     },
     taggedBrandText: {
         marginRight: 5,
@@ -824,14 +969,16 @@ const styles = StyleSheet.create({
     tagPillContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        backgroundColor: theme.colors.light_background_2,
         borderRadius: 15,
         paddingVertical: 4,
         paddingHorizontal: 10,
-
+    },
+    pendingTagPill: {
+        backgroundColor: 'rgba(255, 215, 0, 0.8)', // Yellow with opacity for pending tags
     },
     tagText: {
-        color: '#fff',
+        color: theme.colors.text,
         fontSize: 12,
         marginRight: 5,
         flexShrink: 1,
@@ -843,7 +990,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     removeButtonText: {
-        color: '#fff',
+        color: theme.colors.text,
         fontSize: 16,
         fontWeight: 'bold',
     },
@@ -869,6 +1016,7 @@ const styles = StyleSheet.create({
     },
     suggestionsList: {
         marginTop: 10,
+        width: 300,
     },
     suggestionItem: {
         paddingVertical: 12,
@@ -967,5 +1115,76 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         paddingHorizontal: 10,
+    },
+    // New styles for no results and add brand
+    noResultsContainer: {
+        alignItems: 'center',
+        marginTop: 20,
+        width: 300,
+    },
+    noResultsText: {
+        textAlign: 'center',
+        marginBottom: 15,
+        color: '#666',
+    },
+    addBrandButton: {
+        backgroundColor: theme.colors.light_background_2,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        marginTop: 10,
+    },
+    addBrandButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    // New Brand Form styles
+    addBrandForm: {
+        width: 300,
+        marginTop: 10,
+    },
+    formLabel: {
+        fontSize: 14,
+        marginBottom: 5,
+        color: '#333',
+    },
+    formInput: {
+        color: theme.colors.text,
+        borderWidth: 1,
+        borderColor: theme.colors.light_background_1,
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 15,
+    },
+    formButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
+    },
+    cancelButton: {
+        backgroundColor: '#f0f0f0',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        marginRight: 10,
+    },
+    cancelButtonText: {
+        color: '#333',
+    },
+    submitButton: {
+        backgroundColor: theme.colors.light_background_2,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        flex: 1,
+        alignItems: 'center',
+    },
+    submitButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+    disabledButton: {
+        opacity: 0.5,
     },
 });

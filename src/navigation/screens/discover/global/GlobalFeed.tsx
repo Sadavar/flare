@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Dimensions, TouchableOpacity, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 // import { Image } from 'react-native';
-import { useGlobalFeed, useSavedPostStatus } from '@/hooks/usePostQueries';
-import { useIsFocused, useNavigation } from '@react-navigation/native';
-import { Post } from '@/types';
+import { useGlobalFeed } from '@/hooks/usePostQueries';
+import { NavigationProp, useIsFocused, useNavigation } from '@react-navigation/native';
+import { DiscoverTabParamList, Post } from '@/types';
 import { PaginatedGridList } from '@/components/PaginatedGridList';
 import { MaterialIcons } from '@expo/vector-icons';
 import PostCard from '@/components/PostCard';
@@ -13,6 +13,8 @@ import { theme } from '@/context/ThemeContext';
 
 
 function GlobalSearch() {
+    const navigation = useNavigation<NavigationProp<DiscoverTabParamList>>();
+
     const styles = StyleSheet.create({
         searchContainer: {
             flexDirection: 'row',
@@ -23,6 +25,7 @@ function GlobalSearch() {
             paddingHorizontal: 10,
             backgroundColor: theme.colors.light_background_1,
             margin: 15,
+            paddingVertical: 5,
         },
         searchIcon: {
             marginRight: 10,
@@ -33,35 +36,39 @@ function GlobalSearch() {
         },
     });
 
+    const handleSearchPress = () => {
+        navigation.navigate('Search', {
+            initialFilter: 'users',
+        });
+    };
+
     return (
-        <View style={styles.searchContainer}>
-            <MaterialIcons name="search" size={30} color={theme.colors.light_background_2} style={styles.searchIcon} />
-            <TextInput
-                style={styles.searchInput}
-                placeholder="Search for brands"
-                placeholderTextColor="#666"
-                // value={searchQuery}
-                // onChangeText={setSearchQuery}
-                autoCorrect={false}
-            />
-        </View>
+        <TouchableOpacity onPress={handleSearchPress}>
+            <View style={styles.searchContainer}>
+                <MaterialIcons
+                    name="search"
+                    size={30}
+                    color={theme.colors.light_background_2}
+                    style={styles.searchIcon}
+                />
+                <CustomText style={{
+                    fontSize: 16,
+                    color: theme.colors.light_background_2
+                }}>
+                    Search
+                </CustomText>
+            </View>
+        </TouchableOpacity>
     );
 }
 
 function Header() {
     return (
         <>
-
             <View style={styles.fixedHeader}>
-
                 <CustomText style={styles.mainTitle}>Discover Globally</CustomText>
-
-                <GlobalSearch
-
-                />
-
+                <GlobalSearch />
             </View>
-
         </>
     )
 }

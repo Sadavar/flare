@@ -24,6 +24,7 @@ export type GlobalStackParamList = {
         postData?: Post;
     };
     PostDetails: { post: Post };
+    Search: undefined;
 };
 
 export type FriendsStackParamList = {
@@ -44,6 +45,9 @@ export type DiscoverTabParamList = {
     Brands: {
         screen?: keyof BrandsStackParamList;
         params?: BrandsStackParamList[keyof BrandsStackParamList];
+    };
+    Search: {
+        initialFilter?: 'users' | 'brands' | 'styles';
     };
     PostDetails: { post: Post };
     UserProfile: { username: string };

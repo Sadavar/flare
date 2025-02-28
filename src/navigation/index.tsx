@@ -21,6 +21,7 @@ import { Profile } from './screens/profile/Profile';
 import { Global } from './screens/discover/global/Global';
 import { Friends } from './screens/discover/friends/Friends';
 import { Brands } from './screens/discover/brands/Brands';
+import { Search } from './screens/search/Search';
 import { Layout } from '@/components/Layout';
 import { UserProfile } from './screens/discover/UserProfile';
 import { ProfileMain } from './screens/profile/ProfileMain';
@@ -85,6 +86,16 @@ function TopTabNavigator() {
               tabBarLabel: '',
               tabBarIcon: ({ color }) => (
                 <MaterialIcons name="sell" size={30} color={color} />
+              ),
+            }}
+          />
+          <TopTab.Screen
+            name="Search"
+            component={Search}
+            options={{
+              tabBarLabel: '',
+              tabBarIcon: ({ color }) => (
+                <MaterialIcons name="search" size={30} color={color} />
               ),
             }}
           />

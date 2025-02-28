@@ -48,10 +48,11 @@ function TopTabNavigator() {
             tabBarStyle: {
               elevation: 0,
               shadowOpacity: 0,
-              borderTopWidth: 1,
               borderTopColor: theme.colors.background,
               backgroundColor: theme.colors.background,
               paddingBottom: 0,
+              borderBottomWidth: 0,
+              height: 70,
             },
             tabBarActiveTintColor: theme.colors.primary,
             tabBarInactiveTintColor: theme.colors.tabBarInactive,

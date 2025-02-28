@@ -1,6 +1,6 @@
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { ThemeContext, useNavigation } from '@react-navigation/native';
 import { Post } from '@/types';
 import { Image } from 'expo-image';
 import { useSavePost } from '@/hooks/usePostQueries';
@@ -152,10 +152,13 @@ const styles = StyleSheet.create({
         aspectRatio: 0.75, // 3:4 aspect ratio (width:height)
         backgroundColor: 'white',
         borderRadius: 12,
+        borderBottomStartRadius: 0,
+        borderBottomEndRadius: 0
     },
     postDetails: {
         width: '100%',
-        paddingHorizontal: 3
+        paddingHorizontal: 3,
+        paddingTop: 1,
     },
     brandsContainer: {
         paddingBottom: 10,
@@ -163,7 +166,6 @@ const styles = StyleSheet.create({
     brandsLabel: {
         fontSize: 11,
         fontWeight: '500',
-        color: '#888',
         marginBottom: 4,
     },
     brandsList: {
@@ -174,7 +176,7 @@ const styles = StyleSheet.create({
     brandButton: {
         paddingHorizontal: 8,
         paddingVertical: 4,
-        backgroundColor: theme.colors.light_background_2,
+        backgroundColor: theme.colors.light_background_0,
         borderRadius: 6,
     },
     brandText: {
@@ -242,6 +244,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        paddingBottom: 5,
+        paddingTop: 5
     },
     saveButton: {
         padding: 0,

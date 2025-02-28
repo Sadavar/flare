@@ -7,6 +7,7 @@ export const theme = {
         light_primary_1: '#FE6E4F',
         light_primary_2: '#FF9E8A',
         light_primary_3: '#FFCFC4',
+        light_background_0: '#1d1d1f',
         light_background_1: '#313135',
         light_background_2: '#7C7C7F',
         light_background_3: '#C4C4C5',

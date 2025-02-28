@@ -6,8 +6,6 @@ import {
     TouchableOpacity,
     TextInput,
     FlatList,
-    KeyboardAvoidingView,
-    Platform,
     ScrollView,
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
@@ -21,32 +19,11 @@ import { PaginatedGridList } from '@/components/PaginatedGridList';
 import { CustomText } from '@/components/CustomText';
 import { theme } from '@/context/ThemeContext';
 import PostCard from '@/components/PostCard';
-
-function StyleSearch({ searchQuery, setSearchQuery }: {
-    searchQuery: string;
-    setSearchQuery: (text: string) => void;
-}) {
-    return (
-        <View style={styles.searchContainer}>
-            <MaterialIcons name="search" size={30} color={theme.colors.light_background_2} style={styles.searchIcon} />
-            <TextInput
-                style={styles.searchInput}
-                placeholder="Search for styles"
-                placeholderTextColor="#666"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoCorrect={false}
-            />
-        </View>
-    );
-}
-
+import { SearchButton } from '@/components/SearchButton';
 
 export function BrandsScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const [selectedStyles, setSelectedStyles] = useState<number[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const queryClient = useQueryClient();
     const PAGE_SIZE = 10;
 
     // Using the refactored hooks from usePostQueries
@@ -64,15 +41,8 @@ export function BrandsScreen() {
         refetch: refetchPosts
     } = useFilteredPostsByStyles(selectedStyles, PAGE_SIZE);
 
-    console.log('[BrandsScreen] Posts data:', postsData);
-
     // Flatten posts data correctly for use with PaginatedGridList
     const flattenedPosts = postsData?.pages.flatMap(page => page.posts) || [];
-    console.log('[BrandsScreen] Flattened posts:', flattenedPosts);
-
-    const filteredStyles = stylesData?.filter(style =>
-        style.name.toLowerCase().includes(searchQuery.toLowerCase())
-    ) || [];
 
     const handleStylePress = (styleId: number) => {
         setSelectedStyles(prev => {
@@ -107,14 +77,11 @@ export function BrandsScreen() {
     };
 
     // Header component for PaginatedGridList
-    const renderHeader = () => {
+    const Header = () => {
         return (
-            <View>
+            <View style={styles.fixedHeader}>
                 <CustomText style={styles.mainTitle}>Discover Styles</CustomText>
-                <StyleSearch
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                />
+                <SearchButton type={'brands'} />
 
                 <CustomText style={styles.trendingTitle}>Trending Brands</CustomText>
                 <FlatList
@@ -167,26 +134,6 @@ export function BrandsScreen() {
         );
     };
 
-    // Custom empty component
-    const renderEmptyComponent = () => (
-        <View style={styles.emptyContainer}>
-            <CustomText style={styles.emptyText}>
-                {selectedStyles.length > 0
-                    ? "No posts found with the selected styles. Try selecting different styles."
-                    : "No posts found."}
-            </CustomText>
-        </View>
-    );
-
-    // Custom error component
-    const renderErrorComponent = () => (
-        <View style={styles.errorContainer}>
-            <CustomText style={styles.errorText}>
-                Error loading posts. Pull down to try again.
-            </CustomText>
-        </View>
-    );
-
 
     if (stylesLoading) {
         return (
@@ -197,60 +144,23 @@ export function BrandsScreen() {
     }
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            {searchQuery ? (
-                // Show search results
-                <FlatList
-                    data={filteredStyles}
-                    ListHeaderComponent={() => (
-                        <View style={styles.fixedHeader}>
-                            <CustomText style={styles.mainTitle}>Discover Styles</CustomText>
-                            <StyleSearch
-                                searchQuery={searchQuery}
-                                setSearchQuery={setSearchQuery}
-                            />
-                        </View>
-                    )}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity
-                            key={item.id.toString()}
-                            style={styles.suggestionItem}
-                            onPress={() => {
-                                setSelectedStyles([item.id]);
-                                setSearchQuery('');
-                            }}
-                        >
-                            <CustomText style={styles.suggestionText}>{item.name}</CustomText>
-                        </TouchableOpacity>
-                    )}
-                    keyExtractor={(item) => item.id.toString()}
-                />
-            ) : (
-                // Show paginated grid view for posts
-                <PaginatedGridList
-                    data={flattenedPosts}
-                    header={renderHeader()}
-                    renderItem={renderPostItem}
-                    fetchNextPage={fetchNextPage}
-                    hasNextPage={!!hasNextPage}
-                    isFetchingNextPage={isFetchingNextPage}
-                    isLoading={postsLoading}
-                    isError={postsError}
-                    refetch={refetchPosts}
-                    keyExtractor={(item: Post) => item.uuid}
-                    numColumns={2}
-                    estimatedItemSize={280}
-                    // emptyComponent={renderEmptyComponent()}
-                    // errorComponent={renderErrorComponent()}
-                    loadingMoreText="Loading more posts..."
-                    contentContainerStyle={styles.gridContent}
-                />
-            )}
-        </KeyboardAvoidingView>
-    );
+        <PaginatedGridList
+            data={flattenedPosts}
+            header={<Header />}
+            renderItem={renderPostItem}
+            fetchNextPage={fetchNextPage}
+            hasNextPage={!!hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            isLoading={postsLoading}
+            isError={postsError}
+            refetch={refetchPosts}
+            keyExtractor={(item: Post) => item.uuid}
+            numColumns={2}
+            estimatedItemSize={280}
+            loadingMoreText="Loading more posts..."
+            contentContainerStyle={styles.gridContent}
+        />
+    )
 }
 
 
@@ -261,14 +171,12 @@ const styles = StyleSheet.create({
     },
     fixedHeader: {
         paddingTop: 10,
-        backgroundColor: '#fff',
         zIndex: 1,
     },
     mainTitle: {
         fontSize: 18,
         fontWeight: 'bold',
         alignSelf: 'center',
-        marginVertical: 8,
     },
     searchContainer: {
         flexDirection: 'row',

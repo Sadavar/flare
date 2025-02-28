@@ -10,64 +10,16 @@ import { MaterialIcons } from '@expo/vector-icons';
 import PostCard from '@/components/PostCard';
 import { CustomText } from '@/components/CustomText';
 import { theme } from '@/context/ThemeContext';
+import { SearchButton } from '@/components/SearchButton';
 
 
-function GlobalSearch() {
-    const navigation = useNavigation<NavigationProp<DiscoverTabParamList>>();
-
-    const styles = StyleSheet.create({
-        searchContainer: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            borderWidth: 0.5,
-            borderColor: '#000',
-            borderRadius: 20,
-            paddingHorizontal: 10,
-            backgroundColor: theme.colors.light_background_1,
-            margin: 15,
-            paddingVertical: 5,
-        },
-        searchIcon: {
-            marginRight: 10,
-        },
-        searchInput: {
-            flex: 1,
-            height: 40,
-        },
-    });
-
-    const handleSearchPress = () => {
-        navigation.navigate('Search', {
-            initialFilter: 'users',
-        });
-    };
-
-    return (
-        <TouchableOpacity onPress={handleSearchPress}>
-            <View style={styles.searchContainer}>
-                <MaterialIcons
-                    name="search"
-                    size={30}
-                    color={theme.colors.light_background_2}
-                    style={styles.searchIcon}
-                />
-                <CustomText style={{
-                    fontSize: 16,
-                    color: theme.colors.light_background_2
-                }}>
-                    Search
-                </CustomText>
-            </View>
-        </TouchableOpacity>
-    );
-}
 
 function Header() {
     return (
         <>
             <View style={styles.fixedHeader}>
                 <CustomText style={styles.mainTitle}>Discover Globally</CustomText>
-                <GlobalSearch />
+                <SearchButton type={'global'} />
             </View>
         </>
     )

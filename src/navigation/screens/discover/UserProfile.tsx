@@ -6,7 +6,7 @@ import { Layout } from '@/components/Layout';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { DiscoverTabParamList, Post } from '@/types';
-import { useUserPostsAll } from '@/hooks/usePostQueries';
+import { useUserId, useUserPostsAll, useNumSavedYourPosts } from '@/hooks/usePostQueries';
 import { useSession } from '@/context/SessionContext';
 import RecentPosts from '../profile/RecentPosts';
 import { useIsFollowing, useFollowUser } from '@/hooks/useFollowQueries';
@@ -24,6 +24,8 @@ export function UserProfile() {
     const { user: currentUser } = useSession();
 
     const { data: allPosts = [], isLoading: postsLoading, refetch } = useUserPostsAll(username || '');
+
+    const { data: numSavedPosts } = useNumSavedYourPosts(username || '');
 
     // Get target user's ID
     const { data: targetUser } = useQuery({
@@ -93,13 +95,10 @@ export function UserProfile() {
                     <CustomText style={styles.statLabel}>Posts</CustomText>
                 </View>
                 <View style={styles.statItem}>
-                    <CustomText style={styles.statNumber}>45</CustomText>
+                    <CustomText style={styles.statNumber}>{numSavedPosts || 0}</CustomText>
                     <CustomText style={styles.statLabel}>Saves</CustomText>
                 </View>
             </View>
-            <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-                <MaterialIcons name="refresh" size={24} color="black" />
-            </TouchableOpacity>
         </View>
     ), [username, allPosts?.length, handleRefresh]);
 

@@ -83,7 +83,19 @@ export function usePost(postId: string) {
     });
 }
 
-export function useUserPostsAll(username) {
+export function useUserId(username: string) {
+    return useQuery({
+        queryKey: ['userId', username],
+        queryFn: async () => {
+            const { data, error } = await supabase.from('profiles').select('id').eq('username', username).single();
+            if (error) throw error;
+            return data.id;
+        },
+        enabled: !!username
+    });
+}
+
+export function useUserPostsAll(username: string) {
     const { user } = useSession();
     const queryClient = useQueryClient();
 
@@ -729,6 +741,56 @@ async function getSavedPosts(userId: string, postUuids?: string[]) {
     return savedPosts || [];
 }
 
+export function useNumSavedYourPosts(username: string) {
+    return useQuery({
+        queryKey: ['numSavedYourPosts', username],
+        queryFn: async () => {
+            const { data: userId, error: userIdError } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('username', username)
+                .single();
+
+            if (userIdError) {
+                console.error('Error fetching user ID:', userIdError);
+                throw userIdError;
+            }
+
+            console.log('user id', userId);
+
+            const { data: savedPosts, error: savedPostsError } = await supabase
+                .from('saved_posts')
+                .select('post_uuid')
+
+            if (savedPostsError) {
+                console.error('Error fetching saved posts:', savedPostsError);
+                throw savedPostsError;
+            }
+
+            console.log('saved posts', savedPosts);
+
+            // Check if the saved posts belong to the user
+            const postUuids = savedPosts.map(sp => sp.post_uuid);
+            console.log('post uuids', postUuids);
+            const { data: posts, error: postsError } = await supabase
+                .from('posts')
+                .select('user_uuid')
+                .in('uuid', postUuids);
+
+
+            if (postsError) {
+                console.error('Error fetching posts:', postsError);
+                throw postsError;
+            }
+
+            // Count the number of posts that belong to the user
+            const savedPostCount = posts.filter(post => post.user_uuid === userId.id).length;
+            return savedPostCount;
+        },
+        enabled: !!username
+    });
+}
+
 // Update checkSavedStatus to use getSavedPosts
 async function checkSavedStatus(posts: any[], userId: string | undefined) {
     console.log('checkSavedStatus called with:', {
@@ -902,3 +964,4 @@ export function useFollowingFeed(pageSize = 10) {
         enabled: !!user?.id
     });
 }
+

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo, useMemo } from 'react';
 import {
     View,
     Text,
@@ -21,6 +21,99 @@ import { theme } from '@/context/ThemeContext';
 import PostCard from '@/components/PostCard';
 import { SearchButton } from '@/components/SearchButton';
 
+// Memoize the post item to prevent unnecessary re-renders
+const MemoizedPostCard = memo(PostCard);
+
+// Memoize the trending item component
+const TrendingItem = memo(({ item, onPress }: { item: Brand, onPress: () => void }) => (
+    <TouchableOpacity
+        style={styles.trendingCard}
+        onPress={onPress}
+    >
+        <CustomText style={styles.brandIcon}>{item.name.charAt(0)}</CustomText>
+        <CustomText style={styles.brandName}>{item.name}</CustomText>
+    </TouchableOpacity>
+));
+
+// Memoize the filter chip component
+const FilterChip = memo(({ label, isSelected, onPress }: { label: string, isSelected: boolean, onPress: () => void }) => (
+    <TouchableOpacity
+        style={[
+            styles.chip,
+            isSelected && styles.chipSelected
+        ]}
+        onPress={onPress}
+    >
+        <CustomText style={[
+            styles.chipText,
+            isSelected && styles.chipTextSelected
+        ]}>{label}</CustomText>
+    </TouchableOpacity>
+));
+
+// Memoized Header Component
+const Header = memo(({
+    brands,
+    stylesData,
+    selectedStyles,
+    onStylePress,
+    onAllStylesPress,
+    navigation
+}) => {
+    const trendingBrands = useMemo(() => brands ? brands.slice(0, 10) : [], [brands]);
+
+    const renderTrendingItem = useCallback(({ item }: { item: Brand }) => (
+        <TrendingItem
+            item={item}
+            onPress={() => navigation.navigate('BrandDetails', {
+                brandId: item.id,
+                brandName: item.name,
+            })}
+        />
+    ), [navigation]);
+
+    return (
+        <View style={styles.fixedHeader}>
+            <CustomText style={styles.mainTitle}>Discover Styles</CustomText>
+            <SearchButton type={'brands'} />
+
+            <CustomText style={styles.trendingTitle}>Trending Brands</CustomText>
+            <FlatList
+                horizontal
+                data={trendingBrands}
+                renderItem={renderTrendingItem}
+                showsHorizontalScrollIndicator={false}
+                style={styles.carouselContainer}
+                keyExtractor={item => item.id.toString()}
+            />
+
+            <CustomText style={styles.trendingTitle}>Filter by Style</CustomText>
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.chipsContainer}
+                contentContainerStyle={styles.chipsContent}
+                keyboardShouldPersistTaps="always"
+            >
+                <FilterChip
+                    label="All Styles"
+                    isSelected={selectedStyles.length === 0}
+                    onPress={onAllStylesPress}
+                />
+
+                {stylesData?.map((style) => (
+                    <FilterChip
+                        key={style.id}
+                        label={style.name}
+                        isSelected={selectedStyles.includes(style.id)}
+                        onPress={() => onStylePress(style.id)}
+                    />
+                ))}
+            </ScrollView>
+        </View>
+    );
+});
+
 export function BrandsScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const [selectedStyles, setSelectedStyles] = useState<number[]>([]);
@@ -41,99 +134,39 @@ export function BrandsScreen() {
         refetch: refetchPosts
     } = useFilteredPostsByStyles(selectedStyles, PAGE_SIZE);
 
-    // Flatten posts data correctly for use with PaginatedGridList
-    const flattenedPosts = postsData?.pages.flatMap(page => page.posts) || [];
+    // Memoize flattened posts to prevent unnecessary recalculations
+    const flattenedPosts = useMemo(() =>
+        postsData?.pages.flatMap(page => page.posts) || [],
+        [postsData]
+    );
 
-    const handleStylePress = (styleId: number) => {
+    const handleStylePress = useCallback((styleId: number) => {
         setSelectedStyles(prev => {
             if (prev.includes(styleId)) {
                 return prev.filter(id => id !== styleId);
             }
             return [...prev, styleId];
         });
-    };
+    }, []);
 
-    const handleAllStylesPress = () => {
+    const handleAllStylesPress = useCallback(() => {
         setSelectedStyles([]);
-    };
+    }, []);
 
-    const renderTrendingItem = ({ item }: { item: Brand }) => (
-        <TouchableOpacity
-            style={styles.trendingCard}
-            onPress={() => navigation.navigate('BrandDetails', {
-                brandId: item.id,
-                brandName: item.name,
-            })}
-        >
-            <CustomText style={styles.brandIcon}>{item.name.charAt(0)}</CustomText>
-            <CustomText style={styles.brandName}>{item.name}</CustomText>
-        </TouchableOpacity>
-    );
+    const renderPostItem = useCallback(({ item }: { item: Post }) => {
+        return <MemoizedPostCard post={item} />;
+    }, []);
 
-    const renderPostItem = ({ item }: { item: Post }) => {
-        return (
-            <PostCard post={item} />
-        )
-    };
-
-    // Header component for PaginatedGridList
-    const Header = () => {
-        return (
-            <View style={styles.fixedHeader}>
-                <CustomText style={styles.mainTitle}>Discover Styles</CustomText>
-                <SearchButton type={'brands'} />
-
-                <CustomText style={styles.trendingTitle}>Trending Brands</CustomText>
-                <FlatList
-                    horizontal
-                    data={brands ? brands.slice(0, 10) : []}
-                    renderItem={renderTrendingItem}
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.carouselContainer}
-                    keyExtractor={item => item.id.toString()}
-                />
-
-                <CustomText style={styles.trendingTitle}>Filter by Style</CustomText>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.chipsContainer}
-                    contentContainerStyle={styles.chipsContent}
-                    keyboardShouldPersistTaps="always"
-                >
-                    <TouchableOpacity
-                        style={[
-                            styles.chip,
-                            selectedStyles.length === 0 && styles.chipSelected
-                        ]}
-                        onPress={handleAllStylesPress}
-                    >
-                        <CustomText style={[
-                            styles.chipText,
-                            selectedStyles.length === 0 && styles.chipTextSelected
-                        ]}>All Styles</CustomText>
-                    </TouchableOpacity>
-
-                    {stylesData?.map((style) => (
-                        <TouchableOpacity
-                            key={style.id}
-                            style={[
-                                styles.chip,
-                                selectedStyles.includes(style.id) && styles.chipSelected
-                            ]}
-                            onPress={() => handleStylePress(style.id)}
-                        >
-                            <CustomText style={[
-                                styles.chipText,
-                                selectedStyles.includes(style.id) && styles.chipTextSelected
-                            ]}>{style.name}</CustomText>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View>
-        );
-    };
-
+    const headerComponent = useMemo(() => (
+        <Header
+            brands={brands || []}
+            stylesData={stylesData || []}
+            selectedStyles={selectedStyles}
+            onStylePress={handleStylePress}
+            onAllStylesPress={handleAllStylesPress}
+            navigation={navigation}
+        />
+    ), [brands, stylesData, selectedStyles, handleStylePress, handleAllStylesPress, navigation]);
 
     if (stylesLoading) {
         return (
@@ -146,7 +179,7 @@ export function BrandsScreen() {
     return (
         <PaginatedGridList
             data={flattenedPosts}
-            header={<Header />}
+            header={headerComponent}
             renderItem={renderPostItem}
             fetchNextPage={fetchNextPage}
             hasNextPage={!!hasNextPage}

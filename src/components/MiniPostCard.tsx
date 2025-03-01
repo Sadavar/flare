@@ -121,7 +121,9 @@ function MiniPostCard({ post }: { post: Post }) {
                                 style={styles.brandPill}
                                 onPress={() => handleBrandPress(brand.id, brand.name)}
                             >
-                                <CustomText style={styles.brandText}>{brand.name}</CustomText>
+                                <CustomText style={styles.brandText}>
+                                    {brand.name.length > 9 ? `${brand.name.slice(0, 9)}...` : brand.name}
+                                </CustomText>
                             </TouchableOpacity>
                         ))}
                         {post.brands.length > 1 && (
@@ -152,7 +154,9 @@ const styles = StyleSheet.create({
     image: {
         width: '100%',
         aspectRatio: 0.75, // 3:4 aspect ratio
-        borderRadius: 12
+        borderRadius: 12,
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
     },
     details: {
         padding: 8,
@@ -181,7 +185,7 @@ const styles = StyleSheet.create({
     brandPill: {
         paddingHorizontal: 8,
         paddingVertical: 4,
-        backgroundColor: theme.colors.light_background_2,
+        backgroundColor: theme.colors.background,
         borderRadius: 6,
     },
     brandText: {

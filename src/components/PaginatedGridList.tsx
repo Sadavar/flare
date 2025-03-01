@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Dimensions, RefreshControl, ScrollView } from 'react-native';
 import { MasonryFlashList } from '@shopify/flash-list';
 
@@ -53,6 +53,18 @@ export function PaginatedGridList({
         // Default height if no other metrics available
         return estimatedItemSize;
     }, [getColumnWidth, estimatedItemSize]);
+
+    // Track previous data length
+    const prevDataLengthRef = useRef(data.length);
+
+    useEffect(() => {
+        // Only reset when transitioning from data to no data or vice versa
+        if ((prevDataLengthRef.current === 0 && data.length > 0) ||
+            (prevDataLengthRef.current > 0 && data.length === 0)) {
+            resetColumnHeights();
+        }
+        prevDataLengthRef.current = data.length;
+    }, [data.length]);
 
     // Reset column heights when data changes
     const resetColumnHeights = useCallback(() => {
@@ -165,6 +177,11 @@ export function PaginatedGridList({
         <View style={styles.container}>
             <MasonryFlashList
                 data={data}
+                key="posts-grid"
+                maintainVisibleContentPosition={{
+                    minIndexForVisible: 0,
+                    autoscrollToTopThreshold: null
+                }}
                 ListHeaderComponent={header}
                 numColumns={numColumns}
                 renderItem={renderItem}
@@ -178,7 +195,6 @@ export function PaginatedGridList({
                 showsVerticalScrollIndicator={false}
                 optimizeItemArrangement={true}
                 overrideItemLayout={overrideItemLayout}
-                contentContainerStyle={[styles.listContent, contentContainerStyle]}
                 {...listProps}
             />
         </View>

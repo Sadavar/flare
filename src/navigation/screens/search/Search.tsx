@@ -6,7 +6,7 @@ import { DiscoverTabParamList } from '@/types';
 import { useUserSearch } from '@/hooks/useUserSearch';
 import { useBrands, useStyles } from '@/hooks/usePostQueries';
 import { CustomText } from '@/components/CustomText';
-import { useTheme } from '@/context/ThemeContext';
+import { theme, useTheme } from '@/context/ThemeContext';
 import debounce from 'lodash/debounce';
 
 export function Search() {
@@ -15,7 +15,13 @@ export function Search() {
     const { theme } = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
     const initialFilter = route.params?.initialFilter || 'users';
+    console.log("initialFilter", initialFilter);
     const [searchMode, setSearchMode] = useState<'users' | 'brands' | 'styles'>(initialFilter);
+    console.log("searchMode", searchMode);
+
+    useEffect(() => {
+        setSearchMode(initialFilter);
+    }, [initialFilter]);
 
     // User search
     const {
@@ -268,7 +274,7 @@ export function Search() {
                     </CustomText>
                 </TouchableOpacity>
 
-                {/* <TouchableOpacity
+                <TouchableOpacity
                     onPress={() => handleSearch('styles')}
                     style={[
                         styles.filter,
@@ -288,7 +294,7 @@ export function Search() {
                     ]}>
                         Styles
                     </CustomText>
-                </TouchableOpacity> */}
+                </TouchableOpacity>
             </View>
 
             {renderSearchResults()}
@@ -355,7 +361,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: theme.colors.light_background_1,
     },
     userIconContainer: {
         width: 40,

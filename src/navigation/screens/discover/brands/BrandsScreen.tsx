@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo, useMemo } from 'react';
+import React, { useState, useCallback, memo, useMemo, useEffect } from 'react';
 import {
     View,
     Text,
@@ -9,11 +9,11 @@ import {
     ScrollView,
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Brand, Post } from '@/types';
+import { Brand, Post, Style } from '@/types';
 import { useBrands, useStyles, useFilteredPostsByStyles } from '@/hooks/usePostQueries';
 import { PaginatedGridList } from '@/components/PaginatedGridList';
 import { CustomText } from '@/components/CustomText';
@@ -74,7 +74,7 @@ const Header = memo(({
 
     return (
         <View style={styles.fixedHeader}>
-            <CustomText style={styles.mainTitle}>Discover Styles</CustomText>
+            <CustomText style={styles.mainTitle}>Discover Brands</CustomText>
             <SearchButton type={'brands'} />
 
             <CustomText style={styles.trendingTitle}>Trending Brands</CustomText>
@@ -101,7 +101,7 @@ const Header = memo(({
                     onPress={onAllStylesPress}
                 />
 
-                {stylesData?.map((style) => (
+                {stylesData?.map((style: Style) => (
                     <FilterChip
                         key={style.id}
                         label={style.name}
@@ -118,6 +118,16 @@ export function BrandsScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const [selectedStyles, setSelectedStyles] = useState<number[]>([]);
     const PAGE_SIZE = 10;
+
+    const route = useRoute();
+    console.log("route.params", route.params);
+    const { selectedStyle } = route.params ? (route.params as { selectedStyle?: number | undefined }) : {};
+
+    useEffect(() => {
+        if (selectedStyle !== undefined) {
+            setSelectedStyles([selectedStyle]);
+        }
+    }, [selectedStyle]);
 
     // Using the refactored hooks from usePostQueries
     const { data: brands } = useBrands();

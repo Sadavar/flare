@@ -82,11 +82,42 @@ export function Post() {
     const { user } = useSession();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isAnyModalOpen, setIsAnyModalOpen] = useState(false);
 
     const { data: colors, isLoading: isColorLoading } = useColors();
 
     const scrollViewRef = useRef<ScrollView>(null);
     const descriptionRef = useRef<View>(null);
+
+    // Brand modal refs, scroll down on input logic
+    const brandFormScrollRef = useRef(null);
+    const brandNameInputRef = useRef(null);
+    const brandWebsiteInputRef = useRef(null);
+    const brandInstagramInputRef = useRef(null);
+
+    const handleFormInputFocus = (inputRef: React.RefObject<View>) => {
+        console.log("inputRef", inputRef)
+        if (inputRef.current && brandFormScrollRef.current) {
+            console.log("brandFormScrollRef", brandFormScrollRef.current)
+            // Add a slight delay to ensure the keyboard is visible when measuring
+            setTimeout(() => {
+
+                console.log("scroll to",)
+
+                inputRef.current?.measureLayout(
+                    brandFormScrollRef.current as unknown as number,
+                    (_, y) => {
+                        // Scroll to the input with some padding
+                        (brandFormScrollRef.current as unknown as ScrollView)?.scrollTo({
+                            y: 200,
+                            animated: true
+                        });
+                    },
+                    () => console.log('Measurement failed')
+                );
+            }, 100);
+        }
+    };
 
     const [imageLayout, setImageLayout] = useState<{
         width: number;
@@ -451,6 +482,7 @@ export function Post() {
             <ScrollView
                 ref={scrollViewRef}
                 keyboardShouldPersistTaps='handled'
+                scrollEnabled={!isModalOpen}
             >
                 <View style={styles.container}>
 
@@ -695,7 +727,7 @@ export function Post() {
                 {/* Color Modal */}
                 <Modalize
                     ref={colorModalizeRef}
-                    modalHeight={500}
+                    modalHeight={Dimensions.get('window').height * 0.8}
                     modalStyle={styles.modalContainer}
                     panGestureEnabled={false}
                     onOpen={() => setIsModalOpen(true)}
@@ -726,7 +758,7 @@ export function Post() {
                 <Modalize
                     ref={modalizeRef}
                     modalStyle={styles.modalContainer}
-                    modalHeight={700}
+                    modalHeight={Dimensions.get('window').height}
                     onOpen={() => setIsModalOpen(true)}
                     onClose={() => {
                         setIsModalOpen(false);
@@ -738,7 +770,11 @@ export function Post() {
                     panGestureEnabled={false}
                 >
                     <View style={styles.modalContent}>
-                        <CustomText style={styles.modalTitle}>Tag a Brand</CustomText>
+                        {!showAddBrandModal ? (
+                            <CustomText style={styles.modalTitle}>Tag a Brand</CustomText>
+                        ) : (
+                            <CustomText style={styles.modalTitle}>Add a Brand</CustomText>
+                        )}
                         {!showAddBrandModal ? (
                             <>
                                 <TextInput
@@ -797,55 +833,66 @@ export function Post() {
                                 </ScrollView>
                             </>
                         ) : (
-                            // Form for adding a new brand
-                            <View style={styles.addBrandForm}>
-                                <CustomText style={styles.formLabel}>Brand Name*</CustomText>
-                                <TextInput
-                                    style={styles.formInput}
-                                    value={newBrandName}
-                                    onChangeText={setNewBrandName}
-                                    placeholder="Enter brand name"
-                                    placeholderTextColor={theme.colors.light_background_2}
-                                />
+                            <ScrollView
+                                ref={brandFormScrollRef}
+                                keyboardShouldPersistTaps="handled"
+                                contentContainerStyle={{ paddingBottom: 100 }}
+                            >
+                                <View style={styles.addBrandForm}>
+                                    <CustomText style={styles.formLabel}>Brand Name*</CustomText>
+                                    <TextInput
+                                        ref={brandNameInputRef}
+                                        style={styles.formInput}
+                                        value={newBrandName}
+                                        onChangeText={setNewBrandName}
+                                        placeholder="Enter brand name"
+                                        placeholderTextColor={theme.colors.light_background_2}
+                                        onFocus={() => handleFormInputFocus(brandNameInputRef)}
+                                    />
 
-                                <CustomText style={styles.formLabel}>Website (optional)</CustomText>
-                                <TextInput
-                                    style={styles.formInput}
-                                    value={newBrandWebsite}
-                                    onChangeText={setNewBrandWebsite}
-                                    placeholder="https://..."
-                                    placeholderTextColor={theme.colors.light_background_2}
-                                />
+                                    <CustomText style={styles.formLabel}>Website (optional)</CustomText>
+                                    <TextInput
+                                        ref={brandWebsiteInputRef}
+                                        style={styles.formInput}
+                                        value={newBrandWebsite}
+                                        onChangeText={setNewBrandWebsite}
+                                        placeholder="https://..."
+                                        placeholderTextColor={theme.colors.light_background_2}
+                                        onFocus={() => handleFormInputFocus(brandWebsiteInputRef)}
+                                    />
 
-                                <CustomText style={styles.formLabel}>Instagram (optional)</CustomText>
-                                <TextInput
-                                    style={styles.formInput}
-                                    value={newBrandInstagram}
-                                    onChangeText={setNewBrandInstagram}
-                                    placeholder="@username"
-                                    placeholderTextColor={theme.colors.light_background_2}
-                                />
+                                    <CustomText style={styles.formLabel}>Instagram (optional)</CustomText>
+                                    <TextInput
+                                        ref={brandInstagramInputRef}
+                                        style={styles.formInput}
+                                        value={newBrandInstagram}
+                                        onChangeText={setNewBrandInstagram}
+                                        placeholder="@username"
+                                        placeholderTextColor={theme.colors.light_background_2}
+                                        onFocus={() => handleFormInputFocus(brandInstagramInputRef)}
+                                    />
 
-                                <View style={styles.formButtons}>
-                                    <TouchableOpacity
-                                        style={styles.cancelButton}
-                                        onPress={() => setShowAddBrandModal(false)}
-                                    >
-                                        <CustomText style={styles.cancelButtonText}>Cancel</CustomText>
-                                    </TouchableOpacity>
+                                    <View style={styles.formButtons}>
+                                        <TouchableOpacity
+                                            style={styles.cancelButton}
+                                            onPress={() => setShowAddBrandModal(false)}
+                                        >
+                                            <CustomText style={styles.cancelButtonText}>Cancel</CustomText>
+                                        </TouchableOpacity>
 
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.submitButton,
-                                            !newBrandName.trim() && styles.disabledButton
-                                        ]}
-                                        onPress={handleAddPendingBrand}
-                                        disabled={!newBrandName.trim()}
-                                    >
-                                        <CustomText style={styles.submitButtonText}>Add Brand</CustomText>
-                                    </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.submitButton,
+                                                !newBrandName.trim() && styles.disabledButton
+                                            ]}
+                                            onPress={handleAddPendingBrand}
+                                            disabled={!newBrandName.trim()}
+                                        >
+                                            <CustomText style={styles.submitButtonText}>Add Brand</CustomText>
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
-                            </View>
+                            </ScrollView>
                         )}
                     </View>
                 </Modalize>
@@ -1147,7 +1194,7 @@ const styles = StyleSheet.create({
     formLabel: {
         fontSize: 14,
         marginBottom: 5,
-        color: '#333',
+        color: theme.colors.light_background_3,
     },
     formInput: {
         color: theme.colors.text,

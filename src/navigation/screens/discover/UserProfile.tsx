@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { CustomText } from '@/components/CustomText';
 import { theme } from '@/context/ThemeContext';
+import { RefreshControl } from 'react-native';
 
 type UserProfileRouteProp = RouteProp<DiscoverTabParamList, 'UserProfile'>;
 
@@ -24,8 +25,9 @@ export function UserProfile() {
     const { user: currentUser } = useSession();
 
     const { data: allPosts = [], isLoading: postsLoading, refetch } = useUserPostsAll(username || '');
-
     const { data: numSavedPosts } = useNumSavedYourPosts(username || '');
+
+    const [refreshing, setRefreshing] = React.useState(false);
 
     // Get target user's ID
     const { data: targetUser } = useQuery({
@@ -54,9 +56,11 @@ export function UserProfile() {
         }
     }, []);
 
-    // Handle refresh
     const handleRefresh = useCallback(() => {
-        refetch();
+        setRefreshing(true);
+        refetch().finally(() => {
+            setRefreshing(false);
+        });
     }, [refetch]);
 
     const handleFollowPress = () => {
@@ -113,7 +117,17 @@ export function UserProfile() {
     }
 
     return (
-        <ScrollView style={styles.container}>
+        <ScrollView
+            style={styles.container}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={handleRefresh}
+                    tintColor={theme.colors.primary}
+                    titleColor={theme.colors.primary}
+                />
+            }
+        >
             <ProfileHeader />
             {currentUser && username !== currentUser.username && (
                 <TouchableOpacity

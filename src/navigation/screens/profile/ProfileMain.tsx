@@ -72,9 +72,6 @@ export function ProfileMain() {
                     <CustomText style={styles.statLabel}>Friends</CustomText>
                 </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
-                <MaterialIcons name="refresh" size={24} color="black" />
-            </TouchableOpacity>
         </View>
     ), [username, allPosts.length, handleRefresh, navigation]);
 
@@ -85,8 +82,8 @@ export function ProfileMain() {
                 <RefreshControl
                     refreshing={false}
                     onRefresh={handleRefresh}
-                    tintColor="#007AFF"
-                    title="Pull to refresh..."
+                    tintColor={theme.colors.primary}
+                    titleColor={theme.colors.primary}
                 />
             }
         >

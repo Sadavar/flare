@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Dimensions, RefreshControl, ScrollView } from 'react-native';
 import { MasonryFlashList } from '@shopify/flash-list';
+import { theme } from '@/context/ThemeContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GAP_SIZE = 8; // Matches the listContent paddingHorizontal
@@ -138,7 +139,7 @@ export function PaginatedGridList({
             <>
                 {header}
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#000" />
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
                     <Text style={styles.loadingText}>Loading...</Text>
                 </View>
             </>
@@ -191,6 +192,14 @@ export function PaginatedGridList({
                 onEndReachedThreshold={0.2}
                 ListFooterComponent={footerComponent}
                 refreshing={isLoading}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={isLoading}
+                        onRefresh={handleRefresh}
+                        colors={[theme.colors.primary]} // For Android
+                        tintColor={theme.colors.primary} // For iOS
+                    />
+                }
                 onRefresh={handleRefresh}
                 showsVerticalScrollIndicator={false}
                 optimizeItemArrangement={true}

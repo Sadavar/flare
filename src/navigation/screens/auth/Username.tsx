@@ -34,7 +34,6 @@ export function Username() {
                 .upsert({
                     id: user.id,
                     username: username,
-                    phone: user.phone,
                     updated_at: new Date(),
                 });
 

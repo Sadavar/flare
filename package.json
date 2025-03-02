@@ -29,7 +29,7 @@
     "expo-image": "~1.10.6",
     "expo-image-manipulator": "~13.0.6",
     "expo-image-picker": "~14.7.1",
-    "expo-splash-screen": "~0.29.13",
+    "expo-splash-screen": "~0.29.22",
     "expo-system-ui": "~4.0.4",
     "libphonenumber-js": "^1.11.18",
     "react": "18.3.1",

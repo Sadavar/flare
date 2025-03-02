@@ -12,6 +12,7 @@ module.exports = {
         },
         ios: {
             bundleIdentifier: 'com.flareapp.flare',
+            "icon": "./assets/icon.png"
         },
         "android": {
             "package": "com.flareapp.flare"

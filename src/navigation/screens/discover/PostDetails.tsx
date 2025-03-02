@@ -16,8 +16,6 @@ export function PostDetails() {
     const navigation = useNavigation<PostDetailsNavigationProp>();
     const { post } = route.params;
 
-    console.log('post detail', post);
-
     return (
         <PostView
             post={post}

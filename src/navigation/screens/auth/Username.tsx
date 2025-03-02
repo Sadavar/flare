@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Text, Alert } from 'react-native';
+import { View, TextInput, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/context/SessionContext';
 import { Layout } from '@/components/Layout';
+import { CustomText } from '@/components/CustomText';
+import { theme } from '@/context/ThemeContext';
 
 export function Username() {
     const [username, setUsername] = useState('');
@@ -37,6 +39,7 @@ export function Username() {
                 });
 
             if (error) throw error;
+            Alert.alert('Success', 'Username set successfully!');
         } catch (error: any) {
             Alert.alert(error.message);
         } finally {
@@ -47,8 +50,8 @@ export function Username() {
     return (
         <Layout>
             <View style={styles.container}>
-                <Text style={styles.title}>Choose a Username</Text>
-                <Text style={styles.subtitle}>This will be your unique identifier in the app</Text>
+                <CustomText style={styles.title}>Choose a Username</CustomText>
+                <CustomText style={styles.subtitle}>This will be your unique identifier in the app</CustomText>
                 <TextInput
                     style={styles.input}
                     placeholder="Username"
@@ -57,11 +60,13 @@ export function Username() {
                     autoCapitalize="none"
                     autoCorrect={false}
                 />
-                <Button
-                    title="Continue"
+                <TouchableOpacity
+                    style={styles.button}
                     onPress={setUserUsername}
                     disabled={loading}
-                />
+                >
+                    <CustomText style={styles.buttonText}>Continue</CustomText>
+                </TouchableOpacity>
             </View>
         </Layout>
     );
@@ -72,25 +77,39 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         padding: 20,
+        backgroundColor: theme.colors.background,
     },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
         marginBottom: 10,
         textAlign: 'center',
+        color: theme.colors.text,
     },
     subtitle: {
         fontSize: 16,
         marginBottom: 20,
         textAlign: 'center',
-        color: '#666',
+        color: theme.colors.light_background_3,
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: theme.colors.light_background_1,
         padding: 15,
         marginBottom: 20,
         borderRadius: 8,
         fontSize: 16,
+        color: theme.colors.text,
+    },
+    button: {
+        backgroundColor: theme.colors.primary,
+        padding: 15,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    buttonText: {
+        color: 'white',
+        fontWeight: 'bold',
     },
 }); 

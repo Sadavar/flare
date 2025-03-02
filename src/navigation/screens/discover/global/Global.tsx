@@ -18,7 +18,23 @@ export function Global() {
         <ErrorBoundary>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="GlobalFeed" component={GlobalFeed} />
-                <Stack.Screen name="UserProfile" component={UserProfile} />
+                <Stack.Screen
+                    name="UserProfile"
+                    component={UserProfile}
+                    options={({ navigation }) => ({
+                        headerShown: true,
+                        headerTitle: '',
+                        headerStyle: {
+                            backgroundColor: theme.colors.background
+                        },
+                        headerLeft: () => (
+                            <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <MaterialIcons name="arrow-back" size={24} color={theme.colors.text} />
+                                <CustomText style={{ marginLeft: 8, fontSize: 16 }}>Global</CustomText>
+                            </TouchableOpacity>
+                        ),
+                    })}
+                />
                 <Stack.Screen
                     name="PostDetails"
                     component={PostDetails}

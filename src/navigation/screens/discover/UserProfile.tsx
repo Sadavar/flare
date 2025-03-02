@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
@@ -29,6 +29,8 @@ export function UserProfile() {
 
     const [refreshing, setRefreshing] = React.useState(false);
 
+    const [bio, setBio] = useState('');
+
     // Get target user's ID
     const { data: targetUser } = useQuery({
         queryKey: ['user', username],
@@ -44,6 +46,33 @@ export function UserProfile() {
         },
         enabled: !!username
     });
+
+    // Fetch user bio from Supabase
+    const fetchUserBio = useCallback(async () => {
+        if (!targetUser?.id) return;
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('bio')
+                .eq('id', targetUser.id)
+                .single();
+
+            if (error) {
+                console.error('Error fetching bio:', error);
+                return;
+            }
+
+            if (data && data.bio) {
+                setBio(data.bio);
+            }
+        } catch (error) {
+            console.error('Error fetching bio:', error);
+        }
+    }, [targetUser?.id]);
+
+    useEffect(() => {
+        fetchUserBio();
+    }, []);
 
     // Check if following
     const { data: isFollowing = false } = useIsFollowing(targetUser?.id);
@@ -89,7 +118,7 @@ export function UserProfile() {
                 </View>
                 <View style={styles.userInfo}>
                     <CustomText style={styles.username}>@{username}</CustomText>
-                    <CustomText style={styles.bio}>professional frollicker | NYC 📍</CustomText>
+                    <CustomText style={styles.bio}>{bio}</CustomText>
                 </View>
             </View>
 

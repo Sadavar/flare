@@ -1,11 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { View, TextInput, Button, StyleSheet, Text, Alert } from 'react-native';
+import { View, TextInput, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import PhoneInput from 'react-native-phone-number-input';
 import { parsePhoneNumberWithError } from 'libphonenumber-js';
 import { PhoneInputWrapper } from '@/components/PhoneInputWrapper';
 import { Layout } from '@/components/Layout';
+import { CustomText } from '@/components/CustomText';
+import { theme } from '@/context/ThemeContext';
 
 export function Login() {
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -85,14 +87,12 @@ export function Login() {
 
     return (
         <Layout>
-            <View style={[
-                styles.container,
-            ]}>
+            <View style={styles.container}>
                 <View style={styles.content}>
-                    <Text style={styles.title}>Welcome to Flare</Text>
+                    <CustomText style={styles.title}>Welcome to Flare</CustomText>
                     {!showVerification ? (
                         <>
-                            <Text style={styles.subtitle}>Enter your phone number to continue</Text>
+                            <CustomText style={styles.subtitle}>Enter your phone number to continue</CustomText>
                             <PhoneInputWrapper
                                 ref={phoneInput}
                                 defaultValue={phoneNumber}
@@ -100,15 +100,17 @@ export function Login() {
                                 onChangeFormattedText={setFormattedPhoneNumber}
                                 autoFocus
                             />
-                            <Button
-                                title="Send Code"
+                            <TouchableOpacity
+                                style={styles.button}
                                 onPress={sendVerificationCode}
                                 disabled={loading}
-                            />
+                            >
+                                <CustomText style={styles.buttonText}>Send Code</CustomText>
+                            </TouchableOpacity>
                         </>
                     ) : (
                         <>
-                            <Text style={styles.subtitle}>Enter the verification code</Text>
+                            <CustomText style={styles.subtitle}>Enter the verification code</CustomText>
                             <TextInput
                                 style={styles.input}
                                 placeholder="6-digit code"
@@ -118,16 +120,19 @@ export function Login() {
                                 maxLength={6}
                                 autoFocus
                             />
-                            <Button
-                                title="Verify"
+                            <TouchableOpacity
+                                style={styles.button}
                                 onPress={verifyCode}
                                 disabled={loading}
-                            />
-                            <Button
-                                title="Back"
+                            >
+                                <CustomText style={styles.buttonText}>Verify</CustomText>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.backButton}
                                 onPress={() => setShowVerification(false)}
-                                color="gray"
-                            />
+                            >
+                                <CustomText style={styles.backButtonText}>Back</CustomText>
+                            </TouchableOpacity>
                         </>
                     )}
                 </View>
@@ -139,7 +144,7 @@ export function Login() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.background,
     },
     content: {
         flex: 1,
@@ -151,33 +156,40 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 10,
         textAlign: 'center',
+        color: theme.colors.text,
     },
     subtitle: {
         fontSize: 16,
         marginBottom: 20,
         textAlign: 'center',
-        color: '#666',
-    },
-    phoneInputContainer: {
-        width: '100%',
-        marginBottom: 20,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        overflow: 'hidden',
-    },
-    phoneInputText: {
-        paddingVertical: 0,
-        borderLeftWidth: 1,
-        borderLeftColor: '#ddd',
-        backgroundColor: 'transparent',
+        color: theme.colors.light_background_3,
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: theme.colors.light_background_1,
         padding: 15,
         marginBottom: 20,
         borderRadius: 8,
         fontSize: 16,
+        color: theme.colors.text,
+    },
+    button: {
+        backgroundColor: theme.colors.primary,
+        padding: 15,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    buttonText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
+    backButton: {
+        marginTop: 10,
+        alignItems: 'center',
+    },
+    backButtonText: {
+        color: theme.colors.primary,
+        fontWeight: 'bold',
     },
 }); 

@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingVertical: 10,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: theme.colors.light_background_1,
     },
     userInfo: {
         flexDirection: 'row',

@@ -9,6 +9,7 @@ import { PostDetails } from '../PostDetails';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { theme } from '@/context/ThemeContext';
 import { CustomText } from '@/components/CustomText';
+import { UserProfile } from '../UserProfile';
 
 const Stack = createNativeStackNavigator<BrandsStackParamList>();
 
@@ -17,6 +18,23 @@ export function Brands() {
         <ErrorBoundary>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="BrandsScreen" component={BrandsScreen} />
+                <Stack.Screen
+                    name="UserProfile"
+                    component={UserProfile}
+                    options={({ navigation }) => ({
+                        headerShown: true,
+                        headerTitle: '',
+                        headerStyle: {
+                            backgroundColor: theme.colors.background
+                        },
+                        headerLeft: () => (
+                            <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <MaterialIcons name="arrow-back" size={24} color={theme.colors.text} />
+                                <CustomText style={{ marginLeft: 8, fontSize: 16 }}>Brands</CustomText>
+                            </TouchableOpacity>
+                        ),
+                    })}
+                />
                 <Stack.Screen
                     name="BrandDetails"
                     component={BrandDetails}

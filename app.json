@@ -10,25 +10,26 @@
     "scheme": "flare",
     "ios": {
       "supportsTablet": true,
-      "newArchEnabled": true
+      "newArchEnabled": true,
+      "icon": "./assets/icon.png"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff",
-        "bundleIdentifier": "com.flare.flare"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#131418",
+        "bundleIdentifier": "com.flareapp.flare"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
       "expo-asset",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#ffffff",
-          "image": "./assets/splash-icon.png"
+          "backgroundColor": "#131418",
+          "image": "./assets/icon.png"
         }
       ],
       "react-native-edge-to-edge"

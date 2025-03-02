@@ -81,10 +81,7 @@ export function PostView({ post }: PostViewProps) {
         if (username === currentUsername) {
             navigation.getParent()?.navigate('Profile', { screen: 'ProfileMain' });
         } else {
-            navigation.navigate('Global', {
-                screen: 'UserProfile',
-                params: { username },
-            });
+            navigation.navigate('UserProfile', { username });
         }
     };
 

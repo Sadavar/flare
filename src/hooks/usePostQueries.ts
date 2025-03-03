@@ -138,13 +138,10 @@ export function useUserPosts(username: string, pageSize = 12) {
     const [userUuid, setUserUuid] = useState<string | null>(null);
     const isActive = useRef(true);
 
-    console.log('[useUserPosts] Initializing with username:', username, 'pageSize:', pageSize);
-
     // First get the user's UUID
     useEffect(() => {
         if (!username) return;
         isActive.current = true;
-        console.log('[useUserPosts] Fetching user UUID for username:', username);
 
         const fetchUserUuid = async () => {
             const { data, error } = await supabase
@@ -159,7 +156,6 @@ export function useUserPosts(username: string, pageSize = 12) {
             }
 
             if (data && isActive.current) {
-                console.log('[useUserPosts] Found user UUID:', data.id);
                 setUserUuid(data.id);
             }
         };
@@ -167,7 +163,6 @@ export function useUserPosts(username: string, pageSize = 12) {
         fetchUserUuid();
 
         return () => {
-            console.log('[useUserPosts] Cleanup - setting isActive to false');
             isActive.current = false;
         };
     }, [username]);
@@ -175,11 +170,9 @@ export function useUserPosts(username: string, pageSize = 12) {
     // Set up realtime subscription
     useEffect(() => {
         if (!userUuid) {
-            console.log('[useUserPosts] Skipping subscription setup - no userUuid yet');
             return;
         }
 
-        console.log('[useUserPosts] Setting up realtime subscription for userUuid:', userUuid);
 
         const channel: RealtimeChannel = supabase
             .channel(`user-posts-${username}`)
@@ -191,14 +184,12 @@ export function useUserPosts(username: string, pageSize = 12) {
                     filter: `user_uuid=eq.${userUuid}`
                 },
                 (payload) => {
-                    console.log('[useUserPosts] Realtime change detected:', payload.eventType);
                     queryClient.invalidateQueries({ queryKey: ['userPosts', username] });
                 }
             )
             .subscribe();
 
         return () => {
-            console.log('[useUserPosts] Cleaning up subscription');
             channel.unsubscribe();
         };
     }, [username, userUuid, queryClient]);
@@ -207,40 +198,20 @@ export function useUserPosts(username: string, pageSize = 12) {
     const result = useInfiniteQuery({
         queryKey: ['userPosts', username],
         queryFn: async ({ pageParam = 0 }) => {
-            console.log('[useUserPosts] QueryFn called with pageParam:', pageParam, 'pageSize:', pageSize);
             if (!username) {
-                console.log('[useUserPosts] No username provided, returning empty array');
                 return [];
             }
             const posts = await fetchUserPostsPage(username, pageParam, pageSize, userUuid);
-            console.log('[useUserPosts] Fetched page', pageParam, 'got', posts.length, 'posts');
             return posts;
         },
         getNextPageParam: (lastPage, allPages) => {
             const hasMore = lastPage.length === pageSize;
             const nextPage = hasMore ? allPages.length : undefined;
-            console.log(
-                '[useUserPosts] getNextPageParam -',
-                'lastPageSize:', lastPage.length,
-                'pageSize:', pageSize,
-                'totalPages:', allPages.length,
-                'hasMore:', hasMore,
-                'nextPage:', nextPage
-            );
             return nextPage;
         },
         initialPageParam: 0,
         enabled: !!username && !!userUuid
     });
-
-    console.log(
-        '[useUserPosts] Query state -',
-        'isFetching:', result.isFetching,
-        'isFetchingNextPage:', result.isFetchingNextPage,
-        'hasNextPage:', result.hasNextPage,
-        'pages count:', result.data?.pages?.length || 0,
-        'total items:', result.data?.pages?.reduce((count, page) => count + page.length, 0) || 0
-    );
 
     return result;
 }
@@ -265,7 +236,6 @@ export function useGlobalFeed(pageSize = 5) {
     return useInfiniteQuery({
         queryKey: ['globalFeed'],
         queryFn: async ({ pageParam = 0 }) => {
-            console.log('[useGlobalFeed] Fetching page:', pageParam);
             return fetchGlobalFeedPage(pageParam, pageSize, user?.id);
         },
         getNextPageParam: (lastPage, allPages) => {
@@ -386,7 +356,6 @@ export function useFilteredPostsByStyles(selectedStyles: number[], pageSize = 10
     const fetchFilteredPostsPage = useCallback(async (pageParam = 0) => {
         const from = pageParam * pageSize;
         const to = from + pageSize - 1;
-        console.log('[useFilteredPostsByStyles] Fetching page:', pageParam, 'from:', from, 'to:', to, 'with styles:', selectedStyles);
 
         let postQuery = supabase
             .from('posts')
@@ -418,7 +387,6 @@ export function useFilteredPostsByStyles(selectedStyles: number[], pageSize = 10
         }
 
         const { data, error, count } = await postQuery;
-        console.log('[useFilteredPostsByStyles] Query response:', { dataLength: data?.length, error, count });
         if (error) throw error;
 
         // Process the posts and format them
@@ -452,7 +420,6 @@ async function fetchUserPostsPage(username: string, page: number, pageSize: numb
     const from = page * pageSize;
     const to = from + pageSize - 1;
 
-    console.log('[fetchUserPostsPage] Starting fetch for range:', from, 'to', to);
     const startTime = Date.now();
 
     // First get the user UUID
@@ -463,16 +430,13 @@ async function fetchUserPostsPage(username: string, page: number, pageSize: numb
         .single();
 
     if (profileError) {
-        console.error('[fetchUserPostsPage] Error fetching profile:', profileError);
         throw profileError;
     }
 
     if (!profileData?.id) {
-        console.error('[fetchUserPostsPage] Could not find UUID for username:', username);
         return [];
     }
 
-    console.log('[fetchUserPostsPage] Found userUuid:', profileData.id);
 
     // Then fetch the posts with the UUID
     const { data, error, count } = await supabase
@@ -489,24 +453,6 @@ async function fetchUserPostsPage(username: string, page: number, pageSize: numb
         throw error;
     }
 
-    console.log(
-        '[fetchUserPostsPage] Response -',
-        'items:', data.length,
-        'total count:', count,
-        'fetch time:', `${endTime - startTime}ms`,
-        'from:', from,
-        'to:', to
-    );
-
-    // Print the first and last item IDs for debugging
-    if (data.length > 0) {
-        console.log(
-            '[fetchUserPostsPage] Range verification -',
-            'first item created_at:', data[0].created_at,
-            'last item created_at:', data[data.length - 1].created_at
-        );
-    }
-
     const postsWithSavedStatus = await checkSavedStatus(data, userId);
     return postsWithSavedStatus.map(formatPost);
 }
@@ -514,10 +460,8 @@ async function fetchUserPostsPage(username: string, page: number, pageSize: numb
 
 // Modify the fetch function to accept userId
 async function fetchGlobalFeedPage(page: number, pageSize: number, userId?: string) {
-    console.log("fetching with userId:", userId);
     const from = page * pageSize;
     const to = from + pageSize - 1;
-    console.log('[fetchGlobalFeedPage] Range request -', 'from:', from, 'to:', to);
 
     const startTime = Date.now();
     const { data, error, count } = await supabase
@@ -532,21 +476,7 @@ async function fetchGlobalFeedPage(page: number, pageSize: number, userId?: stri
         throw error;
     }
 
-    console.log(
-        '[fetchGlobalFeedPage] Response -',
-        'items:', data.length,
-        'total count:', count,
-        'fetch time:', `${endTime - startTime}ms`
-    );
 
-    if (data.length > 0) {
-        console.log(
-            '[fetchGlobalFeedPage] Range verification -',
-            'first item id:', data[0].uuid,
-            'last item id:', data[data.length - 1].uuid
-        );
-    }
-    console.log("going to check saved status")
     const postsWithSavedStatus = await checkSavedStatus(data, userId);
     return postsWithSavedStatus.map(formatPost);
 }
@@ -584,12 +514,6 @@ async function updatePostWithPublicUrl(post: any): Promise<any> {
         .update({ public_image_url: publicUrl })
         .eq('uuid', post.uuid);
 
-    if (error) {
-        console.error('[updatePostWithPublicUrl] Error updating public URL:', error);
-        // Continue without failing, just use the generated URL
-    } else {
-        console.log('[updatePostWithPublicUrl] Updated public URL for post:', post.uuid);
-    }
 
     // Return post with public_image_url added
     return {
@@ -605,7 +529,6 @@ export function usePostsWithBrandFeed(brandId: number, pageSize = 5) {
     return useInfiniteQuery({
         queryKey: ['postsWithBrandFeed', brandId],
         queryFn: async ({ pageParam = 0 }) => {
-            console.log('[usePostsWithBrandFeed] Fetching page:', pageParam);
             return fetchPostsWithBrandFeedPage(brandId, pageParam, pageSize);
         },
         getNextPageParam: (lastPage, allPages) => {
@@ -623,8 +546,6 @@ export function usePostsWithBrandFeed(brandId: number, pageSize = 5) {
 async function fetchPostsWithBrandFeedPage(brandId: number, page: number, pageSize: number) {
     const from = page * pageSize;
     const to = from + pageSize - 1;
-    console.log('[fetchPostsWithBrandFeedPage] Range request -', 'from:', from, 'to:', to);
-    console.log('[fetchPostsWithBrandFeedPage] Brand ID:', brandId);
 
     const startTime = Date.now();
 
@@ -660,22 +581,6 @@ async function fetchPostsWithBrandFeedPage(brandId: number, page: number, pageSi
     if (error) {
         console.error('[fetchPostsWithBrandFeedPage] Error fetching posts:', error);
         throw error;
-    }
-
-    console.log(
-        '[fetchPostsWithBrandFeedPage] Response -',
-        'items:', data?.length || 0,
-        'total count:', count,
-        'fetch time:', `${endTime - startTime}ms`
-    );
-
-    // Print the first and last item IDs for debugging
-    if (data?.length > 0) {
-        console.log(
-            '[fetchPostsWithBrandFeedPage] Range verification -',
-            'first item id:', data[0].uuid,
-            'last item id:', data[data.length - 1].uuid
-        );
     }
 
     if (!data) return [];
@@ -756,8 +661,6 @@ export function useNumSavedYourPosts(username: string) {
                 throw userIdError;
             }
 
-            console.log('user id', userId);
-
             const { data: savedPosts, error: savedPostsError } = await supabase
                 .from('saved_posts')
                 .select('post_uuid')
@@ -767,11 +670,9 @@ export function useNumSavedYourPosts(username: string) {
                 throw savedPostsError;
             }
 
-            console.log('saved posts', savedPosts);
 
             // Check if the saved posts belong to the user
             const postUuids = savedPosts.map(sp => sp.post_uuid);
-            console.log('post uuids', postUuids);
             const { data: posts, error: postsError } = await supabase
                 .from('posts')
                 .select('user_uuid')

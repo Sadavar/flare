@@ -39,7 +39,7 @@ SplashScreen.preventAutoHideAsync();
 
 // Set the animation options
 SplashScreen.setOptions({
-  duration: 1000,
+  duration: 3000,
   fade: true,
 });
 
@@ -52,8 +52,8 @@ export function App() {
         // Pre-load fonts, make any API calls you need to do here
         await Font.loadAsync(Entypo.font);
 
-        // Add a slight delay to make sure the splash screen is visible
-        // await new Promise(resolve => setTimeout(resolve, 1000));
+        // Add a slight delay to ensure everything is properly loaded
+        // await new Promise(resolve => setTimeout(resolve, 500));
       } catch (e) {
         console.warn(e);
       } finally {
@@ -61,16 +61,39 @@ export function App() {
         setAppIsReady(true);
       }
     }
-
     prepare();
   }, []);
 
+  // Add a second useEffect to handle splash screen hiding based on app readiness
+  useEffect(() => {
+    const hideScreen = async () => {
+      if (appIsReady) {
+        try {
+          // Hide the splash screen once app is ready
+          await SplashScreen.hideAsync();
+        } catch (e) {
+          console.warn("Error hiding splash screen:", e);
+        }
+      }
+    };
+
+    hideScreen();
+  }, [appIsReady]);
+
   const onLayoutRootView = useCallback(async () => {
     if (appIsReady) {
-      // Hide the splash screen once layout is complete
-      await SplashScreen.hideAsync();
+      try {
+        // This is a backup approach in case the useEffect doesn't work
+        await SplashScreen.hideAsync();
+      } catch (e) {
+        console.warn("Error hiding splash screen in layout:", e);
+      }
     }
   }, [appIsReady]);
+
+  if (!appIsReady) {
+    return null;
+  }
 
   return (
     <GestureHandlerRootView style={styles.container} onLayout={onLayoutRootView}>

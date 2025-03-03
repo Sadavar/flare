@@ -189,10 +189,6 @@ function ProfileNavigator() {
           headerStyle: {
             backgroundColor: theme.colors.background,
           },
-          contentStyle: {
-            borderTopColor: theme.colors.light_background_1,
-            borderTopWidth: 1,
-          },
         }}
       >
         <ProfileStack.Screen

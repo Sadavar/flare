@@ -1,4 +1,4 @@
-package com.flareapp.flare
+package com.flareapp.flare.dev
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

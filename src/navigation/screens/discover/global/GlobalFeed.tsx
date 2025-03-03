@@ -43,7 +43,6 @@ export function GlobalFeed() {
 
     // Flatten posts from all pages
     const allPosts = data?.pages?.flat() || [];
-    console.log("got all posts", allPosts)
 
     // Render each post
     const renderItem = useCallback(({ item }: { item: Post }) => {

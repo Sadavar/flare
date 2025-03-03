@@ -4,7 +4,7 @@ import { Navigation } from './navigation';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { useCallback, useEffect, useState } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
@@ -37,7 +37,7 @@ const queryClient = new QueryClient();
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
-// Set the animation options. This is optional.
+// Set the animation options
 SplashScreen.setOptions({
   duration: 1000,
   fade: true,
@@ -51,9 +51,9 @@ export function App() {
       try {
         // Pre-load fonts, make any API calls you need to do here
         await Font.loadAsync(Entypo.font);
-        // Artificially delay for two seconds to simulate a slow loading
-        // experience. Remove this if you copy and paste the code!
-        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Add a slight delay to make sure the splash screen is visible
+        // await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (e) {
         console.warn(e);
       } finally {
@@ -65,23 +65,15 @@ export function App() {
     prepare();
   }, []);
 
-  const onLayoutRootView = useCallback(() => {
+  const onLayoutRootView = useCallback(async () => {
     if (appIsReady) {
-      // This tells the splash screen to hide immediately! If we call this after
-      // `setAppIsReady`, then we may see a blank screen while the app is
-      // loading its initial state and rendering its first pixels. So instead,
-      // we hide the splash screen once we know the root view has already
-      // performed layout.
-      SplashScreen.hide();
+      // Hide the splash screen once layout is complete
+      await SplashScreen.hideAsync();
     }
   }, [appIsReady]);
 
-  if (!appIsReady) {
-    return null; // Prevent rendering until the app is ready
-  }
-
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <GestureHandlerRootView style={styles.container} onLayout={onLayoutRootView}>
       <SafeAreaProvider>
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>

@@ -107,7 +107,7 @@ function TopTabNavigator() {
 
 // Bottom Tab Navigator
 function MainTabs() {
-  const modalRef = useRef<Modalize>(null);
+  const postModalRef = useRef<Modalize>(null);
 
   return (
     <>
@@ -143,8 +143,6 @@ function MainTabs() {
             title: 'Create Post',
             headerStyle: {
               backgroundColor: theme.colors.background,
-              borderBottomWidth: 1,
-              borderBottomColor: theme.colors.light_background_1,
             },
             tabBarIcon: ({ color }) => (
               <MaterialIcons name="add-box" size={30} color={color} />
@@ -155,7 +153,7 @@ function MainTabs() {
               // Prevent default navigation
               e.preventDefault();
               // Open modal
-              modalRef.current?.open();
+              postModalRef.current?.open();
             },
           }}
         />
@@ -170,11 +168,11 @@ function MainTabs() {
         />
       </BottomTab.Navigator>
       <Modalize
-        ref={modalRef}
+        ref={postModalRef}
         adjustToContentHeight
         modalStyle={{ backgroundColor: theme.colors.background }}
       >
-        <PostModal modalRef={modalRef} />
+        <PostModal modalRef={postModalRef} />
       </Modalize>
     </>
   );

@@ -1,3 +1,5 @@
+import { Modalize } from 'react-native-modalize';
+
 export type RootStackParamList = {
     Login: undefined;
     Username: undefined;
@@ -106,5 +108,9 @@ export interface Color {
     id: number;
     name: string;
     hex_value: string;
+}
+
+interface PostScreenProps {
+    postModalRef: React.RefObject<Modalize>;
 }
 

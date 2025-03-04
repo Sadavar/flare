@@ -10,10 +10,10 @@ import {
     TouchableWithoutFeedback,
     KeyboardAvoidingView,
     TouchableOpacity,
-    PanResponder,
-    GestureResponderEvent,
     LayoutChangeEvent,
     Modal,
+    Dimensions,
+    ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -24,8 +24,8 @@ import uuid from 'react-native-uuid';
 import { Modalize } from 'react-native-modalize';
 import type { RouteProp } from '@react-navigation/native';
 import type { MainTabParamList } from '@/types';
-import { Dimensions } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
 
 import { ColorCard } from '@/components/ColorCard';
 import { Color } from '@/types';
@@ -34,6 +34,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { PostButton } from '@/components/PostButton';
 import { theme } from '@/context/ThemeContext';
 import { CustomText } from '@/components/CustomText';
+import { transform } from '@babel/core';
+import { PostModal } from '@/components/PostModal';
 
 
 type PostScreenRouteProp = RouteProp<MainTabParamList, 'Post'>;
@@ -52,9 +54,12 @@ type Style = {
     name: string;
 };
 
+type PhotoMenuOption = 'library' | 'camera';
+
 export function Post() {
     const route = useRoute<PostScreenRouteProp>();
     const [image, setImage] = useState<string | null>(null);
+    const navigation = useNavigation();
 
     const [description, setDescription] = useState('');
     const [selectedStyleIds, setSelectedStyleIds] = useState<number[]>([]);
@@ -67,7 +72,13 @@ export function Post() {
     const [brandSuggestions, setBrandSuggestions] = useState<string[]>([]);
     const [taggedBrands, setTaggedBrands] = useState<BrandTag[]>([]);
     const [activePosition, setActivePosition] = useState<{ x: number, y: number } | null>(null);
-    const [isDragging, setIsDragging] = useState<number | null>(null);
+
+    const [actualImageDimensions, setActualImageDimensions] = useState({
+        width: 0,
+        height: 0,
+        x: 0,
+        y: 0
+    });
 
     // New state for pending brand creation
     const [showAddBrandModal, setShowAddBrandModal] = useState(false);
@@ -77,12 +88,11 @@ export function Post() {
 
     const [loading, setLoading] = useState(false);
     const modalizeRef = useRef<Modalize>(null);
+    const postModalRef = useRef<Modalize>(null);
     const imageRef = useRef<View>(null);
-    const navigation = useNavigation();
     const { user } = useSession();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isAnyModalOpen, setIsAnyModalOpen] = useState(false);
 
     const { data: colors, isLoading: isColorLoading } = useColors();
 
@@ -95,15 +105,16 @@ export function Post() {
     const brandWebsiteInputRef = useRef(null);
     const brandInstagramInputRef = useRef(null);
 
+    // Add new state for image picker loading
+    const [isImagePickerLoading, setIsImagePickerLoading] = useState(false);
+
+    const [showPhotoMenu, setShowPhotoMenu] = useState(false);
+    const [isPhotoPickerLoading, setIsPhotoPickerLoading] = useState(false);
+
     const handleFormInputFocus = (inputRef: React.RefObject<View>) => {
-        console.log("inputRef", inputRef)
         if (inputRef.current && brandFormScrollRef.current) {
-            console.log("brandFormScrollRef", brandFormScrollRef.current)
             // Add a slight delay to ensure the keyboard is visible when measuring
             setTimeout(() => {
-
-                console.log("scroll to",)
-
                 inputRef.current?.measureLayout(
                     brandFormScrollRef.current as unknown as number,
                     (_, y) => {
@@ -126,18 +137,7 @@ export function Post() {
         pageY: number;
     } | null>(null);
 
-    const [tagPillSizes, setTagPillSizes] = useState<{ width: number; height: number }[]>([]);
-
     const [styleOptions, setStyleOptions] = useState<Style[]>([]);
-
-    const handleTagLayout = (index: number, event: LayoutChangeEvent) => {
-        const { width, height } = event.nativeEvent.layout;
-        setTagPillSizes(prevSizes => {
-            const newSizes = [...prevSizes];
-            newSizes[index] = { width, height };
-            return newSizes;
-        });
-    };
 
     // Add this useEffect to get and store image layout
     useEffect(() => {
@@ -147,7 +147,6 @@ export function Post() {
             });
         }
     }, [image]); // Re-measure when image changes
-
 
     useEffect(() => {
         // Set image from navigation params if available
@@ -172,7 +171,6 @@ export function Post() {
                 if (!error && data) {
                     const brands = data.map(item => item.name);
                     setBrandSuggestions([...brands, ...brands, ...brands]);
-                } else {
                 }
             }
         }
@@ -198,14 +196,17 @@ export function Post() {
     const handleImagePress = (event: any) => {
         event.persist(); // Persist the event
 
-        if (isDragging !== null || !imageLayout) return;
+        if (!imageLayout) return;
 
-        const touchX = event.nativeEvent.pageX - imageLayout.pageX;
-        const touchY = event.nativeEvent.pageY - imageLayout.pageY;
+        // Get coordinates relative to the touchable overlay
+        const touchX = event.nativeEvent.locationX;
+        const touchY = event.nativeEvent.locationY;
 
         // Calculate position as percentage of image dimensions
         const xPercent = (touchX / imageLayout.width) * 100;
         const yPercent = (touchY / imageLayout.height) * 100;
+
+        console.log(xPercent, yPercent);
 
         // Ensure coordinates are within bounds
         if (xPercent >= 0 && xPercent <= 100 && yPercent >= 0 && yPercent <= 100) {
@@ -227,7 +228,7 @@ export function Post() {
         }
     };
 
-    // New handler for adding a pending brand
+    // Handler for adding a pending brand
     const handleAddPendingBrand = () => {
         if (activePosition && newBrandName.trim()) {
             setTaggedBrands([...taggedBrands, {
@@ -248,53 +249,6 @@ export function Post() {
             setActivePosition(null);
             setBrandsInput('');
         }
-    };
-
-    const handleTagDragStart = (index: number) => {
-        setIsDragging(index);
-    };
-
-    const handleTagDragMove = (event: GestureResponderEvent, index: number) => {
-        event.persist();
-        if (isDragging === index && imageLayout) {
-            const { pageX, pageY } = imageLayout;
-
-            const touchX = event.nativeEvent.pageX - pageX;
-            const touchY = event.nativeEvent.pageY - pageY;
-
-            const { width = 0, height = 0 } = tagPillSizes[index] || {};
-
-            const adjustedWidth = imageLayout.width - width;
-            const adjustedHeight = imageLayout.height - height;
-
-            const screenWidth = Dimensions.get('window').width;
-            console.log("screen width", screenWidth)
-
-            console.log('touchX:', touchX);
-            console.log('touchY:', touchY);
-            console.log('imageLayout:', imageLayout);
-            console.log('tagPillSizes:', tagPillSizes);
-
-            if (touchX >= width && touchX <= adjustedWidth &&
-                touchY >= 50 && touchY <= 360) {
-
-                const xPercent = Math.max(0, Math.min((touchX / imageLayout.width) * 100, 100));
-                const yPercent = Math.max(0, Math.min((touchY / imageLayout.height) * 100, 100));
-
-                const updatedTags = [...taggedBrands];
-                updatedTags[index] = {
-                    ...updatedTags[index],
-                    x: xPercent,
-                    y: yPercent
-                };
-                setTaggedBrands(updatedTags);
-            }
-        }
-    };
-
-
-    const handleTagDragEnd = () => {
-        setIsDragging(null);
     };
 
     const removeTag = (index: number) => {
@@ -325,7 +279,6 @@ export function Post() {
         }
     };
 
-
     const uploadPost = async () => {
         if (!image || !user) return;
         setLoading(true);
@@ -346,11 +299,15 @@ export function Post() {
                     format: ImageManipulator.SaveFormat.JPEG
                 }
             );
+
+            // get dimensions
+            let changedWidth = manipulatedImage.width;
+            let changedHeight = manipulatedImage.height;
+
+            console.log(changedWidth, changedHeight);
+
             const file_id = uuid.v4().toString();
             const fileName = `outfits/${user.id}/${file_id}.jpg`;
-
-            console.log("manipulatedImage", manipulatedImage)
-            console.log("fileName", fileName)
 
             const base64 = await fetch(manipulatedImage.uri)
                 .then(res => res.blob())
@@ -374,8 +331,6 @@ export function Post() {
                 .getPublicUrl(fileName)
                 .data.publicUrl
 
-            console.log("public_image_url", public_image_url)
-
             const { data: postData, error: postError } = await supabase
                 .from('posts')
                 .insert([{
@@ -395,7 +350,6 @@ export function Post() {
                     post_uuid: postData.uuid,
                     style_id: styleId,
                 }));
-                console.log("styleRelations", styleRelations)
 
                 for (const style of styleRelations) {
                     const { error: styleError } = await supabase
@@ -477,428 +431,587 @@ export function Post() {
         }
     };
 
+    useEffect(() => {
+        calcImageLayout();
+    }, [image]);
+
+    async function calcImageLayout() {
+        // get dimension screenw dith
+        let screenWidth = Dimensions.get('window').width;
+
+        // get original image width and height with image manipulator
+        const manipulatedImage = await ImageManipulator.manipulateAsync(image)
+
+        console.log(manipulatedImage.width, manipulatedImage.height);
+        let originalImageWidth = manipulatedImage.width;
+        let originalImageHeight = manipulatedImage.height;
+
+        let aspectRatio = originalImageWidth / originalImageHeight;
+
+        let newImageHeight = 300;
+
+        let newImageWidth = newImageHeight * aspectRatio;
+
+        console.log(newImageWidth, newImageHeight);
+
+        setImageLayout({ width: newImageWidth, height: newImageHeight });
+    }
+
+    // Add image picker handler
+    const handlePhotoOption = async (option: PhotoMenuOption) => {
+        try {
+            setIsPhotoPickerLoading(true);
+            let result;
+
+            if (option === 'camera') {
+                const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                if (status !== 'granted') {
+                    alert('Sorry, we need camera permissions to make this work!');
+                    return;
+                }
+                result = await ImagePicker.launchCameraAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    quality: 1,
+                });
+            } else {
+                result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    quality: 1,
+                });
+            }
+
+            if (!result.canceled && result.assets[0] && result.assets[0].uri) {
+                setImage(result.assets[0].uri);
+                setShowPhotoMenu(false);
+            }
+        } catch (error) {
+            console.error('Error picking image:', error);
+            alert('Error picking image');
+        } finally {
+            setIsPhotoPickerLoading(false);
+        }
+    };
+
+    // Add this handler to close the menu when clicking outside
+    const handleBackdropPress = () => {
+        setShowPhotoMenu(false);
+    };
+
     return (
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <ScrollView
-                ref={scrollViewRef}
-                keyboardShouldPersistTaps='handled'
-                scrollEnabled={!isModalOpen}
-            >
-                <View style={styles.container}>
+        <>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <ScrollView
+                    ref={scrollViewRef}
+                    keyboardShouldPersistTaps='handled'
+                    scrollEnabled={!isModalOpen}
+                >
+                    <View style={styles.container}>
 
-                    {/* Image Preview */}
+                        {/* Image Preview */}
 
-                    {image ? (
-                        <>
-                            <CustomText style={styles.trendingTitle}>Image Preview</CustomText>
-                            <CustomText style={styles.tagInstruction}>Tap image to add brands</CustomText>
-                            <View
-                                ref={imageRef}
-                                style={styles.imageContainer}
-                                onLayout={() => {
-                                    // Re-measure on layout changes
-                                    imageRef.current?.measure((x, y, width, height, pageX, pageY) => {
-                                        setImageLayout({ width, height, pageX, pageY });
-                                    });
-                                }}
-                            >
-                                <TouchableWithoutFeedback onPress={handleImagePress}>
+                        {image ? (
+                            <>
+                                <View style={styles.imageHeaderContainer}>
+                                    <CustomText style={styles.trendingTitle}>Image Preview</CustomText>
+                                    <View style={styles.photoMenuContainer}>
+                                        <TouchableOpacity
+                                            style={styles.changePhotoButton}
+                                            onPress={() => setShowPhotoMenu(!showPhotoMenu)}
+                                        >
+                                            <CustomText style={styles.changePhotoText}>Change Photo</CustomText>
+                                        </TouchableOpacity>
+
+                                        {showPhotoMenu && (
+                                            <>
+                                                <TouchableWithoutFeedback onPress={handleBackdropPress}>
+                                                    <View style={styles.backdrop} />
+                                                </TouchableWithoutFeedback>
+                                                <View style={styles.photoMenu}>
+                                                    <TouchableOpacity
+                                                        style={[
+                                                            styles.photoMenuItem,
+                                                            isPhotoPickerLoading && styles.photoMenuItemDisabled
+                                                        ]}
+                                                        onPress={() => handlePhotoOption('library')}
+                                                        disabled={isPhotoPickerLoading}
+                                                    >
+                                                        <MaterialIcons
+                                                            name="photo-library"
+                                                            size={24}
+                                                            color={isPhotoPickerLoading ? theme.colors.light_background_2 : "white"}
+                                                        />
+                                                        <CustomText style={styles.photoMenuItemText}>
+                                                            Choose from Library
+                                                        </CustomText>
+                                                    </TouchableOpacity>
+
+                                                    <TouchableOpacity
+                                                        style={[
+                                                            styles.photoMenuItem,
+                                                            isPhotoPickerLoading && styles.photoMenuItemDisabled
+                                                        ]}
+                                                        onPress={() => handlePhotoOption('camera')}
+                                                        disabled={isPhotoPickerLoading}
+                                                    >
+                                                        <MaterialIcons
+                                                            name="camera-alt"
+                                                            size={24}
+                                                            color={isPhotoPickerLoading ? theme.colors.light_background_2 : "white"}
+                                                        />
+                                                        <CustomText style={styles.photoMenuItemText}>
+                                                            Take Photo
+                                                        </CustomText>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </>
+                                        )}
+                                    </View>
+                                </View>
+                                <CustomText style={styles.tagInstruction}>Tap image to add brands</CustomText>
+
+
+
+                                <View
+                                    ref={imageRef}
+                                    style={styles.imageContainer}
+                                    onLayout={() => {
+                                        calcImageLayout();
+                                    }}
+                                >
                                     <Image
                                         source={{ uri: image }}
                                         style={styles.image}
                                         contentFit='contain'
+                                        onLayout={async () => {
+                                            calcImageLayout();
+                                        }}
                                     />
-                                </TouchableWithoutFeedback>
-                                {taggedBrands.map((tag, index) => (
+
+                                    {/* Single overlay for both tap detection and tag display */}
                                     <View
-                                        key={index}
-                                        style={[
-                                            styles.tagPill,
-                                            {
-                                                left: `${tag.x}%`,
-                                                top: `${tag.y}%`,
-                                            }
-                                        ]}
-                                        onLayout={(event) => handleTagLayout(index, event)}
+                                        style={{
+                                            width: '100%',
+                                            height: 300,
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            zIndex: 10
+                                        }}
                                     >
-                                        <View
-                                            style={[
-                                                styles.tagPillContent,
-                                                tag.isPending && styles.pendingTagPill
-                                            ]}
-                                            {...PanResponder.create({
-                                                onStartShouldSetPanResponder: () => true,
-                                                onPanResponderGrant: () => handleTagDragStart(index),
-                                                onPanResponderMove: (e) => handleTagDragMove(e, index),
-                                                onPanResponderRelease: handleTagDragEnd,
-                                            }).panHandlers}
-                                        >
-                                            <CustomText
-                                                style={styles.tagText}
-                                                numberOfLines={1}
-                                                ellipsizeMode="tail"
+                                        <TouchableWithoutFeedback onPress={handleImagePress}>
+                                            <View
+                                                style={{
+                                                    width: imageLayout?.width,
+                                                    height: imageLayout?.height,
+                                                    position: 'relative',
+                                                    backgroundColor: 'transparent' // Changed from red background to transparent
+                                                }}
                                             >
-                                                {tag.name}
-                                            </CustomText>
+                                                {/* Render tags directly within the touchable area */}
+                                                {taggedBrands.map((tag, index) => (
+                                                    <View
+                                                        key={index}
+                                                        style={[
+                                                            styles.tagPill,
+                                                            {
+                                                                left: `${tag.x}%`,
+                                                                top: `${tag.y}%`,
+                                                            },
+                                                            {
+                                                                transform: [{ translateX: -50 }, { translateY: -10 }]
+                                                            }
+                                                        ]}
+                                                        pointerEvents="box-none"
+                                                    >
+                                                        <View
+                                                            style={[
+                                                                styles.tagPillContent,
+                                                                tag.isPending && styles.pendingTagPill
+                                                            ]}
+                                                        >
+                                                            <CustomText
+                                                                style={styles.tagText}
+                                                                numberOfLines={1}
+                                                                ellipsizeMode="tail"
+                                                            >
+                                                                {tag.name}
+                                                            </CustomText>
+
+                                                            {/* Make remove button a separate touchable */}
+                                                            <TouchableOpacity
+                                                                onPress={(e) => {
+                                                                    e.stopPropagation(); // Stop propagation to parent
+                                                                    removeTag(index);
+                                                                }}
+                                                                style={styles.removeButton}
+                                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Increase touch target
+                                                            >
+                                                                <CustomText style={styles.removeButtonText}>×</CustomText>
+                                                            </TouchableOpacity>
+                                                        </View>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        </TouchableWithoutFeedback>
+                                    </View>
+                                </View>
+
+
+                                {/* Description */}
+                                <View ref={descriptionRef}>
+                                    <CustomText style={styles.trendingTitle}>Description</CustomText>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholderTextColor={theme.colors.light_background_2}
+                                        placeholder="Add a description..."
+                                        value={description}
+                                        onChangeText={setDescription}
+                                        multiline
+                                        onFocus={handleDescriptionFocus}
+                                    />
+                                </View>
+
+                                {/* Colors */}
+
+                                {colors && (
+                                    <View style={styles.colorSection}>
+                                        <View style={styles.colorHeader}>
+                                            <CustomText style={styles.colorTitle}>Colors</CustomText>
+                                            <View style={styles.selectedColorPills}>
+                                                {selectedColorIds.map(colorId => {
+                                                    const color = colors.find((c: Color) => c.id === colorId);
+                                                    if (!color) return null;
+                                                    return (
+                                                        <TouchableOpacity
+                                                            key={colorId}
+                                                            onPress={() => handleColorSelect(colorId)}
+                                                            style={styles.colorPillContainer}
+                                                        >
+                                                            <View style={styles.pillWrapper}>
+                                                                <View
+                                                                    style={[
+                                                                        styles.colorSquare,
+                                                                        { backgroundColor: color.hex_value }
+                                                                    ]}
+                                                                />
+                                                                <View style={styles.closeButtonContainer}>
+                                                                    <MaterialIcons name="close" size={12} color="#666" />
+                                                                </View>
+                                                            </View>
+                                                        </TouchableOpacity>
+                                                    );
+                                                })}
+                                            </View>
+                                        </View>
+
+                                        <View style={styles.quickSelectHeader}>
+                                            <CustomText style={styles.subtitle}>Quick Select</CustomText>
                                             <TouchableOpacity
-                                                onPress={() => removeTag(index)}
-                                                style={styles.removeButton}
+                                                onPress={() => colorModalizeRef.current?.open()}
+                                                style={styles.seeAllButton}
                                             >
-                                                <CustomText style={styles.removeButtonText}>×</CustomText>
+                                                <CustomText style={styles.seeAllText}>See All Colors</CustomText>
+                                                <MaterialIcons name="chevron-right" size={20} color="#666" />
                                             </TouchableOpacity>
                                         </View>
-                                    </View>
-                                ))}
-                            </View>
-
-                            {/* Description */}
-                            <View ref={descriptionRef}>
-                                <CustomText style={styles.trendingTitle}>Description</CustomText>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholderTextColor={theme.colors.light_background_2}
-                                    placeholder="Add a description..."
-                                    value={description}
-                                    onChangeText={setDescription}
-                                    multiline
-                                    onFocus={handleDescriptionFocus}
-                                />
-                            </View>
-
-                            {/* Colors */}
-
-                            {colors && (
-                                <View style={styles.colorSection}>
-                                    <View style={styles.colorHeader}>
-                                        <CustomText style={styles.colorTitle}>Colors</CustomText>
-                                        <View style={styles.selectedColorPills}>
-                                            {selectedColorIds.map(colorId => {
-                                                const color = colors.find((c: Color) => c.id === colorId);
-                                                if (!color) return null;
-                                                return (
-                                                    <TouchableOpacity
-                                                        key={colorId}
-                                                        onPress={() => handleColorSelect(colorId)}
-                                                        style={styles.colorPillContainer}
-                                                    >
-                                                        <View style={styles.pillWrapper}>
-                                                            <View
-                                                                style={[
-                                                                    styles.colorSquare,
-                                                                    { backgroundColor: color.hex_value }
-                                                                ]}
-                                                            />
-                                                            <View style={styles.closeButtonContainer}>
-                                                                <MaterialIcons name="close" size={12} color="#666" />
-                                                            </View>
-                                                        </View>
-                                                    </TouchableOpacity>
-                                                );
-                                            })}
-                                        </View>
-                                    </View>
-
-                                    <View style={styles.quickSelectHeader}>
-                                        <CustomText style={styles.subtitle}>Quick Select</CustomText>
-                                        <TouchableOpacity
-                                            onPress={() => colorModalizeRef.current?.open()}
-                                            style={styles.seeAllButton}
+                                        <ScrollView
+                                            horizontal
+                                            showsHorizontalScrollIndicator={false}
+                                            style={styles.quickSelectScroll}
                                         >
-                                            <CustomText style={styles.seeAllText}>See All Colors</CustomText>
-                                            <MaterialIcons name="chevron-right" size={20} color="#666" />
-                                        </TouchableOpacity>
+                                            {colors?.slice(0, 15).map((color: Color) => (
+                                                <ColorCard
+                                                    key={color.id}
+                                                    color={color}
+                                                    size="small"
+                                                    isSelected={selectedColorIds.includes(color.id)}
+                                                    onPress={() => handleColorSelect(color.id)}
+                                                />
+                                            ))}
+                                        </ScrollView>
                                     </View>
+                                )}
+
+                                {/* Styles */}
+
+                                <View>
+                                    <CustomText style={styles.trendingTitle}>Style</CustomText>
                                     <ScrollView
                                         horizontal
                                         showsHorizontalScrollIndicator={false}
-                                        style={styles.quickSelectScroll}
+                                        contentContainerStyle={styles.styleScrollContainer}
                                     >
-                                        {colors?.slice(0, 15).map((color: Color) => (
-                                            <ColorCard
-                                                key={color.id}
-                                                color={color}
-                                                size="small"
-                                                isSelected={selectedColorIds.includes(color.id)}
-                                                onPress={() => handleColorSelect(color.id)}
-                                            />
-                                        ))}
+                                        <View style={styles.styleRows}>
+                                            <View style={styles.styleRow}>
+                                                {styleOptions.slice(0, Math.ceil(styleOptions.length / 2)).map((style) => (
+                                                    <TouchableOpacity
+                                                        key={style.id}
+                                                        style={[
+                                                            styles.styleChip,
+                                                            selectedStyleIds.includes(style.id) && styles.selectedStyleChip
+                                                        ]}
+                                                        onPress={() => {
+                                                            if (selectedStyleIds.includes(style.id)) {
+                                                                setSelectedStyleIds(selectedStyleIds.filter(id => id !== style.id));
+                                                            } else if (selectedStyleIds.length < 3) {
+                                                                setSelectedStyleIds([...selectedStyleIds, style.id]);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <CustomText style={[
+                                                            styles.styleChipText,
+                                                            selectedStyleIds.includes(style.id) && styles.selectedStyleChipText
+                                                        ]}>
+                                                            {style.name}
+                                                        </CustomText>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+                                            <View style={styles.styleRow}>
+                                                {styleOptions.slice(Math.ceil(styleOptions.length / 2)).map((style) => (
+                                                    <TouchableOpacity
+                                                        key={style.id}
+                                                        style={[
+                                                            styles.styleChip,
+                                                            selectedStyleIds.includes(style.id) && styles.selectedStyleChip
+                                                        ]}
+                                                        onPress={() => {
+                                                            if (selectedStyleIds.includes(style.id)) {
+                                                                setSelectedStyleIds(selectedStyleIds.filter(id => id !== style.id));
+                                                            } else if (selectedStyleIds.length < 3) {
+                                                                setSelectedStyleIds([...selectedStyleIds, style.id]);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <CustomText style={[
+                                                            styles.styleChipText,
+                                                            selectedStyleIds.includes(style.id) && styles.selectedStyleChipText
+                                                        ]}>
+                                                            {style.name}
+                                                        </CustomText>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+                                        </View>
                                     </ScrollView>
                                 </View>
-                            )}
 
-                            {/* Styles */}
+                                {/* Brands */}
 
-                            <View>
-                                <CustomText style={styles.trendingTitle}>Style</CustomText>
-                                <ScrollView
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
-                                    contentContainerStyle={styles.styleScrollContainer}
-                                >
-                                    <View style={styles.styleRows}>
-                                        <View style={styles.styleRow}>
-                                            {styleOptions.slice(0, Math.ceil(styleOptions.length / 2)).map((style) => (
-                                                <TouchableOpacity
-                                                    key={style.id}
-                                                    style={[
-                                                        styles.styleChip,
-                                                        selectedStyleIds.includes(style.id) && styles.selectedStyleChip
-                                                    ]}
-                                                    onPress={() => {
-                                                        if (selectedStyleIds.includes(style.id)) {
-                                                            setSelectedStyleIds(selectedStyleIds.filter(id => id !== style.id));
-                                                        } else if (selectedStyleIds.length < 3) {
-                                                            setSelectedStyleIds([...selectedStyleIds, style.id]);
-                                                        }
-                                                    }}
-                                                >
-                                                    <CustomText style={[
-                                                        styles.styleChipText,
-                                                        selectedStyleIds.includes(style.id) && styles.selectedStyleChipText
-                                                    ]}>
-                                                        {style.name}
-                                                    </CustomText>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
-                                        <View style={styles.styleRow}>
-                                            {styleOptions.slice(Math.ceil(styleOptions.length / 2)).map((style) => (
-                                                <TouchableOpacity
-                                                    key={style.id}
-                                                    style={[
-                                                        styles.styleChip,
-                                                        selectedStyleIds.includes(style.id) && styles.selectedStyleChip
-                                                    ]}
-                                                    onPress={() => {
-                                                        if (selectedStyleIds.includes(style.id)) {
-                                                            setSelectedStyleIds(selectedStyleIds.filter(id => id !== style.id));
-                                                        } else if (selectedStyleIds.length < 3) {
-                                                            setSelectedStyleIds([...selectedStyleIds, style.id]);
-                                                        }
-                                                    }}
-                                                >
-                                                    <CustomText style={[
-                                                        styles.styleChipText,
-                                                        selectedStyleIds.includes(style.id) && styles.selectedStyleChipText
-                                                    ]}>
-                                                        {style.name}
-                                                    </CustomText>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
-                                    </View>
-                                </ScrollView>
-                            </View>
-
-                            {/* Brands */}
-
-                            <CustomText style={styles.trendingTitle}>Brands</CustomText>
-                            <View style={styles.taggedBrandsContainer}>
-                                {taggedBrands.map((brand, index) => (
-                                    <TouchableOpacity
-                                        key={index}
-                                        style={[
-                                            styles.taggedBrand,
-                                            brand.isPending && styles.pendingTaggedBrand
-                                        ]}
-                                        onPress={() => {
-                                            setTaggedBrands(taggedBrands.filter((_, i) => i !== index));
-                                        }}
-                                    >
-                                        <CustomText style={styles.taggedBrandText}>
-                                            {brand.name} {brand.isPending && '(Pending)'}
-                                        </CustomText>
-                                        <CustomText style={styles.removeTag}>X</CustomText>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-
-                            {/* Post Button */}
-                            <PostButton
-                                onPress={uploadPost}
-                                loading={loading}
-                            />
-                        </>
-                    ) : (
-                        <CustomText style={styles.placeholder}>Select an image to post</CustomText>
-                    )}
-                </View>
-
-                {/* Color Modal */}
-                <Modalize
-                    ref={colorModalizeRef}
-                    modalHeight={Dimensions.get('window').height * 0.8}
-                    modalStyle={styles.modalContainer}
-                    panGestureEnabled={false}
-                    onOpen={() => setIsModalOpen(true)}
-                    onClose={() => setIsModalOpen(false)}
-                >
-                    <View style={styles.modalContent}>
-                        <CustomText style={styles.modalTitle}>All Colors</CustomText>
-                        <CustomText style={styles.modalSubtitle}>
-                            Select up to 3 colors ({selectedColorIds.length}/3)
-                        </CustomText>
-                        <ScrollView style={styles.colorGrid}>
-                            <View style={styles.gridContainer}>
-                                {colors?.map((color: Color) => (
-                                    <ColorCard
-                                        key={color.id}
-                                        color={color}
-                                        isSelected={selectedColorIds.includes(color.id)}
-                                        onPress={() => handleColorSelect(color.id)}
-                                    />
-                                ))}
-                            </View>
-                        </ScrollView>
-                    </View>
-                </Modalize>
-
-                {/* Brand Modal */}
-
-                <Modalize
-                    ref={modalizeRef}
-                    modalStyle={styles.modalContainer}
-                    modalHeight={Dimensions.get('window').height}
-                    onOpen={() => setIsModalOpen(true)}
-                    onClose={() => {
-                        setIsModalOpen(false);
-                        setShowAddBrandModal(false);
-                        setNewBrandName('');
-                        setNewBrandWebsite('');
-                        setNewBrandInstagram('');
-                    }}
-                    panGestureEnabled={false}
-                >
-                    <View style={styles.modalContent}>
-                        {!showAddBrandModal ? (
-                            <CustomText style={styles.modalTitle}>Tag a Brand</CustomText>
-                        ) : (
-                            <CustomText style={styles.modalTitle}>Add a Brand</CustomText>
-                        )}
-                        {!showAddBrandModal ? (
-                            <>
-                                <TextInput
-                                    style={styles.searchInput}
-                                    placeholder="Search brands..."
-                                    placeholderTextColor={theme.colors.light_background_2}
-                                    value={brandsInput}
-                                    onChangeText={async (text) => {
-                                        setBrandsInput(text);
-                                        if (text.length > 0) {
-                                            const { data, error } = await supabase
-                                                .from('brands')
-                                                .select('name')
-                                                .ilike('name', `%${text}%`)
-                                                .limit(5);
-
-                                            if (error) {
-                                                console.error('Error fetching brands:', error);
-                                            } else {
-                                                setBrandSuggestions(data.map(item => item.name));
-                                            }
-                                        } else {
-                                            setBrandSuggestions([]);
-                                        }
-                                    }}
-                                />
-                                <ScrollView style={styles.suggestionsList}>
-                                    {brandSuggestions.length > 0 ? (
-                                        brandSuggestions.map((brand, index) => (
-                                            <TouchableOpacity
-                                                key={index}
-                                                style={styles.suggestionItem}
-                                                onPress={() => handleBrandSelect(brand)}
-                                            >
-                                                <CustomText style={styles.suggestionText}>{brand}</CustomText>
-                                            </TouchableOpacity>
-                                        ))
-                                    ) : (
-                                        <View style={styles.noResultsContainer}>
-                                            <CustomText style={styles.noResultsText}>
-                                                No brands found matching your search.
+                                <CustomText style={styles.trendingTitle}>Brands</CustomText>
+                                <View style={styles.taggedBrandsContainer}>
+                                    {taggedBrands.map((brand, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={[
+                                                styles.taggedBrand,
+                                                brand.isPending && styles.pendingTaggedBrand
+                                            ]}
+                                            onPress={() => {
+                                                setTaggedBrands(taggedBrands.filter((_, i) => i !== index));
+                                            }}
+                                        >
+                                            <CustomText style={styles.taggedBrandText}>
+                                                {brand.name} {brand.isPending && '(Pending)'}
                                             </CustomText>
-                                            <TouchableOpacity
-                                                style={styles.addBrandButton}
-                                                onPress={() => {
-                                                    setShowAddBrandModal(true);
-                                                    setNewBrandName(brandsInput);
-                                                }}
-                                            >
-                                                <CustomText style={styles.addBrandButtonText}>
-                                                    Add Brand
-                                                </CustomText>
-                                            </TouchableOpacity>
-                                        </View>
-                                    )}
-                                </ScrollView>
+                                            <CustomText style={styles.removeTag}>X</CustomText>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+
+                                {/* Post Button */}
+                                <PostButton
+                                    onPress={uploadPost}
+                                    loading={loading}
+                                />
                             </>
                         ) : (
-                            <ScrollView
-                                ref={brandFormScrollRef}
-                                keyboardShouldPersistTaps="handled"
-                                contentContainerStyle={{ paddingBottom: 100 }}
-                            >
-                                <View style={styles.addBrandForm}>
-                                    <CustomText style={styles.formLabel}>Brand Name*</CustomText>
-                                    <TextInput
-                                        ref={brandNameInputRef}
-                                        style={styles.formInput}
-                                        value={newBrandName}
-                                        onChangeText={setNewBrandName}
-                                        placeholder="Enter brand name"
-                                        placeholderTextColor={theme.colors.light_background_2}
-                                        onFocus={() => handleFormInputFocus(brandNameInputRef)}
-                                    />
-
-                                    <CustomText style={styles.formLabel}>Website (optional)</CustomText>
-                                    <TextInput
-                                        ref={brandWebsiteInputRef}
-                                        style={styles.formInput}
-                                        value={newBrandWebsite}
-                                        onChangeText={setNewBrandWebsite}
-                                        placeholder="https://..."
-                                        placeholderTextColor={theme.colors.light_background_2}
-                                        onFocus={() => handleFormInputFocus(brandWebsiteInputRef)}
-                                    />
-
-                                    <CustomText style={styles.formLabel}>Instagram (optional)</CustomText>
-                                    <TextInput
-                                        ref={brandInstagramInputRef}
-                                        style={styles.formInput}
-                                        value={newBrandInstagram}
-                                        onChangeText={setNewBrandInstagram}
-                                        placeholder="@username"
-                                        placeholderTextColor={theme.colors.light_background_2}
-                                        onFocus={() => handleFormInputFocus(brandInstagramInputRef)}
-                                    />
-
-                                    <View style={styles.formButtons}>
-                                        <TouchableOpacity
-                                            style={styles.cancelButton}
-                                            onPress={() => setShowAddBrandModal(false)}
-                                        >
-                                            <CustomText style={styles.cancelButtonText}>Cancel</CustomText>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.submitButton,
-                                                !newBrandName.trim() && styles.disabledButton
-                                            ]}
-                                            onPress={handleAddPendingBrand}
-                                            disabled={!newBrandName.trim()}
-                                        >
-                                            <CustomText style={styles.submitButtonText}>Add Brand</CustomText>
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            </ScrollView>
+                            <CustomText style={styles.placeholder}>Select an image to post</CustomText>
                         )}
                     </View>
-                </Modalize>
 
-            </ScrollView>
-        </TouchableWithoutFeedback>
+
+
+                </ScrollView>
+            </TouchableWithoutFeedback>
+
+            {/* Color Modal */}
+            <Modalize
+                ref={colorModalizeRef}
+                modalHeight={Dimensions.get('window').height * 0.6}
+                modalStyle={styles.modalContainer}
+                panGestureEnabled={false}
+                onOpen={() => setIsModalOpen(true)}
+                onClose={() => setIsModalOpen(false)}
+            >
+                <View style={styles.modalContent}>
+                    <CustomText style={styles.modalTitle}>All Colors</CustomText>
+                    <CustomText style={styles.modalSubtitle}>
+                        Select up to 3 colors ({selectedColorIds.length}/3)
+                    </CustomText>
+                    <ScrollView style={styles.colorGrid}>
+                        <View style={styles.gridContainer}>
+                            {colors?.map((color: Color) => (
+                                <ColorCard
+                                    key={color.id}
+                                    color={color}
+                                    isSelected={selectedColorIds.includes(color.id)}
+                                    onPress={() => handleColorSelect(color.id)}
+                                />
+                            ))}
+                        </View>
+                    </ScrollView>
+                </View>
+            </Modalize>
+
+            {/* Brand Modal */}
+
+            <Modalize
+                ref={modalizeRef}
+                modalStyle={styles.modalContainer}
+                modalHeight={Dimensions.get('window').height * 0.6}
+                onOpen={() => setIsModalOpen(true)}
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setShowAddBrandModal(false);
+                    setNewBrandName('');
+                    setNewBrandWebsite('');
+                    setNewBrandInstagram('');
+                }}
+                panGestureEnabled={false}
+            >
+                <View style={styles.modalContent}>
+                    {!showAddBrandModal ? (
+                        <CustomText style={styles.modalTitle}>Tag a Brand</CustomText>
+                    ) : (
+                        <CustomText style={styles.modalTitle}>Add a Brand</CustomText>
+                    )}
+                    {!showAddBrandModal ? (
+                        <>
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Search brands..."
+                                placeholderTextColor={theme.colors.light_background_2}
+                                value={brandsInput}
+                                onChangeText={async (text) => {
+                                    setBrandsInput(text);
+                                    if (text.length > 0) {
+                                        const { data, error } = await supabase
+                                            .from('brands')
+                                            .select('name')
+                                            .ilike('name', `%${text}%`)
+                                            .limit(5);
+
+                                        if (error) {
+                                            console.error('Error fetching brands:', error);
+                                        } else {
+                                            setBrandSuggestions(data.map(item => item.name));
+                                        }
+                                    } else {
+                                        setBrandSuggestions([]);
+                                    }
+                                }}
+                            />
+                            <ScrollView style={styles.suggestionsList}>
+                                {brandSuggestions.length > 0 ? (
+                                    brandSuggestions.map((brand, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={styles.suggestionItem}
+                                            onPress={() => handleBrandSelect(brand)}
+                                        >
+                                            <CustomText style={styles.suggestionText}>{brand}</CustomText>
+                                        </TouchableOpacity>
+                                    ))
+                                ) : (
+                                    <View style={styles.noResultsContainer}>
+                                        <CustomText style={styles.noResultsText}>
+                                            No brands found matching your search.
+                                        </CustomText>
+                                        <TouchableOpacity
+                                            style={styles.addBrandButton}
+                                            onPress={() => {
+                                                setShowAddBrandModal(true);
+                                                setNewBrandName(brandsInput);
+                                            }}
+                                        >
+                                            <CustomText style={styles.addBrandButtonText}>
+                                                Add Brand
+                                            </CustomText>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                            </ScrollView>
+                        </>
+                    ) : (
+                        <ScrollView
+                            ref={brandFormScrollRef}
+                            keyboardShouldPersistTaps="handled"
+                            contentContainerStyle={{ paddingBottom: 100 }}
+                        >
+                            <View style={styles.addBrandForm}>
+                                <CustomText style={styles.formLabel}>Brand Name*</CustomText>
+                                <TextInput
+                                    ref={brandNameInputRef}
+                                    style={styles.formInput}
+                                    value={newBrandName}
+                                    onChangeText={setNewBrandName}
+                                    placeholder="Enter brand name"
+                                    placeholderTextColor={theme.colors.light_background_2}
+                                    onFocus={() => handleFormInputFocus(brandNameInputRef)}
+                                />
+
+                                <CustomText style={styles.formLabel}>Website (optional)</CustomText>
+                                <TextInput
+                                    ref={brandWebsiteInputRef}
+                                    style={styles.formInput}
+                                    value={newBrandWebsite}
+                                    onChangeText={setNewBrandWebsite}
+                                    placeholder="https://..."
+                                    placeholderTextColor={theme.colors.light_background_2}
+                                    onFocus={() => handleFormInputFocus(brandWebsiteInputRef)}
+                                />
+
+                                <CustomText style={styles.formLabel}>Instagram (optional)</CustomText>
+                                <TextInput
+                                    ref={brandInstagramInputRef}
+                                    style={styles.formInput}
+                                    value={newBrandInstagram}
+                                    onChangeText={setNewBrandInstagram}
+                                    placeholder="@username"
+                                    placeholderTextColor={theme.colors.light_background_2}
+                                    onFocus={() => handleFormInputFocus(brandInstagramInputRef)}
+                                />
+
+                                <View style={styles.formButtons}>
+                                    <TouchableOpacity
+                                        style={styles.cancelButton}
+                                        onPress={() => setShowAddBrandModal(false)}
+                                    >
+                                        <CustomText style={styles.cancelButtonText}>Cancel</CustomText>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.submitButton,
+                                            !newBrandName.trim() && styles.disabledButton
+                                        ]}
+                                        onPress={handleAddPendingBrand}
+                                        disabled={!newBrandName.trim()}
+                                    >
+                                        <CustomText style={styles.submitButtonText}>Add Brand</CustomText>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </ScrollView>
+                    )}
+                </View>
+            </Modalize>
+
+        </>
     );
 }
 
@@ -908,6 +1021,23 @@ const styles = StyleSheet.create({
         padding: 20,
         // backgroundColor: theme.colors.background
     },
+    imageHeaderContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 10,
+    },
+    changePhotoButton: {
+        backgroundColor: theme.colors.light_background_2,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+    },
+    changePhotoText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '500',
+    },
     imageContainer: {
         position: 'relative',
         marginBottom: 15,
@@ -915,6 +1045,13 @@ const styles = StyleSheet.create({
     image: {
         height: 300,
         marginBottom: 15,
+    },
+    touchableOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        backgroundColor: 'transparent',
+        zIndex: 1,
     },
     tagInstruction: {
         textAlign: 'center',
@@ -1005,13 +1142,11 @@ const styles = StyleSheet.create({
     selectedStyleChipText: {
         color: '#fff',
     },
-
     tagPill: {
         position: 'absolute',
-        transform: [{ translateX: -50 }, { translateY: -50 }],
-        zIndex: 1,
+        zIndex: 20,
         maxWidth: 100,
-        maxHeight: 35
+        pointerEvents: 'auto',
     },
     tagPillContent: {
         flexDirection: 'row',
@@ -1034,7 +1169,9 @@ const styles = StyleSheet.create({
         width: 16,
         height: 16,
         alignItems: 'center',
+        zIndex: 30,
         justifyContent: 'center',
+        pointerEvents: 'auto',
     },
     removeButtonText: {
         color: theme.colors.text,
@@ -1233,5 +1370,75 @@ const styles = StyleSheet.create({
     },
     disabledButton: {
         opacity: 0.5,
+    },
+    imagePickerContent: {
+        padding: 20,
+    },
+    imagePickerOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 15,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: theme.colors.light_background_1,
+    },
+    optionDisabled: {
+        opacity: 0.6,
+    },
+    optionText: {
+        fontSize: 16,
+        marginLeft: 10,
+        flex: 1,
+    },
+    optionTextDisabled: {
+        color: '#999',
+    },
+    loader: {
+        marginLeft: 10,
+    },
+    photoMenuContainer: {
+        position: 'relative',
+        zIndex: 1000, // Higher z-index to ensure menu appears above other content
+    },
+    backdrop: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 999,
+        position: 'absolute',
+        width: Dimensions.get('window').width,
+        height: Dimensions.get('window').height,
+    },
+    photoMenu: {
+        position: 'absolute',
+        top: '100%',
+        right: 0,
+        backgroundColor: theme.colors.background,
+        borderRadius: 8,
+        padding: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+        minWidth: 200,
+        zIndex: 1000,
+    },
+    photoMenuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderRadius: 6,
+        backgroundColor: theme.colors.light_background_1,
+        marginBottom: 8,
+    },
+    photoMenuItemDisabled: {
+        opacity: 0.6,
+    },
+    photoMenuItemText: {
+        marginLeft: 12,
+        color: '#fff',
+        fontSize: 14,
     },
 });

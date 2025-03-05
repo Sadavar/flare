@@ -29,6 +29,7 @@ import { PostDetails } from './screens/profile/PostDetails';
 import { PostEdit } from './screens/profile/PostEdit';
 import { FollowList } from './screens/profile/FollowList';
 import { AllPosts } from './screens/profile/AllPosts';
+import { UserAllPosts } from './screens/discover/UserAllPosts';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const BottomTab = createBottomTabNavigator<MainTabParamList>();

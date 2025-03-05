@@ -25,6 +25,7 @@ export type GlobalStackParamList = {
         initialScreen?: 'PostDetails';
         postData?: Post;
     };
+    UserAllPosts: { username: string };
     PostDetails: { post: Post };
     Search: undefined;
 };

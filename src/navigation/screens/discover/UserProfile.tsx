@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { Layout } from '@/components/Layout';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
@@ -174,7 +173,13 @@ export function UserProfile() {
                     </CustomText>
                 </TouchableOpacity>
             )}
-            <RecentPosts data={allPosts} onSeeAll={() => console.log("see all clicked")} />
+            <RecentPosts
+                data={allPosts}
+                onSeeAll={() => navigation.getParent()?.navigate('Global', {
+                    screen: 'UserAllPosts',
+                    params: { username }
+                })}
+            />
             {/* <SavedPosts
                 data={savedPosts}
                 onSeeAll={() => { console.log('see all saved posts clicked') }}

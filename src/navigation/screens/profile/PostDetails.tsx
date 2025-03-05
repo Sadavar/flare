@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     },
     tag: {
         position: 'absolute',
-        transform: [{ translateX: -50 }, { translateY: -50 }],
+        transform: [{ translateX: -50 }, { translateY: -10 }],
         backgroundColor: theme.colors.light_background_1,
         borderRadius: 15,
         paddingVertical: 4,

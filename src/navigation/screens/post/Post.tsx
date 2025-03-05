@@ -497,6 +497,17 @@ export function Post() {
         setShowPhotoMenu(false);
     };
 
+    // Add this useEffect near your other useEffect hooks:
+    useEffect(() => {
+        // Reset scroll position when screen is focused
+        const unsubscribe = navigation.addListener('focus', () => {
+            scrollViewRef.current?.scrollTo({ x: 0, y: 0, animated: false });
+        });
+
+        // Cleanup subscription on unmount
+        return unsubscribe;
+    }, [navigation]);
+
     return (
         <>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -1028,7 +1039,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     changePhotoButton: {
-        backgroundColor: theme.colors.light_background_2,
+        backgroundColor: theme.colors.light_background_1,
         paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: 8,

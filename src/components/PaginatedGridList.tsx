@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Dimensions, RefreshControl, ScrollView } from 'react-native';
 import { MasonryFlashList } from '@shopify/flash-list';
 import { theme } from '@/context/ThemeContext';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GAP_SIZE = 8; // Matches the listContent paddingHorizontal
@@ -29,7 +30,6 @@ export function PaginatedGridList({
     loadingMoreText = "Loading more items...",
     listProps = {}
 }) {
-    console.log('[PaginatedGridList] Rendering with', data.length, 'items, hasNextPage:', hasNextPage);
 
     // Keep track of column heights for masonry layout
     const columnHeights = useRef(Array(numColumns).fill(0));
@@ -100,7 +100,6 @@ export function PaginatedGridList({
 
     // Handle refresh - resets to first page
     const handleRefresh = useCallback(() => {
-        console.log('[PaginatedGridList] Refresh triggered');
         resetColumnHeights();
         if (refetch) {
             refetch({ refetchPage: (_data, index) => index === 0 });
@@ -109,14 +108,7 @@ export function PaginatedGridList({
 
     // Handle loading more items
     const handleLoadMore = useCallback(() => {
-        console.log(
-            '[PaginatedGridList] onEndReached called -',
-            'hasNextPage:', hasNextPage,
-            'isFetchingNextPage:', isFetchingNextPage
-        );
-
         if (fetchNextPage && hasNextPage && !isFetchingNextPage) {
-            console.log('[PaginatedGridList] Calling fetchNextPage');
             fetchNextPage();
         }
     }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
@@ -136,13 +128,16 @@ export function PaginatedGridList({
     // Handle loading state
     if (isLoading && data.length === 0) {
         return (
-            <>
+            <View style={styles.container}>
                 {header}
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={theme.colors.primary} />
-                    <Text style={styles.loadingText}>Loading...</Text>
-                </View>
-            </>
+                <ScrollView>
+                    <View style={[styles.listContent, styles.gridContainer]}>
+                        {[1, 2, 3, 4, 5, 6].map((_, index) => (
+                            <SkeletonPostCard key={index} />
+                        ))}
+                    </View>
+                </ScrollView>
+            </View>
         );
     }
 
@@ -210,6 +205,21 @@ export function PaginatedGridList({
     );
 }
 
+function SkeletonPostCard() {
+    return (
+        <View style={styles.skeletonContainer}>
+            <SkeletonLoader
+                width="100%"
+                height={undefined}
+                style={{
+                    aspectRatio: 0.75,
+                    borderRadius: 12,
+                }}
+            />
+        </View>
+    );
+}
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -261,5 +271,18 @@ const styles = StyleSheet.create({
         marginLeft: 8,
         fontSize: 14,
         color: '#666',
+    },
+    gridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        paddingHorizontal: 2,
+    },
+    skeletonContainer: {
+        flex: 1,
+        margin: 6,
+        borderRadius: 12,
+        minWidth: '45%',
+        maxWidth: '48%',
+        backgroundColor: theme.colors.background,
     },
 });

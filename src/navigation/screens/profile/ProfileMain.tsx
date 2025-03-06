@@ -24,9 +24,9 @@ export function ProfileMain() {
     const [newBio, setNewBio] = useState('');
 
     // Get all user posts
-    const { data: allPosts = [], refetch } = useUserPostsAll(username);
+    const { data: allPosts = [], refetch, isLoading: postsLoading } = useUserPostsAll(username);
 
-    const { data: savedPosts = [] } = useGetSavedPosts(user.id);
+    const { data: savedPosts = [], refetch: savedPostsRefetch, isLoading: savedPostsLoading } = useGetSavedPosts(user.id);
 
     // Filter saved posts
     console.log("saved posts: ", savedPosts)
@@ -35,8 +35,9 @@ export function ProfileMain() {
     // Handle refresh
     const handleRefresh = useCallback(() => {
         refetch();
+        savedPostsRefetch();
         fetchUserBio();
-    }, [refetch]);
+    }, [refetch, savedPostsRefetch]);
 
     // Function to limit bio text to 60 characters
     const limitBioText = (text: string) => {
@@ -163,10 +164,15 @@ export function ProfileMain() {
                 }
             >
                 <ProfileHeader />
-                <RecentPosts data={allPosts} onSeeAll={handleSeeAllPosts} />
+                <RecentPosts
+                    data={allPosts}
+                    onSeeAll={handleSeeAllPosts}
+                    isLoading={postsLoading}
+                />
                 <SavedPosts
                     data={savedPosts}
                     onSeeAll={handleSeeAllSavedPosts}
+                    isLoading={savedPostsLoading}
                 />
                 {/* <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
                     <CustomText style={styles.logoutButtonText}>Log Out</CustomText>

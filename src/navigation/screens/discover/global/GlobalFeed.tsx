@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Dimensions, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Dimensions, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 // import { Image } from 'react-native';
 import { useGlobalFeed } from '@/hooks/usePostQueries';
@@ -11,8 +11,7 @@ import PostCard from '@/components/PostCard';
 import { CustomText } from '@/components/CustomText';
 import { theme } from '@/context/ThemeContext';
 import { SearchButton } from '@/components/SearchButton';
-
-
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 function Header() {
     return (
@@ -25,6 +24,64 @@ function Header() {
     )
 }
 
+function SkeletonPostCard() {
+    return (
+        <View style={[styles.postContainer, { margin: 6 }]}>
+            <SkeletonLoader
+                width="100%"
+                height={undefined} // Remove fixed height
+                style={{
+                    aspectRatio: 0.75, // Match PostCard's aspect ratio
+                    borderRadius: 12,
+                    borderBottomLeftRadius: 0,
+                    borderBottomRightRadius: 0
+                }}
+            />
+            <View style={styles.postDetails}>
+                <View style={[styles.actionsRow, { paddingVertical: 5 }]}>
+                    {/* Colors skeleton */}
+                    <View style={styles.colorDotsContainer}>
+                        {[1, 2, 3].map((_, index) => (
+                            <SkeletonLoader
+                                key={index}
+                                width={14}
+                                height={14}
+                                style={{
+                                    borderRadius: 4,
+                                    marginRight: index < 2 ? 4 : 0
+                                }}
+                            />
+                        ))}
+                    </View>
+                    {/* Save button skeleton */}
+                    <SkeletonLoader
+                        width={25}
+                        height={25}
+                        style={{ borderRadius: 4 }}
+                    />
+                </View>
+
+                {/* Brands skeleton */}
+                <View style={styles.brandsContainer}>
+                    <View style={styles.brandsList}>
+                        {[1, 2].map((_, index) => (
+                            <SkeletonLoader
+                                key={index}
+                                width={60}
+                                height={22}
+                                style={{
+                                    borderRadius: 6,
+                                    marginRight: 6,
+                                    marginBottom: 10
+                                }}
+                            />
+                        ))}
+                    </View>
+                </View>
+            </View>
+        </View>
+    );
+}
 
 export function GlobalFeed() {
     const navigation = useNavigation();
@@ -50,6 +107,21 @@ export function GlobalFeed() {
             <PostCard post={item} />
         )
     }, [navigation]);
+
+    if (isLoading) {
+        return (
+            <View style={styles.container}>
+                <Header />
+                <ScrollView>
+                    <View style={[styles.listContent, styles.gridContainer]}>
+                        {[1, 2, 3, 4, 5, 6].map((_, index) => (
+                            <SkeletonPostCard key={index} />
+                        ))}
+                    </View>
+                </ScrollView>
+            </View>
+        );
+    }
 
     return (
         <PaginatedGridList
@@ -96,13 +168,14 @@ const styles = StyleSheet.create({
         flex: 1,
         margin: 6,
         borderRadius: 12,
-        backgroundColor: 'grey',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        shadowColor: 'black',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.9,
+        shadowRadius: 8,
         elevation: 2,
-        overflow: 'hidden',
+        backgroundColor: theme.colors.light_background_1,
+        minWidth: '45%', // Ensure two columns
+        maxWidth: '48%', // Prevent stretching
     },
     postImage: {
         width: '100%',
@@ -111,9 +184,9 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     postDetails: {
-        backgroundColor: 'white',
         width: '100%',
         paddingHorizontal: 3,
+        paddingTop: 1,
     },
     brandsContainer: {
         paddingBottom: 10,
@@ -200,5 +273,10 @@ const styles = StyleSheet.create({
     },
     saveButton: {
         padding: 0,
+    },
+    gridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        paddingHorizontal: 2, // Adjust to match PaginatedGridList padding
     },
 });

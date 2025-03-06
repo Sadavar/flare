@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView, Dimensions, ActivityIndicator, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -26,10 +26,11 @@ interface PostViewProps {
 export function PostView({ post }: PostViewProps) {
     const { username: currentUsername } = useSession();
     const navigation = useNavigation();
-    const [showTags, setShowTags] = useState(true);
+    const [showTags, setShowTags] = useState(false); // Changed to false by default
     const [isImageLoaded, setIsImageLoaded] = useState(false);
     const [imageHeight, setImageHeight] = useState(undefined);
     const loadingStartTimeRef = useRef(Date.now());
+    const fadeAnim = useRef(new Animated.Value(0)).current; // For tag fade animation
 
     const { mutate: toggleSave } = useSavePost();
     const [isSaved, setIsSaved] = useState(post.saved || false);
@@ -38,6 +39,15 @@ export function PostView({ post }: PostViewProps) {
         if (post && post.saved != undefined && post.saved != null)
             setIsSaved(post.saved)
     }, [post])
+
+    // Animation effect for tags
+    useEffect(() => {
+        Animated.timing(fadeAnim, {
+            toValue: showTags ? 1 : 0,
+            duration: 200,
+            useNativeDriver: true,
+        }).start();
+    }, [showTags, fadeAnim]);
 
     const handleSave = () => {
         setIsSaved(!isSaved);
@@ -57,7 +67,7 @@ export function PostView({ post }: PostViewProps) {
         const aspectRatio = width / height;
         const calculatedHeight = SCREEN_WIDTH / aspectRatio;
         setImageHeight(calculatedHeight);
-
+        setIsImageLoaded(true);
     }, [post?.image_url]);
 
     const handleImageError = useCallback((error) => {
@@ -120,7 +130,6 @@ export function PostView({ post }: PostViewProps) {
                     cachePolicy="memory-disk"
                 />
 
-
                 <TouchableOpacity
                     onPress={toggleTagsVisibility}
                     activeOpacity={1}
@@ -134,26 +143,49 @@ export function PostView({ post }: PostViewProps) {
                         ]}
                         contentFit="contain"
                         recyclingKey={post.uuid}
-                        transition={200} // Disable transition to prevent resize effect
+                        transition={200}
                         priority="high"
                     />
                 </TouchableOpacity>
 
+                {post.brands && post.brands.length > 0 && (
+                    <>
+                        {/* Brand icon toggle in bottom right */}
+                        <TouchableOpacity
+                            style={styles.brandToggleButton}
+                            onPress={toggleTagsVisibility}
+                            activeOpacity={0.7}
+                        >
+                            <MaterialIcons
+                                name="local-offer"
+                                size={22}
+                                color={showTags ? theme.colors.light_background_3 : "white"}
+                            />
+                        </TouchableOpacity>
+                    </>
+                )}
+
+                {/* Animated brand tags */}
                 {post.brands?.map((brand) => (
-                    <TouchableOpacity
+                    <Animated.View
                         key={brand.id}
                         style={[
                             styles.tag,
                             {
                                 left: `${brand.x_coord}%`,
                                 top: `${brand.y_coord}%`,
+                                opacity: fadeAnim,
+                                display: isImageLoaded ? 'flex' : 'none'
                             },
                         ]}
-                        onPress={() => handleBrandPress(brand.id, brand.name)}
-                        activeOpacity={1}
                     >
-                        <CustomText style={styles.tagText}>{brand.name}</CustomText>
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => handleBrandPress(brand.id, brand.name)}
+                            activeOpacity={1}
+                        >
+                            <CustomText style={styles.tagText}>{brand.name}</CustomText>
+                        </TouchableOpacity>
+                    </Animated.View>
                 ))}
             </View>
 
@@ -318,7 +350,6 @@ const styles = StyleSheet.create({
     styleText: {
         fontSize: 12,
     },
-
     saveButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -331,5 +362,17 @@ const styles = StyleSheet.create({
     saveButtonText: {
         marginLeft: 8,
         fontSize: 16,
+    },
+    brandToggleButton: {
+        position: 'absolute',
+        right: 15,
+        bottom: 15,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 2,
     },
 });

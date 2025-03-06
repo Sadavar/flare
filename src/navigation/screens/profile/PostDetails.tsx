@@ -303,7 +303,7 @@ export function PostDetails() {
                 {/* Action Buttons*/}
                 {post.username === currentUsername &&
                     <>
-                        <TouchableOpacity
+                        {/* <TouchableOpacity
                             style={styles.editButton}
                             onPress={() => {
                                 console.log('[PostDetails] Post:', post);
@@ -312,7 +312,7 @@ export function PostDetails() {
                         >
                             <MaterialIcons name="edit" size={24} color="#007AFF" />
                             <CustomText style={styles.editButtonText}>Edit Post</CustomText>
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
 
                         <Button
                             title="Delete Post"

@@ -23,7 +23,7 @@ module.exports = ({ config }) => {
             icon: "./assets/icon.png"
         },
         android: {
-            package: 'com.flareapp.flare.dev',
+            package: 'com.flareapp.flare',
             adaptiveIcon: {
                 foregroundImage: "./assets/icon.png",
                 backgroundColor: "#131418",

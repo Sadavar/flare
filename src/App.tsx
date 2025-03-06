@@ -39,7 +39,7 @@ SplashScreen.preventAutoHideAsync();
 
 // Set the animation options
 SplashScreen.setOptions({
-  duration: 3000,
+  duration: 1000,
   fade: true,
 });
 
@@ -53,7 +53,7 @@ export function App() {
         await Font.loadAsync(Entypo.font);
 
         // Add a slight delay to ensure everything is properly loaded
-        // await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (e) {
         console.warn(e);
       } finally {

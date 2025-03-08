@@ -26,7 +26,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="flare"/>
-        <data android:scheme="com.flareapp.flare.dev"/>
+        <data android:scheme="com.flareapp.flare"/>
         <data android:scheme="exp+flare"/>
       </intent-filter>
     </activity>

@@ -885,9 +885,19 @@ export function Post() {
             >
                 <View style={styles.modalContent}>
                     {!showAddBrandModal ? (
-                        <CustomText style={styles.modalTitle}>Tag a Brand</CustomText>
+                        <>
+                            <CustomText style={styles.modalTitle}>Tag a Brand</CustomText>
+                            <CustomText style={styles.tagInstruction}>
+                                If you don't see your brand,
+                                <CustomText style={{ color: theme.colors.primary }} onPress={() => {
+                                    setShowAddBrandModal(true);
+                                    setNewBrandName(brandsInput);
+                                }}> request it!</CustomText>
+                            </CustomText>
+                        </>
+
                     ) : (
-                        <CustomText style={styles.modalTitle}>Add a Brand</CustomText>
+                        <CustomText style={styles.modalTitle}>Request a Brand</CustomText>
                     )}
                     {!showAddBrandModal ? (
                         <>
@@ -939,7 +949,7 @@ export function Post() {
                                             }}
                                         >
                                             <CustomText style={styles.addBrandButtonText}>
-                                                Add Brand
+                                                Request Brand
                                             </CustomText>
                                         </TouchableOpacity>
                                     </View>
@@ -1002,7 +1012,7 @@ export function Post() {
                                         onPress={handleAddPendingBrand}
                                         disabled={!newBrandName.trim()}
                                     >
-                                        <CustomText style={styles.submitButtonText}>Add Brand</CustomText>
+                                        <CustomText style={styles.submitButtonText}>Request Brand</CustomText>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -1312,7 +1322,7 @@ const styles = StyleSheet.create({
         color: '#666',
     },
     addBrandButton: {
-        backgroundColor: theme.colors.light_background_2,
+        backgroundColor: theme.colors.primary,
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 8,
@@ -1357,7 +1367,7 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     submitButton: {
-        backgroundColor: theme.colors.light_background_2,
+        backgroundColor: theme.colors.primary,
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 8,
@@ -1365,7 +1375,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     submitButtonText: {
-        color: '#fff',
+        color: theme.colors.text,
         fontWeight: 'bold',
     },
     disabledButton: {

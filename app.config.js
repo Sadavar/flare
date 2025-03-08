@@ -34,16 +34,11 @@ module.exports = ({ config }) => {
             favicon: "./assets/icon.png"
         },
         plugins: [
-            "expo-asset",
             [
                 "expo-splash-screen",
                 {
                     backgroundColor: "#131418",
                     image: "./assets/icon.png",
-                    dark: {
-                        image: "./assets/icon.png",
-                        backgroundColor: "#131418"
-                    },
                     imageWidth: 200
                 }
             ],

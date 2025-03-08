@@ -86,9 +86,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.flareapp.flare.dev'
+    namespace 'com.flareapp.flare'
     defaultConfig {
-        applicationId 'com.flareapp.flare.dev'
+        applicationId 'com.flareapp.flare'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

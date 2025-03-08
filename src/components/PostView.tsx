@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
         gap: 5,
     },
     brandButton: {
-        backgroundColor: theme.colors.light_background_2,
+        backgroundColor: theme.colors.light_background_1,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 15,
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
         gap: 5,
     },
     styleChip: {
-        backgroundColor: theme.colors.light_background_2,
+        backgroundColor: theme.colors.light_background_1,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 15,

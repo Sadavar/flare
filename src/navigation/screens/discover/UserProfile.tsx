@@ -175,6 +175,7 @@ export function UserProfile() {
             )}
             <RecentPosts
                 data={allPosts}
+                isLoading={postsLoading}
                 onSeeAll={() => navigation.getParent()?.navigate('Global', {
                     screen: 'UserAllPosts',
                     params: { username }

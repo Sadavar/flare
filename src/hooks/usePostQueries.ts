@@ -252,10 +252,18 @@ export function useGlobalFeed(pageSize = 5) {
 
 export function useDeletePost() {
     const queryClient = useQueryClient();
-
     const deletePost = async (postId: string) => {
         try {
-            // Delete post_brands and post_styles entries first
+            // First get the image path
+            const { data: postData, error: fetchError } = await supabase
+                .from('posts')
+                .select('image_url')
+                .eq('uuid', postId)
+                .single();
+
+            if (fetchError) throw fetchError;
+
+            // Delete related entries and the image file
             await Promise.all([
                 supabase
                     .from('post_brands')
@@ -265,16 +273,25 @@ export function useDeletePost() {
                     .from('post_styles')
                     .delete()
                     .eq('post_uuid', postId),
-                supabase.storage
-                    .from('outfits')
-                    .remove([postId]),
                 supabase
                     .from('post_colors')
                     .delete()
-                    .eq('post_uuid', postId)
+                    .eq('post_uuid', postId),
+                supabase
+                    .from('post_pending_brands')
+                    .delete()
+                    .eq('post_uuid', postId),
+                supabase
+                    .from('saved_posts')
+                    .delete()
+                    .eq('post_uuid', postId),
+                // Only attempt to delete the file if image_url exists
+                postData.image_url ? supabase.storage
+                    .from('outfits')
+                    .remove([postData.image_url]) : Promise.resolve()
             ]);
 
-            // Then delete the post
+            // Finally delete the post
             const { error } = await supabase
                 .from('posts')
                 .delete()
@@ -282,12 +299,15 @@ export function useDeletePost() {
 
             if (error) throw error;
 
+            // Invalidate queries to refresh data
+            queryClient.invalidateQueries(['posts']);
+
             return { success: true };
         } catch (error: any) {
+            console.error('Error deleting post:', error);
             return { success: false, error: error.message };
         }
     };
-
     return { deletePost };
 }
 

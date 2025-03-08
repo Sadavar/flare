@@ -1,4 +1,4 @@
-package com.flareapp.flare.dev
+package com.flareapp.flare
 
 import android.app.Application
 import android.content.res.Configuration

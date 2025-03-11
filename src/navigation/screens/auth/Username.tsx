@@ -5,11 +5,17 @@ import { useSession } from '@/context/SessionContext';
 import { Layout } from '@/components/Layout';
 import { CustomText } from '@/components/CustomText';
 import { theme } from '@/context/ThemeContext';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '@/types';
+
+type UsernameScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Username'>;
 
 export function Username() {
     const [username, setUsername] = useState('');
     const [loading, setLoading] = useState(false);
     const { user } = useSession();
+    const navigation = useNavigation<UsernameScreenNavigationProp>();
 
     const setUserUsername = async () => {
         if (!username) return Alert.alert('Please enter a username');
@@ -38,7 +44,13 @@ export function Username() {
                 });
 
             if (error) throw error;
-            Alert.alert('Success', 'Username set successfully!');
+
+            // Navigate to Main screen after successful username set
+            navigation.replace('Main', {
+                screen: 'Discover',
+                params: undefined
+            });
+
         } catch (error: any) {
             Alert.alert(error.message);
         } finally {

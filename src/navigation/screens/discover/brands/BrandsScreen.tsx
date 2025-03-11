@@ -187,22 +187,25 @@ export function BrandsScreen() {
     }
 
     return (
-        <PaginatedGridList
-            data={flattenedPosts}
-            header={headerComponent}
-            renderItem={renderPostItem}
-            fetchNextPage={fetchNextPage}
-            hasNextPage={!!hasNextPage}
-            isFetchingNextPage={isFetchingNextPage}
-            isLoading={postsLoading}
-            isError={postsError}
-            refetch={refetchPosts}
-            keyExtractor={(item: Post) => item.uuid}
-            numColumns={2}
-            estimatedItemSize={280}
-            loadingMoreText="Loading more posts..."
-            contentContainerStyle={styles.gridContent}
-        />
+        <ScrollView>
+            {headerComponent}
+            <PaginatedGridList
+                data={flattenedPosts}
+                // header={headerComponent}
+                renderItem={renderPostItem}
+                fetchNextPage={fetchNextPage}
+                hasNextPage={!!hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                isLoading={postsLoading}
+                isError={postsError}
+                refetch={refetchPosts}
+                keyExtractor={(item: Post) => item.uuid}
+                numColumns={2}
+                estimatedItemSize={280}
+                loadingMoreText="Loading more posts..."
+                contentContainerStyle={styles.gridContent}
+            />
+        </ScrollView>
     )
 }
 
@@ -296,8 +299,7 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.light_background_1,
     },
     chipSelected: {
-        backgroundColor: 'black',
-        borderColor: '#000',
+        backgroundColor: theme.colors.primary,
     },
     chipText: {
         fontSize: 14,

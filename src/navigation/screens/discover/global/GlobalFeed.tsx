@@ -18,7 +18,7 @@ function Header() {
         <>
             <View style={styles.fixedHeader}>
                 <CustomText style={styles.mainTitle}>Discover Globally</CustomText>
-                <SearchButton type={'global'} />
+                {/* <SearchButton type={'global'} /> */}
             </View>
         </>
     )
@@ -151,7 +151,8 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     fixedHeader: {
-        paddingTop: 10,
+        paddingTop: 15,
+        paddingBottom: 20,
         zIndex: 1,
     },
     mainTitle: {

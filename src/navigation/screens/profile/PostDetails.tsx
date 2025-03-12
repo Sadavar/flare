@@ -90,6 +90,7 @@ export function PostDetails() {
     }, [post.uuid]);
 
     const handleSave = () => {
+        console.log("handling save from post details")
         setIsSaved(!isSaved);
         toggleSave(
             { post: post, saved: isSaved },

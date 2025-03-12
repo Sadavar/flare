@@ -10,7 +10,6 @@ import type { Post } from '@/types';
 import { useSavePost, useUserPosts } from '@/hooks/usePostQueries';
 import { Username } from '@/navigation/screens/auth/Username';
 import { usePost } from '@/hooks/usePostQueries'
-import { getColors } from 'react-native-image-colors';
 import { ColorCard } from '@/components/ColorCard';
 import ColorDisplay from './ColorDisplay';
 import { theme } from '@/context/ThemeContext';
@@ -50,6 +49,7 @@ export function PostView({ post }: PostViewProps) {
     }, [showTags, fadeAnim]);
 
     const handleSave = () => {
+        console.log("handling save from post view")
         setIsSaved(!isSaved);
         toggleSave(
             { post: post, saved: isSaved },
@@ -117,8 +117,22 @@ export function PostView({ post }: PostViewProps) {
                     </View>
                     <CustomText style={styles.username}>@{post.username}</CustomText>
                 </TouchableOpacity>
-            </View>
 
+                {/* Color dots added to the right side of header */}
+                {post.colors && post.colors.length > 0 && (
+                    <View style={styles.colorDotsContainer}>
+                        {post.colors.slice(0, 3).map((color) => (
+                            <View
+                                key={color.id}
+                                style={[
+                                    styles.colorDot,
+                                    { backgroundColor: color.hex_value }
+                                ]}
+                            />
+                        ))}
+                    </View>
+                )}
+            </View>
             <View style={styles.imageContainer}>
                 {/* Hidden image for preloading that will trigger onLoad/calculate dimensions */}
                 <Image
@@ -255,6 +269,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 15,
+        justifyContent: 'space-between', // This pushes elements to opposite sides
     },
     userInfo: {
         flexDirection: 'row',
@@ -272,6 +287,20 @@ const styles = StyleSheet.create({
     username: {
         fontSize: 14,
         fontWeight: '600',
+    },
+    colorDotsContainer: {
+        flexDirection: 'row',
+        gap: 4,
+    },
+    colorDot: {
+        width: 16,
+        height: 16,
+        borderRadius: 4,
+        shadowColor: 'black',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.4,
+        shadowRadius: 5,
+        elevation: 2,
     },
     imageContainer: {
         position: 'relative',

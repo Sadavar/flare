@@ -44,17 +44,22 @@ function TopTabNavigator() {
         <TopTab.Navigator
           initialRouteName="Global"
           screenOptions={{
-            tabBarIndicatorStyle: { backgroundColor: 'white' },
+            tabBarIndicatorStyle: { backgroundColor: theme.colors.light_background_1 },
             tabBarPressColor: 'transparent',
             swipeEnabled: true,
             tabBarStyle: {
-              elevation: 0,
-              shadowOpacity: 0,
+              elevation: 8, // Increased elevation for Android shadow
+              shadowColor: 'rgba(0, 0, 0, 0.3)', // Shadow color with transparency
+              shadowOffset: { width: 0, height: 4 }, // Shadow positioned below the tab
+              shadowOpacity: 0.7, // Moderate shadow visibility
+              shadowRadius: 6, // Diffused shadow edge
               borderTopColor: theme.colors.background,
               backgroundColor: theme.colors.background,
               paddingBottom: 0,
-              borderBottomWidth: 0,
               height: 70,
+              // Optional: add a very subtle border to enhance shadow appearance
+              borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+              borderBottomWidth: 0.5,
             },
             tabBarActiveTintColor: theme.colors.primary,
             tabBarInactiveTintColor: theme.colors.tabBarInactive,

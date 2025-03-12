@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
         marginTop: 0
     },
     fixedHeader: {
-        paddingTop: 10,
+        paddingTop: 15,
         zIndex: 1,
     },
     mainTitle: {

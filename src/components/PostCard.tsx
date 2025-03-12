@@ -10,6 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { RootStackParamList, DiscoverTabParamList } from '@/types';
 import { theme } from '@/context/ThemeContext';
+import * as Haptics from 'expo-haptics';
 
 type PostCardNavigationProp = CompositeNavigationProp<
     BottomTabNavigationProp<DiscoverTabParamList>,
@@ -30,12 +31,26 @@ export default function PostCard({ post }: { post: Post }) {
     console.log(post.saved)
 
     const handleSave = () => {
+        console.log("handling save from post card")
+
+        // Add haptic feedback when saving/unsaving
+        if (isSaved) {
+            // When unsaving, provide a lighter impact
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        } else {
+            // When saving, provide a success notification feeling
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+        }
+
         setIsSaved(!isSaved);
         toggleSave(
             { post: post, saved: isSaved },
             {
                 onError: () => {
+                    console.log("error saving!")
                     setIsSaved(isSaved);
+                    // Add error haptic feedback on failure
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                 }
             }
         );
@@ -142,7 +157,7 @@ const styles = StyleSheet.create({
         shadowColor: 'black',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.9,
-        shadowRadius: 8,
+        shadowRadius: 4,
         elevation: 2,
         backgroundColor: theme.colors.light_background_1
         // overflow: 'hidden',

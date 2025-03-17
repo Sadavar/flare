@@ -59,7 +59,10 @@ export default function PostCard({ post }: { post: Post }) {
     return (
         <View style={styles.postContainer}>
             <TouchableOpacity
-                onPress={() => navigation.navigate('PostDetails', { post: post })}
+                onPress={() => {
+                    console.log("navigating")
+                    navigation.navigate('PostDetails', { post: post, viewType: "StandardView" })
+                }}
             >
                 <Image
                     source={{ uri: post.image_url }}

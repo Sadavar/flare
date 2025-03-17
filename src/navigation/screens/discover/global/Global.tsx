@@ -57,7 +57,7 @@ export function Global() {
                     name="PostDetails"
                     component={PostDetails}
                     options={({ navigation }) => ({
-                        headerShown: true,
+                        headerShown: false,
                         headerTitle: '',
                         headerStyle: {
                             backgroundColor: theme.colors.background

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Animated, StyleSheet, Dimensions } from 'react-native';
+import { View, Animated, StyleSheet } from 'react-native';
 import { theme } from '@/context/ThemeContext';
 
 interface DotStreamProps {
@@ -13,15 +13,15 @@ export function DotStream({
     color = theme.colors.primary,
     speed = 2.5
 }: DotStreamProps) {
-    const dots = [...Array(5)].map(() => ({
+    const dotRefs = React.useRef([...Array(5)].map(() => ({
         scale: new Animated.Value(0),
         translateX: new Animated.Value(0)
-    }));
+    }))).current;
 
     const dotSize = size * 0.18;
 
     useEffect(() => {
-        const animations = dots.map((dot, index) => {
+        const animations = dotRefs.map((dot, index) => {
             const delay = -(speed * 1000 * 0.2 * index);
 
             return Animated.loop(
@@ -59,16 +59,16 @@ export function DotStream({
             );
         });
 
-        animations.forEach(animation => animation.start());
+        Animated.parallel(animations).start();
 
         return () => {
             animations.forEach(animation => animation.stop());
         };
-    }, []);
+    }, [size, speed, dotRefs]);
 
     return (
-        <View style={[styles.container, { width: size, height: dotSize }]}>
-            {dots.map((dot, index) => (
+        <View style={[styles.container, { width: size, height: dotSize * 2 }]}>
+            {dotRefs.map((dot, index) => (
                 <Animated.View
                     key={index}
                     style={[
@@ -93,11 +93,11 @@ const styles = StyleSheet.create({
     container: {
         position: 'relative',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
     },
     dot: {
         position: 'absolute',
         borderRadius: 999,
-        left: -5,
+        left: 0,
     }
 }); 

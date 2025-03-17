@@ -63,12 +63,14 @@ function TopTabNavigator() {
             },
             tabBarActiveTintColor: theme.colors.primary,
             tabBarInactiveTintColor: theme.colors.tabBarInactive,
+            headerShown: false,
           }}
         >
           <TopTab.Screen
             name="Global"
             component={Global}
             options={{
+              headerShown: false,
               tabBarLabel: '',
               tabBarIcon: ({ color }) => (
                 <MaterialIcons name="public" size={30} color={color} />

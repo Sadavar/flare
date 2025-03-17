@@ -1,5 +1,8 @@
 import { Modalize } from 'react-native-modalize';
 
+// Define a union type for view types
+export type PostViewType = "StandardView" | "FriendsView" | "ProfileView";
+
 export type RootStackParamList = {
     Login: undefined;
     Username: undefined;
@@ -26,14 +29,21 @@ export type GlobalStackParamList = {
         postData?: Post;
     };
     UserAllPosts: { username: string };
-    PostDetails: { post: Post };
+    PostDetails: {
+        post: Post;
+        showBackButton?: boolean;
+        viewType?: PostViewType; // Added viewType here for consistency
+    };
     Search: undefined;
 };
 
 export type FriendsStackParamList = {
     FriendsFeed: undefined;
     UserProfile: { username: string };
-    PostDetails: { post: Post };
+    PostDetails: {
+        post: Post;
+        viewType?: PostViewType; // Added viewType here for consistency
+    };
 };
 
 export type DiscoverTabParamList = {
@@ -52,20 +62,29 @@ export type DiscoverTabParamList = {
     Search: {
         initialFilter?: 'users' | 'brands' | 'styles';
     };
-    PostDetails: { post: Post };
+    PostDetails: {
+        post: Post,
+        viewType: PostViewType
+    };
     UserProfile: { username: string };
 };
 
 export type BrandsStackParamList = {
     BrandsScreen: undefined;
     BrandDetails: { brandId: number; brandName: string };
-    PostDetails: { post: Post };
+    PostDetails: {
+        post: Post,
+        viewType: PostViewType  // Standardized the viewType parameter
+    };
     UserProfile: { username: string };
 };
 
 export type ProfileStackParamList = {
     ProfileMain: undefined;
-    PostDetails: { post: Post };
+    PostDetails: {
+        post: Post;
+        viewType?: PostViewType; // Added viewType here for consistency
+    };
     PostEdit: { post: Post };
     AllPosts: {
         type: 'posts' | 'saved';
@@ -76,7 +95,6 @@ export type ProfileStackParamList = {
 export type PostStackParamList = {
     CreatePost: undefined;
 };
-
 
 export interface Post {
     uuid: string;
@@ -114,4 +132,3 @@ export interface Color {
 interface PostScreenProps {
     postModalRef: React.RefObject<Modalize>;
 }
-

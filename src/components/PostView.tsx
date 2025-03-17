@@ -15,24 +15,28 @@ import ColorDisplay from './ColorDisplay';
 import { theme } from '@/context/ThemeContext';
 import { CustomText } from './CustomText';
 
-// Get screen width
-const SCREEN_WIDTH = Dimensions.get('window').width;
+// Get screen dimensions
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface PostViewProps {
     post: Post;
+    viewType?: "StandardView" | "FriendsView" | "ProfileView"
 }
 
-export function PostView({ post }: PostViewProps) {
+export function PostView({ post, viewType }: PostViewProps) {
     const { username: currentUsername } = useSession();
     const navigation = useNavigation();
-    const [showTags, setShowTags] = useState(false); // Changed to false by default
+    const [showTags, setShowTags] = useState(false);
     const [isImageLoaded, setIsImageLoaded] = useState(false);
-    const [imageHeight, setImageHeight] = useState(undefined);
+    // Fixed image height at 70% of screen height
+    const imageHeight = Math.round(SCREEN_HEIGHT * 0.7);
     const loadingStartTimeRef = useRef(Date.now());
-    const fadeAnim = useRef(new Animated.Value(0)).current; // For tag fade animation
+    const fadeAnim = useRef(new Animated.Value(0)).current;
 
     const { mutate: toggleSave } = useSavePost();
     const [isSaved, setIsSaved] = useState(post.saved || false);
+
+    console.log("hi", post.brands)
 
     useEffect(() => {
         if (post && post.saved != undefined && post.saved != null)
@@ -61,19 +65,12 @@ export function PostView({ post }: PostViewProps) {
         );
     };
 
-    const handleOnLoad = useCallback((event) => {
-        // Calculate actual height based on natural image dimensions
-        const { width, height } = event.source;
-        const aspectRatio = width / height;
-        const calculatedHeight = SCREEN_WIDTH / aspectRatio;
-        setImageHeight(calculatedHeight);
+    const handleOnLoad = useCallback(() => {
         setIsImageLoaded(true);
-    }, [post?.image_url]);
+    }, []);
 
     const handleImageError = useCallback((error) => {
         console.error('Error loading image:', error);
-        // Set a default aspect ratio on error
-        setImageHeight(SCREEN_WIDTH);
         setIsImageLoaded(true);
     }, []);
 
@@ -107,8 +104,24 @@ export function PostView({ post }: PostViewProps) {
     return (
         <ScrollView style={styles.container}>
             <View style={styles.header}>
+                {viewType === "StandardView" && (
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <MaterialIcons
+                            name="arrow-back-ios"
+                            size={24}
+                            color={theme.colors.text}
+                        />
+                    </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
-                    style={styles.userInfo}
+                    style={[
+                        styles.userInfo,
+                        viewType !== "StandardView" && styles.userInfoWithPadding
+                    ]}
                     onPress={() => handleUserPress(post.username)}
                     activeOpacity={1}
                 >
@@ -118,8 +131,7 @@ export function PostView({ post }: PostViewProps) {
                     <CustomText style={styles.username}>@{post.username}</CustomText>
                 </TouchableOpacity>
 
-                {/* Color dots added to the right side of header */}
-                {post.colors && post.colors.length > 0 && (
+                {/* {post.colors && post.colors.length > 0 && (
                     <View style={styles.colorDotsContainer}>
                         {post.colors.slice(0, 3).map((color) => (
                             <View
@@ -131,40 +143,36 @@ export function PostView({ post }: PostViewProps) {
                             />
                         ))}
                     </View>
-                )}
+                )} */}
             </View>
+
             <View style={styles.imageContainer}>
-                {/* Hidden image for preloading that will trigger onLoad/calculate dimensions */}
-                <Image
-                    source={{ uri: post.image_url }}
-                    style={{ width: 1, height: 1, opacity: 0, position: 'absolute' }}
-                    onLoad={handleOnLoad}
-                    onError={handleImageError}
-                    priority="high"
-                    cachePolicy="memory-disk"
-                />
+                {!isImageLoaded && (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={theme.colors.primary} />
+                    </View>
+                )}
 
                 <TouchableOpacity
                     onPress={toggleTagsVisibility}
                     activeOpacity={1}
-                    style={{ width: '100%' }}
+                    style={{ width: '100%', height: '100%' }}
                 >
                     <Image
                         source={{ uri: post.image_url }}
-                        style={[
-                            styles.image,
-                            { height: imageHeight }
-                        ]}
-                        contentFit="contain"
+                        style={styles.image}
+                        contentFit="cover"
                         recyclingKey={post.uuid}
                         transition={200}
                         priority="high"
+                        onLoad={handleOnLoad}
+                        onError={handleImageError}
+
                     />
                 </TouchableOpacity>
 
                 {post.brands && post.brands.length > 0 && (
                     <>
-                        {/* Brand icon toggle in bottom right */}
                         <TouchableOpacity
                             style={styles.brandToggleButton}
                             onPress={toggleTagsVisibility}
@@ -179,7 +187,6 @@ export function PostView({ post }: PostViewProps) {
                     </>
                 )}
 
-                {/* Animated brand tags */}
                 {post.brands?.map((brand) => (
                     <Animated.View
                         key={brand.id}
@@ -212,21 +219,23 @@ export function PostView({ post }: PostViewProps) {
                 </>
             )}
 
-            <View style={styles.brandsContainer}>
-                <CustomText style={styles.brandsLabel}>Featured Brands:</CustomText>
-                <View style={styles.brandsList}>
-                    {post.brands?.map((brand) => (
-                        <TouchableOpacity
-                            key={brand.id}
-                            style={styles.brandButton}
-                            onPress={() => handleBrandPress(brand.id, brand.name)}
-                            activeOpacity={1}
-                        >
-                            <CustomText style={styles.brandText}>{brand.name}</CustomText>
-                        </TouchableOpacity>
-                    ))}
+            {post.brands && post.brands.length > 0 && (
+                <View style={styles.brandsContainer}>
+                    <CustomText style={styles.brandsLabel}>Featured Brands:</CustomText>
+                    <View style={styles.brandsList}>
+                        {post.brands?.map((brand) => (
+                            <TouchableOpacity
+                                key={brand.id}
+                                style={styles.brandButton}
+                                onPress={() => handleBrandPress(brand.id, brand.name)}
+                                activeOpacity={1}
+                            >
+                                <CustomText style={styles.brandText}>{brand.name}</CustomText>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
                 </View>
-            </View>
+            )}
 
             {post.styles && post.styles.length > 0 && (
                 <View style={styles.stylesContainer}>
@@ -257,7 +266,7 @@ export function PostView({ post }: PostViewProps) {
                 </TouchableOpacity>
             )}
 
-        </ScrollView >
+        </ScrollView>
     );
 }
 
@@ -268,12 +277,22 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 15,
-        justifyContent: 'space-between', // This pushes elements to opposite sides
+        paddingTop: 15,
+        paddingBottom: 15,
+        paddingRight: 15,
+        justifyContent: 'space-between',
+    },
+    backButton: {
+        marginRight: 5,
+        paddingLeft: 5
     },
     userInfo: {
         flexDirection: 'row',
         alignItems: 'center',
+        flex: 1,
+    },
+    userInfoWithPadding: {
+        paddingLeft: 5,
     },
     userIcon: {
         width: 32,
@@ -307,16 +326,19 @@ const styles = StyleSheet.create({
         width: '100%',
         backgroundColor: '#f0f0f0',
         marginBottom: 15,
-        minHeight: 200, // Minimum height for loading state
+        height: Math.round(SCREEN_HEIGHT * 0.6), // Fixed at 70% of screen height
     },
     loadingContainer: {
+        position: 'absolute',
         width: '100%',
-        height: 300,
+        height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
+        zIndex: 1,
     },
     image: {
         width: '100%',
+        height: '100%',
         backgroundColor: '#f0f0f0',
     },
     description: {

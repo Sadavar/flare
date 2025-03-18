@@ -124,11 +124,21 @@ function MainTabs() {
         screenOptions={{
           headerShown: false,
           tabBarShowLabel: false,
+          // tabBarStyle: {
+          //   elevation: 0,
+          //   borderTopWidth: 1,
+          //   borderTopColor: theme.colors.background,
+          //   backgroundColor: theme.colors.background,
+          // },
           tabBarStyle: {
-            elevation: 0,
-            borderTopWidth: 1,
-            borderTopColor: theme.colors.background,
+            elevation: 8, // Increased elevation for Android shadow
+            shadowColor: 'rgba(0, 0, 0, 1)', // Shadow color with transparency
+            shadowOffset: { width: 0, height: 4 }, // Shadow positioned below the tab
+            shadowOpacity: 0.7, // Moderate shadow visibility
+            shadowRadius: 12, // Diffused shadow edge
             backgroundColor: theme.colors.background,
+            borderTopColor: theme.colors.background,
+            height: "70"
           },
           tabBarActiveTintColor: theme.colors.primary,
           tabBarInactiveTintColor: theme.colors.tabBarInactive,

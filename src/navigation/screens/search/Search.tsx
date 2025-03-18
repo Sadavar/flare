@@ -14,7 +14,7 @@ export function Search() {
     const navigation = useNavigation<NavigationProp<DiscoverTabParamList>>();
     const { theme } = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
-    const initialFilter = route.params?.initialFilter || 'users';
+    const initialFilter = route.params?.initialFilter || 'brands';
     console.log("initialFilter", initialFilter);
     const [searchMode, setSearchMode] = useState<'users' | 'brands' | 'styles'>(initialFilter);
     console.log("searchMode", searchMode);
@@ -230,27 +230,7 @@ export function Search() {
             </View>
 
             <View style={styles.filterContainer}>
-                <TouchableOpacity
-                    onPress={() => handleSearch('users')}
-                    style={[
-                        styles.filter,
-                        searchMode === 'users' ?
-                            { backgroundColor: theme.colors.primary } :
-                            { backgroundColor: theme.colors.light_background_1 }
-                    ]}
-                >
-                    <MaterialIcons
-                        name="person"
-                        size={20}
-                        color={searchMode === 'users' ? '#fff' : theme.colors.text}
-                    />
-                    <CustomText style={[
-                        styles.filterText,
-                        { color: searchMode === 'users' ? '#fff' : theme.colors.text }
-                    ]}>
-                        Users
-                    </CustomText>
-                </TouchableOpacity>
+
 
                 <TouchableOpacity
                     onPress={() => handleSearch('brands')}
@@ -271,6 +251,28 @@ export function Search() {
                         { color: searchMode === 'brands' ? '#fff' : theme.colors.text }
                     ]}>
                         Brands
+                    </CustomText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    onPress={() => handleSearch('users')}
+                    style={[
+                        styles.filter,
+                        searchMode === 'users' ?
+                            { backgroundColor: theme.colors.primary } :
+                            { backgroundColor: theme.colors.light_background_1 }
+                    ]}
+                >
+                    <MaterialIcons
+                        name="person"
+                        size={20}
+                        color={searchMode === 'users' ? '#fff' : theme.colors.text}
+                    />
+                    <CustomText style={[
+                        styles.filterText,
+                        { color: searchMode === 'users' ? '#fff' : theme.colors.text }
+                    ]}>
+                        Users
                     </CustomText>
                 </TouchableOpacity>
 
@@ -378,6 +380,7 @@ const styles = StyleSheet.create({
     brandIconText: {
         fontSize: 18,
         fontWeight: 'bold',
+        color: theme.colors.background
     },
     resultTextContainer: {
         flex: 1,

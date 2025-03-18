@@ -18,6 +18,9 @@ import { CustomText } from './CustomText';
 // Get screen dimensions
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+// Constants for image loading
+const BLUR_HASH = 'L6PZfSi_.AyE_3t7t7R**0o#DgR4'; // Default blurhash for image placeholders
+
 interface PostViewProps {
     post: Post;
     viewType?: "StandardView" | "FriendsView" | "ProfileView"
@@ -28,32 +31,98 @@ export function PostView({ post, viewType }: PostViewProps) {
     const navigation = useNavigation();
     const [showTags, setShowTags] = useState(false);
     const [isImageLoaded, setIsImageLoaded] = useState(false);
-    // Fixed image height at 70% of screen height
-    const imageHeight = Math.round(SCREEN_HEIGHT * 0.7);
-    const loadingStartTimeRef = useRef(Date.now());
+    const [imageLoadError, setImageLoadError] = useState(false);
+    const [showLoader, setShowLoader] = useState(false);
+
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const imageOpacity = useRef(new Animated.Value(0)).current;
+    const loaderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const { mutate: toggleSave } = useSavePost();
     const [isSaved, setIsSaved] = useState(post.saved || false);
 
-    console.log("hi", post.brands)
-
+    // Update saved status when post changes
     useEffect(() => {
-        if (post && post.saved != undefined && post.saved != null)
+        if (post && post.saved !== undefined && post.saved !== null)
             setIsSaved(post.saved)
-    }, [post])
+    }, [post]);
 
     // Animation effect for tags
     useEffect(() => {
         Animated.timing(fadeAnim, {
-            toValue: showTags ? 1 : 0,
+            toValue: showTags && isImageLoaded ? 1 : 0,
             duration: 200,
             useNativeDriver: true,
         }).start();
-    }, [showTags, fadeAnim]);
+    }, [showTags, fadeAnim, isImageLoaded]);
+
+    // Set up delayed loader
+    useEffect(() => {
+        if (!isImageLoaded && !imageLoadError) {
+            // Clear any existing timeout
+            if (loaderTimeoutRef.current) {
+                clearTimeout(loaderTimeoutRef.current);
+            }
+
+            // Set a new timeout to show loader after 1 second
+            loaderTimeoutRef.current = setTimeout(() => {
+                if (!isImageLoaded && !imageLoadError) {
+                    setShowLoader(true);
+                }
+            }, 1000);
+        } else {
+            // Image is loaded or errored, hide loader
+            setShowLoader(false);
+
+            // Clear timeout if it exists
+            if (loaderTimeoutRef.current) {
+                clearTimeout(loaderTimeoutRef.current);
+                loaderTimeoutRef.current = null;
+            }
+        }
+
+        // Clean up timeout on component unmount
+        return () => {
+            if (loaderTimeoutRef.current) {
+                clearTimeout(loaderTimeoutRef.current);
+                loaderTimeoutRef.current = null;
+            }
+        };
+    }, [isImageLoaded, imageLoadError]);
+
+    // Animation for image fade-in
+    const handleImageLoad = useCallback(() => {
+        setIsImageLoaded(true);
+        Animated.timing(imageOpacity, {
+            toValue: 1,
+            duration: 0,
+            useNativeDriver: true,
+        }).start();
+    }, [imageOpacity]);
+
+    const handleImageError = useCallback(() => {
+        console.error("Failed to load image:", post.image_url);
+        setImageLoadError(true);
+        setIsImageLoaded(true); // Consider the loading process complete, even with error
+    }, [post.image_url]);
+
+    // Pre-load the image when component mounts
+    useEffect(() => {
+        if (post?.image_url) {
+            // Reset states on new image
+            setIsImageLoaded(false);
+            setImageLoadError(false);
+            setShowLoader(false);
+            imageOpacity.setValue(0);
+
+            // Optionally pre-cache the image
+            Image.prefetch(post.image_url).catch(() => {
+                console.warn("Failed to prefetch image:", post.image_url);
+            });
+        }
+    }, [post?.image_url, imageOpacity]);
 
     const handleSave = () => {
-        console.log("handling save from post view")
         setIsSaved(!isSaved);
         toggleSave(
             { post: post, saved: isSaved },
@@ -64,15 +133,6 @@ export function PostView({ post, viewType }: PostViewProps) {
             }
         );
     };
-
-    const handleOnLoad = useCallback(() => {
-        setIsImageLoaded(true);
-    }, []);
-
-    const handleImageError = useCallback((error) => {
-        console.error('Error loading image:', error);
-        setIsImageLoaded(true);
-    }, []);
 
     if (!post) {
         return (
@@ -130,26 +190,21 @@ export function PostView({ post, viewType }: PostViewProps) {
                     </View>
                     <CustomText style={styles.username}>@{post.username}</CustomText>
                 </TouchableOpacity>
-
-                {/* {post.colors && post.colors.length > 0 && (
-                    <View style={styles.colorDotsContainer}>
-                        {post.colors.slice(0, 3).map((color) => (
-                            <View
-                                key={color.id}
-                                style={[
-                                    styles.colorDot,
-                                    { backgroundColor: color.hex_value }
-                                ]}
-                            />
-                        ))}
-                    </View>
-                )} */}
             </View>
 
             <View style={styles.imageContainer}>
-                {!isImageLoaded && (
+                {/* Loading indicator - only shown after 1 second delay */}
+                {showLoader && !isImageLoaded && !imageLoadError && (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={theme.colors.primary} />
+                    </View>
+                )}
+
+                {/* Error state */}
+                {imageLoadError && (
+                    <View style={styles.errorContainer}>
+                        <MaterialIcons name="broken-image" size={50} color={theme.colors.light_background_3} />
+                        <CustomText style={styles.errorText}>Unable to load image</CustomText>
                     </View>
                 )}
 
@@ -158,33 +213,38 @@ export function PostView({ post, viewType }: PostViewProps) {
                     activeOpacity={1}
                     style={{ width: '100%', height: '100%' }}
                 >
-                    <Image
-                        source={{ uri: post.image_url }}
-                        style={styles.image}
-                        contentFit="cover"
-                        recyclingKey={post.uuid}
-                        transition={200}
-                        priority="high"
-                        onLoad={handleOnLoad}
-                        onError={handleImageError}
-
-                    />
+                    <Animated.View style={{ opacity: imageOpacity, width: '100%', height: '100%' }}>
+                        <Image
+                            source={{ uri: post.image_url }}
+                            style={styles.image}
+                            contentFit="cover"
+                            recyclingKey={post.uuid}
+                            priority="high"
+                            placeholder={BLUR_HASH}
+                            contentPosition="center"
+                            cachePolicy="memory-disk"
+                            onLoad={handleImageLoad}
+                            onError={handleImageError}
+                        />
+                    </Animated.View>
                 </TouchableOpacity>
 
                 {post.brands && post.brands.length > 0 && (
-                    <>
-                        <TouchableOpacity
-                            style={styles.brandToggleButton}
-                            onPress={toggleTagsVisibility}
-                            activeOpacity={0.7}
-                        >
-                            <MaterialIcons
-                                name="local-offer"
-                                size={22}
-                                color={showTags ? theme.colors.light_background_3 : "white"}
-                            />
-                        </TouchableOpacity>
-                    </>
+                    <TouchableOpacity
+                        style={[
+                            styles.brandToggleButton,
+                            isImageLoaded ? null : styles.hidden
+                        ]}
+                        onPress={toggleTagsVisibility}
+                        activeOpacity={0.7}
+                        disabled={!isImageLoaded}
+                    >
+                        <MaterialIcons
+                            name="local-offer"
+                            size={22}
+                            color={showTags ? theme.colors.light_background_3 : "white"}
+                        />
+                    </TouchableOpacity>
                 )}
 
                 {post.brands?.map((brand) => (
@@ -196,7 +256,6 @@ export function PostView({ post, viewType }: PostViewProps) {
                                 left: `${brand.x_coord}%`,
                                 top: `${brand.y_coord}%`,
                                 opacity: fadeAnim,
-                                display: isImageLoaded ? 'flex' : 'none'
                             },
                         ]}
                     >
@@ -307,26 +366,13 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
     },
-    colorDotsContainer: {
-        flexDirection: 'row',
-        gap: 4,
-    },
-    colorDot: {
-        width: 16,
-        height: 16,
-        borderRadius: 4,
-        shadowColor: 'black',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 2,
-    },
     imageContainer: {
         position: 'relative',
         width: '100%',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.background,
         marginBottom: 15,
-        height: Math.round(SCREEN_HEIGHT * 0.6), // Fixed at 70% of screen height
+        height: Math.round(SCREEN_HEIGHT * 0.6),
+        overflow: 'hidden',
     },
     loadingContainer: {
         position: 'absolute',
@@ -334,12 +380,26 @@ const styles = StyleSheet.create({
         height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: theme.colors.background,
         zIndex: 1,
+    },
+    errorContainer: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: theme.colors.background,
+        zIndex: 1,
+    },
+    errorText: {
+        marginTop: 10,
+        color: theme.colors.light_background_3,
     },
     image: {
         width: '100%',
         height: '100%',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.background,
     },
     description: {
         fontSize: 14,
@@ -425,5 +485,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 2,
+    },
+    hidden: {
+        display: 'none',
     },
 });

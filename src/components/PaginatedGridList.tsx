@@ -161,7 +161,7 @@ export function PaginatedGridList({
             <>
                 {header}
                 <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No items found.</Text>
+                    <Text style={styles.emptyText}>No items found</Text>
                 </View>
             </>
         );
@@ -255,7 +255,6 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '100%',
     },
     emptyText: {
         fontSize: 16,

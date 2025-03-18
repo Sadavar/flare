@@ -245,13 +245,12 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     emptyContainer: {
-        padding: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
+        backgroundColor: 'red',
+        color: 'red'
+
     },
     emptyText: {
         fontSize: 16,
-        color: '#666',
         textAlign: 'center',
     },
     loadingText: {

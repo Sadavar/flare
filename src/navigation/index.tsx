@@ -12,6 +12,7 @@ import { PostModal } from '@/components/PostModal';
 import type { RootStackParamList, MainTabParamList, DiscoverTabParamList, ProfileStackParamList } from '../types';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { theme } from '@/context/ThemeContext';
+import { Image } from 'expo-image';
 
 // Import screens
 import { Login } from './screens/auth/Login';
@@ -35,6 +36,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const BottomTab = createBottomTabNavigator<MainTabParamList>();
 const TopTab = createMaterialTopTabNavigator<DiscoverTabParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+
 
 // Top Tab Navigator for Discover section
 function TopTabNavigator() {
@@ -73,7 +75,10 @@ function TopTabNavigator() {
               headerShown: false,
               tabBarLabel: '',
               tabBarIcon: ({ color }) => (
-                <MaterialIcons name="public" size={30} color={color} />
+                <Image
+                  source={require('@/assets/icons/Global.png')}
+                  style={{ width: 30, height: 30, tintColor: color }}
+                />
               ),
             }}
           />
@@ -83,7 +88,11 @@ function TopTabNavigator() {
             options={{
               tabBarLabel: '',
               tabBarIcon: ({ color }) => (
-                <MaterialIcons name="group" size={30} color={color} />
+                <Image
+                  source={require('@/assets/icons/Friends.png')}
+                  style={{ width: 35, height: 35, tintColor: color }}
+                />
+                // <MaterialIcons name="group" size={30} color={color} />
               ),
             }}
           />
@@ -93,7 +102,11 @@ function TopTabNavigator() {
             options={{
               tabBarLabel: '',
               tabBarIcon: ({ color }) => (
-                <MaterialIcons name="sell" size={30} color={color} />
+                <Image
+                  source={require('@/assets/icons/Brands.png')}
+                  style={{ width: 30, height: 30, tintColor: color }}
+                />
+                // <MaterialIcons name="sell" size={30} color={color} />
               ),
             }}
           />
@@ -103,7 +116,11 @@ function TopTabNavigator() {
             options={{
               tabBarLabel: '',
               tabBarIcon: ({ color }) => (
-                <MaterialIcons name="search" size={30} color={color} />
+                <Image
+                  source={require('@/assets/icons/Search.png')}
+                  style={{ width: 30, height: 30, tintColor: color }}
+                />
+                // <MaterialIcons name="search" size={30} color={color} />
               ),
             }}
           />
@@ -149,7 +166,11 @@ function MainTabs() {
           component={TopTabNavigator}
           options={{
             tabBarIcon: ({ color }) => (
-              <MaterialIcons name="explore" size={30} color={color} />
+              <Image
+                source={require('@/assets/icons/Discover.png')}
+                style={{ width: 30, height: 30, tintColor: color }}
+              />
+              // <MaterialIcons name="explore" size={30} color={color} />
             ),
           }}
         />

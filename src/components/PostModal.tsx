@@ -94,6 +94,7 @@ export function PostModal({ modalRef }: PostModalProps) {
 const styles = StyleSheet.create({
     content: {
         padding: 20,
+        paddingBottom: 60
     },
     title: {
         fontSize: 18,
@@ -104,9 +105,11 @@ const styles = StyleSheet.create({
     option: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         paddingVertical: 15,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: theme.colors.light_background_1,
+
     },
     optionDisabled: {
         opacity: 0.6,

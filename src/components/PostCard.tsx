@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
         borderRadius: 6,
     },
     brandText: {
-        fontSize: 10,
+        fontSize: 12,
         color: 'white',
     },
     loadingContainer: {

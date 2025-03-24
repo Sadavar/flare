@@ -50,16 +50,16 @@ function TopTabNavigator() {
             tabBarPressColor: 'transparent',
             swipeEnabled: true,
             tabBarStyle: {
-              elevation: 8, // Increased elevation for Android shadow
-              shadowColor: 'rgba(0, 0, 0, 0.3)', // Shadow color with transparency
-              shadowOffset: { width: 0, height: 4 }, // Shadow positioned below the tab
-              shadowOpacity: 0.7, // Moderate shadow visibility
-              shadowRadius: 6, // Diffused shadow edge
+              elevation: 8,
+              shadowColor: 'rgba(0, 0, 0, 0.3)',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.7,
+              shadowRadius: 6,
               borderTopColor: theme.colors.background,
               backgroundColor: theme.colors.background,
               paddingBottom: 0,
-              height: 70,
-              // Optional: add a very subtle border to enhance shadow appearance
+              height: 60,
+
               borderBottomColor: 'rgba(0, 0, 0, 0.05)',
               borderBottomWidth: 0.5,
             },
@@ -73,12 +73,23 @@ function TopTabNavigator() {
             component={Global}
             options={{
               headerShown: false,
+              // tabBarLabel: 'Global',
+              // tabBarLabelStyle: {
+              //   fontSize: 14,
+              //   fontWeight: 'bold'
+              // }
               tabBarLabel: '',
               tabBarIcon: ({ color }) => (
-                <Image
-                  source={require('@/assets/icons/Global.png')}
-                  style={{ width: 30, height: 30, tintColor: color }}
-                />
+                <View style={{
+                  flex: 1,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Image
+                    source={require('@/assets/icons/Global.png')}
+                    style={{ width: 26, height: 26, tintColor: color }}
+                  />
+                </View>
               ),
             }}
           />
@@ -86,13 +97,23 @@ function TopTabNavigator() {
             name="Friends"
             component={Friends}
             options={{
+              // tabBarLabel: 'Friends',
+              // tabBarLabelStyle: {
+              //   fontSize: 14,
+              //   fontWeight: 'bold'
+              // }
               tabBarLabel: '',
               tabBarIcon: ({ color }) => (
-                <Image
-                  source={require('@/assets/icons/Friends.png')}
-                  style={{ width: 35, height: 35, tintColor: color }}
-                />
-                // <MaterialIcons name="group" size={30} color={color} />
+                <View style={{
+                  flex: 1,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Image
+                    source={require('@/assets/icons/Friends.png')}
+                    style={{ width: 30, height: 30, tintColor: color }}
+                  />
+                </View>
               ),
             }}
           />
@@ -100,13 +121,23 @@ function TopTabNavigator() {
             name="Brands"
             component={Brands}
             options={{
+              // tabBarLabel: 'Brands',
+              // tabBarLabelStyle: {
+              //   fontSize: 14,
+              //   fontWeight: 'bold'
+              // }
               tabBarLabel: '',
               tabBarIcon: ({ color }) => (
-                <Image
-                  source={require('@/assets/icons/Brands.png')}
-                  style={{ width: 30, height: 30, tintColor: color }}
-                />
-                // <MaterialIcons name="sell" size={30} color={color} />
+                <View style={{
+                  flex: 1,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Image
+                    source={require('@/assets/icons/Brands.png')}
+                    style={{ width: 26, height: 26, tintColor: color }}
+                  />
+                </View>
               ),
             }}
           />
@@ -116,11 +147,16 @@ function TopTabNavigator() {
             options={{
               tabBarLabel: '',
               tabBarIcon: ({ color }) => (
-                <Image
-                  source={require('@/assets/icons/Search.png')}
-                  style={{ width: 30, height: 30, tintColor: color }}
-                />
-                // <MaterialIcons name="search" size={30} color={color} />
+                <View style={{
+                  flex: 1,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Image
+                    source={require('@/assets/icons/Search.png')}
+                    style={{ width: 26, height: 26, tintColor: color }}
+                  />
+                </View>
               ),
             }}
           />

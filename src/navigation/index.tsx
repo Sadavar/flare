@@ -18,10 +18,9 @@ import { Image } from 'expo-image';
 import { Login } from './screens/auth/Login';
 import { Username } from './screens/auth/Username';
 import { Post } from './screens/post/Post';
-import { Profile } from './screens/profile/Profile';
 import { Global } from './screens/discover/global/Global';
 import { Friends } from './screens/discover/friends/Friends';
-import { Brands } from './screens/discover/brands/Brands';
+import { Brands } from './screens/brands/Brands';
 import { Search } from './screens/search/Search';
 import { Layout } from '@/components/Layout';
 import { UserProfile } from './screens/discover/UserProfile';
@@ -37,8 +36,6 @@ const BottomTab = createBottomTabNavigator<MainTabParamList>();
 const TopTab = createMaterialTopTabNavigator<DiscoverTabParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 
-
-// Top Tab Navigator for Discover section
 function TopTabNavigator() {
   return (
     <Layout>
@@ -58,106 +55,37 @@ function TopTabNavigator() {
               borderTopColor: theme.colors.background,
               backgroundColor: theme.colors.background,
               paddingBottom: 0,
-              height: 60,
+              height: 50,
+              alignSelf: "center",
+              width: "50%",
 
               borderBottomColor: 'rgba(0, 0, 0, 0.05)',
               borderBottomWidth: 0.5,
             },
             tabBarActiveTintColor: theme.colors.primary,
             tabBarInactiveTintColor: theme.colors.tabBarInactive,
-            headerShown: false,
           }}
         >
           <TopTab.Screen
             name="Global"
             component={Global}
             options={{
-              headerShown: false,
-              // tabBarLabel: 'Global',
-              // tabBarLabelStyle: {
-              //   fontSize: 14,
-              //   fontWeight: 'bold'
-              // }
-              tabBarLabel: '',
-              tabBarIcon: ({ color }) => (
-                <View style={{
-                  flex: 1,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                  <Image
-                    source={require('@/assets/icons/Global.png')}
-                    style={{ width: 26, height: 26, tintColor: color }}
-                  />
-                </View>
-              ),
+              tabBarLabel: 'Global',
+              tabBarLabelStyle: {
+                fontSize: 14,
+                fontWeight: 'bold'
+              }
             }}
           />
           <TopTab.Screen
             name="Friends"
             component={Friends}
             options={{
-              // tabBarLabel: 'Friends',
-              // tabBarLabelStyle: {
-              //   fontSize: 14,
-              //   fontWeight: 'bold'
-              // }
-              tabBarLabel: '',
-              tabBarIcon: ({ color }) => (
-                <View style={{
-                  flex: 1,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                  <Image
-                    source={require('@/assets/icons/Friends.png')}
-                    style={{ width: 30, height: 30, tintColor: color }}
-                  />
-                </View>
-              ),
-            }}
-          />
-          <TopTab.Screen
-            name="Brands"
-            component={Brands}
-            options={{
-              // tabBarLabel: 'Brands',
-              // tabBarLabelStyle: {
-              //   fontSize: 14,
-              //   fontWeight: 'bold'
-              // }
-              tabBarLabel: '',
-              tabBarIcon: ({ color }) => (
-                <View style={{
-                  flex: 1,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                  <Image
-                    source={require('@/assets/icons/Brands.png')}
-                    style={{ width: 26, height: 26, tintColor: color }}
-                  />
-                </View>
-              ),
-            }}
-          />
-          <TopTab.Screen
-            name="Search"
-            component={Search}
-            options={{
-              tabBarLabel: '',
-              tabBarIcon: ({ color }) => (
-                <View style={{
-                  flex: 1,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                  <Image
-                    source={require('@/assets/icons/Search.png')}
-                    style={{ width: 26, height: 26, tintColor: color }}
-                  />
-                </View>
-              ),
+              tabBarLabel: 'Friends',
+              tabBarLabelStyle: {
+                fontSize: 14,
+                fontWeight: 'bold'
+              }
             }}
           />
         </TopTab.Navigator>
@@ -177,12 +105,6 @@ function MainTabs() {
         screenOptions={{
           headerShown: false,
           tabBarShowLabel: false,
-          // tabBarStyle: {
-          //   elevation: 0,
-          //   borderTopWidth: 1,
-          //   borderTopColor: theme.colors.background,
-          //   backgroundColor: theme.colors.background,
-          // },
           tabBarStyle: {
             elevation: 8, // Increased elevation for Android shadow
             shadowColor: 'rgba(0, 0, 0, 1)', // Shadow color with transparency
@@ -206,7 +128,6 @@ function MainTabs() {
                 source={require('@/assets/icons/Discover.png')}
                 style={{ width: 30, height: 30, tintColor: color }}
               />
-              // <MaterialIcons name="explore" size={30} color={color} />
             ),
           }}
         />
@@ -232,6 +153,19 @@ function MainTabs() {
             },
           }}
         />
+        <BottomTab.Screen
+          name="Brands"
+          component={Brands}
+          options={{
+            tabBarIcon: ({ color }) => (
+              <Image
+                source={require('@/assets/icons/Brands.png')}
+                style={{ width: 30, height: 30, tintColor: color }}
+              />
+            ),
+          }}
+        />
+
         <BottomTab.Screen
           name="Profile"
           component={ProfileNavigator}

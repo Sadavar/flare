@@ -5,17 +5,18 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { BrandsStackParamList } from '@/types';
 import { BrandsScreen } from './BrandsScreen';
 import { BrandDetails } from './BrandDetails';
-import { PostDetails } from '../PostDetails';
+import { PostDetails } from '../discover/PostDetails';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { theme } from '@/context/ThemeContext';
 import { CustomText } from '@/components/CustomText';
-import { UserProfile } from '../UserProfile';
+import { UserProfile } from '../discover/UserProfile';
+import { Layout } from '@/components/Layout';
 
 const Stack = createNativeStackNavigator<BrandsStackParamList>();
 
 export function Brands() {
     return (
-        <ErrorBoundary>
+        <Layout>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="BrandsScreen" component={BrandsScreen} />
                 <Stack.Screen
@@ -57,6 +58,6 @@ export function Brands() {
                 />
                 <Stack.Screen name="PostDetails" component={PostDetails} />
             </Stack.Navigator>
-        </ErrorBoundary>
+        </Layout>
     );
 }

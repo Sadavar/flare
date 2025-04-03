@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { Layout } from '@/components/Layout';
@@ -17,7 +17,7 @@ import { RefreshControl } from 'react-native';
 
 type UserProfileRouteProp = RouteProp<DiscoverTabParamList, 'UserProfile'>;
 
-export function UserProfile() {
+export const UserProfile = React.memo(() => {
     const route = useRoute<UserProfileRouteProp>();
     const navigation = useNavigation();
     const { username, initialScreen, postData } = route.params || {};
@@ -91,7 +91,7 @@ export function UserProfile() {
         });
     }, [refetch]);
 
-    const handleFollowPress = () => {
+    const handleFollowPress = useCallback(() => {
         if (!targetUser?.id) return;
 
         toggleFollow(
@@ -106,10 +106,14 @@ export function UserProfile() {
                 }
             }
         );
-    };
+    }, [targetUser?.id, isFollowing, toggleFollow]);
 
-    // Render the profile header
-    const ProfileHeader = useCallback(() => (
+    const handlePostPress = useCallback((post) => {
+        // Post navigation logic
+    }, []);
+
+    // Memoize sections
+    const ProfileHeader = useMemo(() => (
         <View style={styles.header}>
             <View style={styles.profileSection}>
                 <View style={styles.userIcon}>
@@ -134,6 +138,17 @@ export function UserProfile() {
         </View>
     ), [username, allPosts?.length, handleRefresh]);
 
+    const PostsList = useMemo(() => (
+        <RecentPosts
+            data={allPosts}
+            isLoading={postsLoading}
+            onSeeAll={() => navigation.getParent()?.navigate('Global', {
+                screen: 'UserAllPosts',
+                params: { username }
+            })}
+        />
+    ), [allPosts, postsLoading, navigation]);
+
     if (!username) {
         return (
             <Layout>
@@ -156,7 +171,7 @@ export function UserProfile() {
                 />
             }
         >
-            <ProfileHeader />
+            {ProfileHeader}
             {currentUser && username !== currentUser.username && (
                 <TouchableOpacity
                     style={[
@@ -173,21 +188,10 @@ export function UserProfile() {
                     </CustomText>
                 </TouchableOpacity>
             )}
-            <RecentPosts
-                data={allPosts}
-                isLoading={postsLoading}
-                onSeeAll={() => navigation.getParent()?.navigate('Global', {
-                    screen: 'UserAllPosts',
-                    params: { username }
-                })}
-            />
-            {/* <SavedPosts
-                data={savedPosts}
-                onSeeAll={() => { console.log('see all saved posts clicked') }}
-            /> */}
+            {PostsList}
         </ScrollView>
     );
-}
+});
 
 const styles = StyleSheet.create({
     container: {

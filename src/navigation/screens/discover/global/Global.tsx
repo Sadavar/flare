@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { TouchableOpacity, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -11,10 +11,17 @@ import { BaseColorLayout } from '@/components/ColorLayout';
 import { theme } from '@/context/ThemeContext';
 import { CustomText } from '@/components/CustomText';
 import { UserAllPosts } from '../UserAllPosts';
+import { PostCard } from '@/components/PostCard';
+import { FlashList } from '@shopify/flash-list';
 
 const Stack = createNativeStackNavigator<GlobalStackParamList>();
 
-export function Global() {
+export const Global = React.memo(() => {
+    // Use virtualization for long lists
+    const renderItem = useCallback(({ item }) => (
+        <PostCard post={item} />
+    ), []);
+
     return (
         <ErrorBoundary>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -74,6 +81,15 @@ export function Global() {
                     })}
                 />
             </Stack.Navigator>
-        </ErrorBoundary >
+            <FlashList
+                data={posts}
+                renderItem={renderItem}
+                estimatedItemSize={350}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={5}
+                windowSize={5}
+                keyExtractor={item => item.id.toString()}
+            />
+        </ErrorBoundary>
     );
-}
+});

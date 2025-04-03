@@ -105,15 +105,17 @@ function MainTabs() {
         screenOptions={{
           headerShown: false,
           tabBarShowLabel: false,
+          lazy: true,
+          detachInactiveScreens: true,
           tabBarStyle: {
-            elevation: 8, // Increased elevation for Android shadow
-            shadowColor: 'rgba(0, 0, 0, 1)', // Shadow color with transparency
-            shadowOffset: { width: 0, height: 4 }, // Shadow positioned below the tab
-            shadowOpacity: 0.7, // Moderate shadow visibility
-            shadowRadius: 12, // Diffused shadow edge
+            elevation: 8,
+            shadowColor: 'rgba(0, 0, 0, 1)',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.7,
+            shadowRadius: 12,
             backgroundColor: theme.colors.background,
             borderTopColor: theme.colors.background,
-            height: "70"
+            height: 70
           },
           tabBarActiveTintColor: theme.colors.primary,
           tabBarInactiveTintColor: theme.colors.tabBarInactive,
@@ -126,6 +128,18 @@ function MainTabs() {
             tabBarIcon: ({ color }) => (
               <Image
                 source={require('@/assets/icons/Discover.png')}
+                style={{ width: 30, height: 30, tintColor: color }}
+              />
+            ),
+          }}
+        />
+        <BottomTab.Screen
+          name="Search"
+          component={Search}
+          options={{
+            tabBarIcon: ({ color }) => (
+              <Image
+                source={require('@/assets/icons/Search.png')}
                 style={{ width: 30, height: 30, tintColor: color }}
               />
             ),

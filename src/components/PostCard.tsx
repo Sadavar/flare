@@ -28,11 +28,8 @@ export default function PostCard({ post }: { post: Post }) {
             setIsSaved(post.saved)
     }, [post])
 
-    console.log(post.saved)
 
     const handleSave = () => {
-        console.log("handling save from post card")
-
         // Add haptic feedback when saving/unsaving
         if (isSaved) {
             // When unsaving, provide a lighter impact
@@ -47,7 +44,6 @@ export default function PostCard({ post }: { post: Post }) {
             { post: post, saved: isSaved },
             {
                 onError: () => {
-                    console.log("error saving!")
                     setIsSaved(isSaved);
                     // Add error haptic feedback on failure
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -60,7 +56,6 @@ export default function PostCard({ post }: { post: Post }) {
         <View style={styles.postContainer}>
             <TouchableOpacity
                 onPress={() => {
-                    console.log("navigating")
                     navigation.navigate('PostDetails', { post: post, viewType: "StandardView" })
                 }}
             >

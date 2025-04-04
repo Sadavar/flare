@@ -23,14 +23,12 @@ async function extractColorsFromImageURL(imageUrl: string, numColors: number = 1
     }
   }
 
-  console.log(colorCounts);
 
   const sortedColors = Object.entries(colorCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, numColors)
     .map(([color]) => color);
 
-  console.log(sortedColors);
 
   return sortedColors;
 }

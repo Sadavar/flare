@@ -32,10 +32,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const checkUser = async () => {
-        console.log('Checking user');
         setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
-        console.log('user', user);
         if (user) {
             setUser(user);
             const { data: profile } = await supabase

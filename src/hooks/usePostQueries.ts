@@ -756,7 +756,6 @@ async function checkSavedStatus(posts: any[], userId: string | undefined) {
 
     console.log('Returning posts with save status:', {
         count: posts_with_save.length,
-        posts: posts_with_save
     });
 
     return posts_with_save;

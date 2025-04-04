@@ -41,7 +41,6 @@ function MiniPostCard({ post }: { post: Post }) {
     if (!post) return null;
 
     const handlePostPress = () => {
-        console.log(route.name)
         // If we're already in a user's profile view
         if (route.name === 'ProfileMain') {
             // Stay in the current stack and just navigate to PostDetails

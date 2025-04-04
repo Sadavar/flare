@@ -206,7 +206,7 @@ export function Post() {
         const xPercent = (touchX / imageLayout.width) * 100;
         const yPercent = (touchY / imageLayout.height) * 100;
 
-        console.log(xPercent, yPercent);
+        // console.log(xPercent, yPercent);
 
         // Ensure coordinates are within bounds
         if (xPercent >= 0 && xPercent <= 100 && yPercent >= 0 && yPercent <= 100) {
@@ -304,7 +304,7 @@ export function Post() {
             let changedWidth = manipulatedImage.width;
             let changedHeight = manipulatedImage.height;
 
-            console.log(changedWidth, changedHeight);
+            // console.log(changedWidth, changedHeight);
 
             const file_id = uuid.v4().toString();
             const fileName = `outfits/${user.id}/${file_id}.jpg`;
@@ -442,7 +442,7 @@ export function Post() {
         // get original image width and height with image manipulator
         const manipulatedImage = await ImageManipulator.manipulateAsync(image)
 
-        console.log(manipulatedImage.width, manipulatedImage.height);
+        // console.log(manipulatedImage.width, manipulatedImage.height);
         let originalImageWidth = manipulatedImage.width;
         let originalImageHeight = manipulatedImage.height;
 
@@ -452,7 +452,7 @@ export function Post() {
 
         let newImageWidth = newImageHeight * aspectRatio;
 
-        console.log(newImageWidth, newImageHeight);
+        // console.log(newImageWidth, newImageHeight);
 
         setImageLayout({ width: newImageWidth, height: newImageHeight });
     }

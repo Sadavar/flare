@@ -120,7 +120,7 @@ export function BrandsScreen() {
     const PAGE_SIZE = 10;
 
     const route = useRoute();
-    console.log("route.params", route.params);
+    // console.log("route.params", route.params);
     const { selectedStyle } = route.params ? (route.params as { selectedStyle?: number | undefined }) : {};
 
     useEffect(() => {

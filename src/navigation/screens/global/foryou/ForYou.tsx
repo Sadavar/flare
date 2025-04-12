@@ -3,7 +3,7 @@ import { TouchableOpacity, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { GlobalStackParamList } from '@/types';
-import { GlobalFeed } from './GlobalFeed';
+import { ForYouFeed } from './ForYouFeed';
 import { UserProfile } from '../UserProfile';
 import { PostDetails } from '../PostDetails';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -14,11 +14,11 @@ import { UserAllPosts } from '../UserAllPosts';
 
 const Stack = createNativeStackNavigator<GlobalStackParamList>();
 
-export const Global = React.memo(() => {
+export const ForYou = React.memo(() => {
     return (
         <ErrorBoundary>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="GlobalFeed" component={GlobalFeed} />
+                <Stack.Screen name="ForYouFeed" component={ForYouFeed} />
                 <Stack.Screen
                     name="UserProfile"
                     component={UserProfile}

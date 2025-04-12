@@ -83,7 +83,7 @@ function SkeletonPostCard() {
     );
 }
 
-export function GlobalFeed() {
+export function ForYouFeed() {
     const navigation = useNavigation();
 
     const {

@@ -26,6 +26,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { MainTabParamList } from '@/types';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 
 import { ColorCard } from '@/components/ColorCard';
 import { Color } from '@/types';
@@ -282,6 +283,7 @@ export function Post() {
     const uploadPost = async () => {
         if (!image || !user) return;
         setLoading(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
 
         try {
             // First, compress and resize the image

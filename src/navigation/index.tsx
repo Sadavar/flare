@@ -18,18 +18,19 @@ import { Image } from 'expo-image';
 import { Login } from './screens/auth/Login';
 import { Username } from './screens/auth/Username';
 import { Post } from './screens/post/Post';
-import { Global } from './screens/discover/global/Global';
-import { Friends } from './screens/discover/friends/Friends';
-import { Brands } from './screens/brands/Brands';
+import { ForYou } from './screens/global/foryou/ForYou';
+import { Friends } from './screens/global/friends/Friends';
+import { Discover } from './screens/discover/Discover';
 import { Search } from './screens/search/Search';
 import { Layout } from '@/components/Layout';
-import { UserProfile } from './screens/discover/UserProfile';
+import { UserProfile } from './screens/global/UserProfile';
 import { ProfileMain } from './screens/profile/ProfileMain';
 import { PostDetails } from './screens/profile/PostDetails';
 import { PostEdit } from './screens/profile/PostEdit';
 import { FollowList } from './screens/profile/FollowList';
 import { AllPosts } from './screens/profile/AllPosts';
-import { UserAllPosts } from './screens/discover/UserAllPosts';
+import { UserAllPosts } from './screens/global/UserAllPosts';
+import Notis from './screens/notis/Notis';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const BottomTab = createBottomTabNavigator<MainTabParamList>();
@@ -41,7 +42,7 @@ function TopTabNavigator() {
     <Layout>
       <ErrorBoundary>
         <TopTab.Navigator
-          initialRouteName="Global"
+          initialRouteName="ForYou"
           screenOptions={{
             tabBarIndicatorStyle: { backgroundColor: theme.colors.light_background_1 },
             tabBarPressColor: 'transparent',
@@ -67,10 +68,10 @@ function TopTabNavigator() {
           }}
         >
           <TopTab.Screen
-            name="Global"
-            component={Global}
+            name="ForYou"
+            component={ForYou}
             options={{
-              tabBarLabel: 'Global',
+              tabBarLabel: 'For You',
               tabBarLabelStyle: {
                 fontSize: 14,
                 fontWeight: 'bold'
@@ -94,6 +95,12 @@ function TopTabNavigator() {
   );
 }
 
+const customTabIcon = (source: any, color: string) => (
+  <View style={{ paddingTop: 20, justifyContent: 'center', alignItems: 'center' }}>
+    <Image source={source} style={{ width: 25, height: 25, tintColor: color }} />
+  </View>
+);
+
 // Bottom Tab Navigator
 function MainTabs() {
   const postModalRef = useRef<Modalize>(null);
@@ -101,47 +108,39 @@ function MainTabs() {
   return (
     <>
       <BottomTab.Navigator
-        initialRouteName="Discover"
+        initialRouteName="Global"
         screenOptions={{
           headerShown: false,
           tabBarShowLabel: false,
           lazy: true,
-          detachInactiveScreens: true,
           tabBarStyle: {
-            elevation: 8,
-            shadowColor: 'rgba(0, 0, 0, 1)',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.7,
-            shadowRadius: 12,
+            // elevation: 8,
+            // shadowColor: 'rgba(0, 0, 0, 1)',
+            // shadowOffset: { width: 0, height: 4 },
+            // shadowOpacity: 0.7,
+            // shadowRadius: 12,
             backgroundColor: theme.colors.background,
-            borderTopColor: theme.colors.background,
-            height: 70
+            height: '90'
+            // borderTopColor: theme.colors.background,
           },
           tabBarActiveTintColor: theme.colors.primary,
           tabBarInactiveTintColor: theme.colors.tabBarInactive,
         }}
       >
         <BottomTab.Screen
-          name="Discover"
+          name="Global"
           component={TopTabNavigator}
           options={{
-            tabBarIcon: ({ color }) => (
-              <Image
-                source={require('@/assets/icons/Discover.png')}
-                style={{ width: 30, height: 30, tintColor: color }}
-              />
-            ),
+            tabBarIcon: ({ color }) =>
+              customTabIcon(require('@/assets/icons/Discover.png'), color)
           }}
         />
         <BottomTab.Screen
-          name="Search"
-          component={Search}
+          name="Discover"
+          component={Discover}
           options={{
             tabBarIcon: ({ color }) => (
-              <Image
-                source={require('@/assets/icons/Search.png')}
-                style={{ width: 30, height: 30, tintColor: color }}
-              />
+              customTabIcon(require('@/assets/icons/Search.png'), color)
             ),
           }}
         />
@@ -155,8 +154,33 @@ function MainTabs() {
               backgroundColor: theme.colors.background,
             },
             tabBarIcon: ({ color }) => (
-              <MaterialIcons name="add-box" size={30} color={color} />
-            ),
+              customTabIcon(require('@/assets/icons/Post.png'), color)
+              // <View
+              //   style={{
+
+              //     borderRadius: 25,
+              //     backgroundColor: theme.colors.background,
+              //     justifyContent: 'center',
+              //     alignItems: 'center',
+              //     marginBottom: 30, // lift it above the tab bar
+              //     // shadowColor: '#000',
+              //     // shadowOffset: { width: 0, height: 2 },
+              //     // shadowOpacity: 0.3,
+              //     // shadowRadius: 4,
+              //     // elevation: 5,
+              //   }}
+              // >
+              //   <Image
+              //     source={require('@/assets/icons/Post.png')}
+              //     style={{
+              //       width: 38,
+              //       height: 38,
+              //       tintColor: color,
+              //     }}
+              //   />
+              // </View>
+            )
+
           }}
           listeners={{
             tabPress: (e) => {
@@ -168,14 +192,11 @@ function MainTabs() {
           }}
         />
         <BottomTab.Screen
-          name="Brands"
-          component={Brands}
+          name="Notis"
+          component={Notis}
           options={{
             tabBarIcon: ({ color }) => (
-              <Image
-                source={require('@/assets/icons/Brands.png')}
-                style={{ width: 30, height: 30, tintColor: color }}
-              />
+              customTabIcon(require('@/assets/icons/Brands.png'), color)
             ),
           }}
         />
@@ -185,11 +206,15 @@ function MainTabs() {
           component={ProfileNavigator}
           options={{
             tabBarIcon: ({ color }) => (
-              <MaterialIcons name="person" size={30} color={color} />
+              // <MaterialIcons style={{ paddingTop: 5, justifyContent: 'center', alignItems: 'center' }} name="person" size={30} color={color} />
+              // customTabIcon(require('@/assets/icons/Friends2.png'), color)
+              <View style={{ paddingTop: 20, justifyContent: 'center', alignItems: 'center' }}>
+                <Image source={require('@/assets/icons/Friends2.png')} style={{ width: 38, height: 38, tintColor: color }} />
+              </View>
             ),
           }}
         />
-      </BottomTab.Navigator>
+      </BottomTab.Navigator >
       <Modalize
         ref={postModalRef}
         adjustToContentHeight

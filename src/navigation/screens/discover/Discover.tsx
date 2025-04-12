@@ -3,13 +3,12 @@ import { TouchableOpacity, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { BrandsStackParamList } from '@/types';
-import { BrandsScreen } from './BrandsScreen';
+import { DiscoverScreen } from './DiscoverScreen';
 import { BrandDetails } from './BrandDetails';
-import { PostDetails } from '../discover/PostDetails';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PostDetails } from '../global/PostDetails';
 import { theme } from '@/context/ThemeContext';
 import { CustomText } from '@/components/CustomText';
-import { UserProfile } from '../discover/UserProfile';
+import { UserProfile } from '../global/UserProfile';
 import { Layout } from '@/components/Layout';
 
 const Stack = createNativeStackNavigator<BrandsStackParamList>();
@@ -24,7 +23,7 @@ const BackButton = React.memo(({ navigation, title }: { navigation: any; title: 
     </TouchableOpacity>
 ));
 
-export const Brands = React.memo(() => {
+export const Discover = React.memo(() => {
     const screenOptions = useCallback(({ navigation }) => ({
         headerShown: true,
         headerTitle: '',
@@ -39,7 +38,7 @@ export const Brands = React.memo(() => {
     return (
         <Layout>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="BrandsScreen" component={BrandsScreen} />
+                <Stack.Screen name="DiscoverScreen" component={DiscoverScreen} />
                 <Stack.Screen
                     name="UserProfile"
                     component={UserProfile}

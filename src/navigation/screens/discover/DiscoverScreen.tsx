@@ -114,7 +114,7 @@ const Header = memo(({
     );
 });
 
-export function BrandsScreen() {
+export function DiscoverScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const [selectedStyles, setSelectedStyles] = useState<number[]>([]);
     const PAGE_SIZE = 10;

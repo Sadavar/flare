@@ -11,6 +11,7 @@ import { CustomText } from '@/components/CustomText';
 import { UserProfile } from '../global/UserProfile';
 import { Layout } from '@/components/Layout';
 import { Search } from '../search/Search';
+import { StylePosts } from '../styleposts/StylePosts';
 
 const Stack = createNativeStackNavigator<BrandsStackParamList>();
 
@@ -54,10 +55,17 @@ export const Discover = React.memo(() => {
                 />
                 <Stack.Screen
                     name="PostDetails"
-                    component={PostDetails} />
+                    component={PostDetails}
+                />
                 <Stack.Screen
                     name="Search"
-                    component={Search} />
+                    component={Search}
+                />
+                <Stack.Screen
+                    name="StylePosts"
+                    component={StylePosts}
+                    options={screenOptions}
+                />
             </Stack.Navigator>
         </Layout>
     );

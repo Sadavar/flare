@@ -433,51 +433,41 @@ export function useAllStylePosts(limit = 5) {
 }
 
 // Moved from BrandsScreen - Function to fetch filtered posts by page
-export function useFilteredPostsByStyles(selectedStyles: number[], pageSize = 10) {
+export function usePostsByStyle(style_id: number, pageSize = 10) {
     const isTabFocused = useIsTabFocused('Brands');
     const queryClient = useQueryClient();
-
-    // useEffect(() => {
-    //     if (!isTabFocused) {
-    //         // Clear the query cache when tab loses focus
-    //         queryClient.removeQueries({ queryKey: ['stylePosts', selectedStyles] });
-    //     }
-    // }, [isTabFocused, selectedStyles, queryClient]);
 
     const fetchFilteredPostsPage = useCallback(async (pageParam = 0) => {
         const from = pageParam * pageSize;
         const to = from + pageSize - 1;
 
-        let postQuery = supabase
+        // First get the post UUIDs for this style
+        const { data: styleFilteredPosts, error: styleError } = await supabase
+            .from('post_styles')
+            .select('post_uuid')
+            .eq('style_id', style_id);
+
+        if (styleError) throw styleError;
+
+        if (!styleFilteredPosts || styleFilteredPosts.length === 0) {
+            return {
+                posts: [],
+                nextPage: undefined,
+                totalCount: 0
+            };
+        }
+
+        // Get unique post UUIDs
+        const postUuids = [...new Set(styleFilteredPosts.map(post => post.post_uuid))];
+
+        // Then fetch the actual posts with pagination
+        const { data, error, count } = await supabase
             .from('posts')
-            .select(POST_SELECT_QUERY, { count: 'exact' })
+            .select(POST_SELECT_QUERY)
+            .in('uuid', postUuids)
             .order('created_at', { ascending: false })
             .range(from, to);
 
-        if (selectedStyles.length > 0) {
-            // Get posts that have ANY of the selected styles
-            const { data: styleFilteredPosts, error: styleError } = await supabase
-                .from('post_styles')
-                .select('post_uuid')
-                .in('style_id', selectedStyles);
-
-            if (styleError) throw styleError;
-
-            // Get unique post UUIDs
-            const postUuids = [...new Set(styleFilteredPosts.map(post => post.post_uuid))];
-
-            if (postUuids.length > 0) {
-                postQuery = postQuery.in('uuid', postUuids);
-            } else {
-                return {
-                    posts: [],
-                    nextPage: undefined,
-                    totalCount: 0
-                };
-            }
-        }
-
-        const { data, error, count } = await postQuery;
         if (error) throw error;
 
         // Process the posts and format them
@@ -490,14 +480,14 @@ export function useFilteredPostsByStyles(selectedStyles: number[], pageSize = 10
             nextPage: formattedPosts.length === pageSize ? pageParam + 1 : undefined,
             totalCount: count || 0
         };
-    }, [selectedStyles, pageSize]);
+    }, [style_id, pageSize]);
 
     return useInfiniteQuery({
-        queryKey: ['stylePosts', selectedStyles],
+        queryKey: ['stylePosts', style_id],
         queryFn: ({ pageParam = 0 }) => fetchFilteredPostsPage(pageParam),
         getNextPageParam: (lastPage) => lastPage.nextPage,
         initialPageParam: 0,
-        enabled: isTabFocused,
+        enabled: isTabFocused && !!style_id,
         staleTime: 30 * 1000,
         gcTime: 5 * 60 * 1000,
         refetchOnMount: true,

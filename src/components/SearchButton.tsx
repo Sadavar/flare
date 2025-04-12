@@ -58,7 +58,7 @@ export function SearchButton({ type }: { type: 'global' | 'friends' | 'brands' }
                     fontSize: 16,
                     color: theme.colors.light_background_2
                 }}>
-                    Search
+                    Discover Brands
                 </CustomText>
             </View>
         </TouchableOpacity>

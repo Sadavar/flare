@@ -33,7 +33,7 @@ const TrendingItem = memo(({ item, onPress }: { item: Brand, onPress: () => void
 ));
 
 // Grid image item component
-const GridImage = memo(({ post, onPress, size }: { post: Post, onPress: () => void, size: { width: number, height: number } }) => (
+const GridImage = memo(({ post, onPress, size, isLast }: { post: Post, onPress: () => void, size: { width: number, height: number }, isLast?: boolean }) => (
     <TouchableOpacity
         style={[styles.gridItem, { width: size.width, height: size.height }]}
         onPress={onPress}
@@ -43,6 +43,11 @@ const GridImage = memo(({ post, onPress, size }: { post: Post, onPress: () => vo
             style={styles.postImage}
             contentFit="cover"
         />
+        {isLast && (
+            <View style={styles.darkOverlay}>
+                <CustomText style={styles.seeMoreText}>+ SEE MORE</CustomText>
+            </View>
+        )}
     </TouchableOpacity>
 ));
 
@@ -65,7 +70,7 @@ const Header = memo(({
 
     return (
         <View style={styles.header}>
-            <CustomText style={styles.mainTitle}>DISCOVER BRANDS</CustomText>
+            {/* <CustomText style={styles.mainTitle}>DISCOVER BRANDS</CustomText> */}
             <SearchButton type={'brands'} />
 
             <CustomText style={styles.sectionTitle}>TRENDING NOW</CustomText>
@@ -138,6 +143,7 @@ const StyleSection = memo(({
                                 post={posts[0]}
                                 size={{ width: baseWidth, height: baseWidth * 1.2 }}
                                 onPress={() => navigation.navigate('PostDetails', { post: posts[0], viewType: "StandardView" })}
+                                isLast={false}
                             />
                         )}
                         {posts.length > 1 && (
@@ -146,6 +152,7 @@ const StyleSection = memo(({
                                 post={posts[1]}
                                 size={{ width: baseWidth, height: baseWidth * 1.2 }}
                                 onPress={() => navigation.navigate('PostDetails', { post: posts[1], viewType: "StandardView" })}
+                                isLast={false}
                             />
                         )}
 
@@ -156,6 +163,7 @@ const StyleSection = memo(({
                                 post={posts[2]}
                                 size={{ width: baseWidth * 0.6, height: baseWidth * 0.9 }}
                                 onPress={() => navigation.navigate('PostDetails', { post: posts[2], viewType: "StandardView" })}
+                                isLast={false}
                             />
                         )}
                         {posts.length > 3 && (
@@ -164,6 +172,7 @@ const StyleSection = memo(({
                                 post={posts[3]}
                                 size={{ width: baseWidth * 0.6, height: baseWidth * 0.9 }}
                                 onPress={() => navigation.navigate('PostDetails', { post: posts[3], viewType: "StandardView" })}
+                                isLast={false}
                             />
                         )}
                         {posts.length > 4 && (
@@ -171,7 +180,8 @@ const StyleSection = memo(({
                                 key={posts[4].uuid}
                                 post={posts[4]}
                                 size={{ width: baseWidth * 0.7, height: baseWidth * 0.9 }}
-                                onPress={() => navigation.navigate('PostDetails', { post: posts[4], viewType: "StandardView" })}
+                                onPress={() => navigation.navigate('StylePosts', { styleId: style.id, styleName: style.name })}
+                                isLast={true}
                             />
                         )}
 
@@ -180,7 +190,7 @@ const StyleSection = memo(({
                             style={styles.seeMoreButton}
                             onPress={() => navigation.navigate('StylePosts', { styleId: style.id, styleName: style.name })}
                         >
-                            <CustomText style={styles.seeMoreText}>Case 0 SEE MORE</CustomText>
+                            {/* <CustomText style={styles.seeMoreText}>Case 0 SEE MORE</CustomText> */}
                         </TouchableOpacity>
                     </View>
                 );
@@ -195,6 +205,7 @@ const StyleSection = memo(({
                                 post={posts[0]}
                                 size={{ width: baseWidth * 0.66, height: baseWidth * 0.9 }}
                                 onPress={() => navigation.navigate('PostDetails', { post: posts[0], viewType: "StandardView" })}
+                                isLast={false}
                             />
                         )}
                         {posts.length > 1 && (
@@ -203,6 +214,7 @@ const StyleSection = memo(({
                                 post={posts[1]}
                                 size={{ width: baseWidth * 0.66, height: baseWidth * 0.9 }}
                                 onPress={() => navigation.navigate('PostDetails', { post: posts[1], viewType: "StandardView" })}
+                                isLast={false}
                             />
                         )}
                         {posts.length > 2 && (
@@ -211,6 +223,7 @@ const StyleSection = memo(({
                                 post={posts[2]}
                                 size={{ width: baseWidth * 0.6, height: baseWidth * 0.9 }}
                                 onPress={() => navigation.navigate('PostDetails', { post: posts[2], viewType: "StandardView" })}
+                                isLast={false}
                             />
                         )}
 
@@ -220,7 +233,8 @@ const StyleSection = memo(({
                                 key={posts[3].uuid}
                                 post={posts[3]}
                                 size={{ width: fullWidth, height: baseWidth * 0.8 }}
-                                onPress={() => navigation.navigate('PostDetails', { post: posts[3], viewType: "StandardView" })}
+                                onPress={() => navigation.navigate('StylePosts', { styleId: style.id, styleName: style.name })}
+                                isLast={true}
                             />
                         )}
 
@@ -229,7 +243,7 @@ const StyleSection = memo(({
                             style={styles.seeMoreButton}
                             onPress={() => navigation.navigate('StylePosts', { styleId: style.id, styleName: style.name })}
                         >
-                            <CustomText style={styles.seeMoreText}>Case 1 SEE MORE</CustomText>
+                            {/* <CustomText style={styles.seeMoreText}>Case 1 SEE MORE</CustomText> */}
                         </TouchableOpacity>
                     </View>
                 );
@@ -244,6 +258,7 @@ const StyleSection = memo(({
                                 post={posts[0]}
                                 size={{ width: fullWidth, height: baseWidth * 0.8 }}
                                 onPress={() => navigation.navigate('PostDetails', { post: posts[0], viewType: "StandardView" })}
+                                isLast={false}
                             />
                         )}
 
@@ -254,6 +269,7 @@ const StyleSection = memo(({
                                 post={posts[1]}
                                 size={{ width: baseWidth * 0.66, height: baseWidth * 0.9 }}
                                 onPress={() => navigation.navigate('PostDetails', { post: posts[1], viewType: "StandardView" })}
+                                isLast={false}
                             />
                         )}
                         {posts.length > 2 && (
@@ -262,6 +278,7 @@ const StyleSection = memo(({
                                 post={posts[2]}
                                 size={{ width: baseWidth * 0.66, height: baseWidth * 0.9 }}
                                 onPress={() => navigation.navigate('PostDetails', { post: posts[2], viewType: "StandardView" })}
+                                isLast={false}
                             />
                         )}
                         {posts.length > 3 && (
@@ -269,7 +286,8 @@ const StyleSection = memo(({
                                 key={posts[3].uuid}
                                 post={posts[3]}
                                 size={{ width: baseWidth * 0.6, height: baseWidth * 0.9 }}
-                                onPress={() => navigation.navigate('PostDetails', { post: posts[3], viewType: "StandardView" })}
+                                onPress={() => navigation.navigate('StylePosts', { styleId: style.id, styleName: style.name })}
+                                isLast={true}
                             />
                         )}
 
@@ -278,7 +296,7 @@ const StyleSection = memo(({
                             style={styles.seeMoreButton}
                             onPress={() => navigation.navigate('StylePosts', { styleId: style.id, styleName: style.name })}
                         >
-                            <CustomText style={styles.seeMoreText}>Case 2 SEE MORE</CustomText>
+                            {/* <CustomText style={styles.seeMoreText}>Case 2 SEE MORE</CustomText> */}
                         </TouchableOpacity>
                     </View>
                 );
@@ -293,6 +311,7 @@ const StyleSection = memo(({
                                 post={posts[0]}
                                 size={{ width: baseWidth * 0.9, height: baseWidth * 2.1 }}
                                 onPress={() => navigation.navigate('PostDetails', { post: posts[0], viewType: "StandardView" })}
+                                isLast={false}
                             />
                         )}
 
@@ -304,6 +323,7 @@ const StyleSection = memo(({
                                     post={posts[1]}
                                     size={{ width: baseWidth * 1.1, height: baseWidth }}
                                     onPress={() => navigation.navigate('PostDetails', { post: posts[1], viewType: "StandardView" })}
+                                    isLast={false}
                                 />
                             )}
                             {posts.length > 2 && (
@@ -312,6 +332,7 @@ const StyleSection = memo(({
                                     post={posts[2]}
                                     size={{ width: baseWidth * 1.1, height: baseWidth }}
                                     onPress={() => navigation.navigate('PostDetails', { post: posts[2], viewType: "StandardView" })}
+                                    isLast={false}
                                 />
                             )}
                         </View>
@@ -322,7 +343,8 @@ const StyleSection = memo(({
                                 key={posts[3].uuid}
                                 post={posts[3]}
                                 size={{ width: fullWidth, height: baseWidth * 0.7 }}
-                                onPress={() => navigation.navigate('PostDetails', { post: posts[3], viewType: "StandardView" })}
+                                onPress={() => navigation.navigate('StylePosts', { styleId: style.id, styleName: style.name })}
+                                isLast={true}
                             />
                         )}
 
@@ -331,7 +353,7 @@ const StyleSection = memo(({
                             style={styles.seeMoreButton}
                             onPress={() => navigation.navigate('StylePosts', { styleId: style.id, styleName: style.name })}
                         >
-                            <CustomText style={styles.seeMoreText}>Case 3 SEE MORE</CustomText>
+                            {/* <CustomText style={styles.seeMoreText}>Case 3 SEE MORE</CustomText> */}
                         </TouchableOpacity>
                     </View>
                 );
@@ -419,11 +441,9 @@ export function DiscoverScreen() {
     );
 }
 
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000',
     },
     header: {
         paddingTop: 15,
@@ -495,11 +515,22 @@ const styles = StyleSheet.create({
         margin: SPACING,
         overflow: 'hidden',
         borderRadius: 4,
+        position: 'relative',
     },
     postImage: {
         width: '100%',
         height: '100%',
         backgroundColor: '#333',
+    },
+    darkOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     seeMoreButton: {
         position: 'absolute',
@@ -516,6 +547,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: 'bold',
         fontSize: 14,
+        textAlign: 'center',
     },
     loadingContainer: {
         height: 200,

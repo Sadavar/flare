@@ -154,7 +154,10 @@ function MainTabs() {
               backgroundColor: theme.colors.background,
             },
             tabBarIcon: ({ color }) => (
-              customTabIcon(require('@/assets/icons/Post.png'), color)
+              // customTabIcon(require('@/assets/icons/Post.png'), color)
+              <View style={{ paddingTop: 20, justifyContent: 'center', alignItems: 'center' }}>
+                <Image source={require('@/assets/icons/Post.png')} style={{ width: 33, height: 33, tintColor: color }} />
+              </View>
               // <View
               //   style={{
 

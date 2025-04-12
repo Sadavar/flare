@@ -18,7 +18,7 @@ function Header() {
     return (
         <>
             <View style={styles.fixedHeader}>
-                <CustomText style={styles.mainTitle}>Friends</CustomText>
+                {/* <CustomText style={styles.mainTitle}>Friends</CustomText> */}
                 {/* <SearchButton type={'friends'} /> */}
             </View>
         </>
@@ -63,7 +63,6 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     fixedHeader: {
-        paddingTop: 15,
         zIndex: 1,
     },
     mainTitle: {

@@ -361,51 +361,71 @@ export function useColors() {
     });
 }
 
-export function usePostsByStyle(styleId: number, limit = 10) {
+export function useAllStylePosts(limit = 5) {
     const isTabFocused = useIsTabFocused('Discover'); // Adjust this to the tab name
 
-    // Function to fetch posts for a specific style
-    const fetchPostsByStyle = async () => {
-        // First, get the post UUIDs for the given style
-        const { data: styleFilteredPosts, error: styleError } = await supabase
-            .from('post_styles')
-            .select('post_uuid')
-            .eq('style_id', styleId)
-            .limit(limit);
+    // Function to fetch all style posts
+    const fetchAllStylePosts = async () => {
+        // First, get all styles
+        const { data: styles, error: stylesError } = await supabase
+            .from('styles')
+            .select('id');
 
-        if (styleError) throw styleError;
+        if (stylesError) throw stylesError;
 
-        // If no posts found for this style, return empty array
-        if (styleFilteredPosts.length === 0) {
-            return { posts: [] };
+        if (!styles || styles.length === 0) {
+            return {};
         }
 
-        // Get unique post UUIDs
-        const postUuids = [...new Set(styleFilteredPosts.map(post => post.post_uuid))];
+        // Prepare an object to store posts by style ID
+        const postsByStyle = {};
 
-        // Fetch the actual posts
-        const { data, error } = await supabase
-            .from('posts')
-            .select(POST_SELECT_QUERY)
-            .in('uuid', postUuids)
-            .order('created_at', { ascending: false })
-            .limit(limit);
+        // For each style, fetch its posts
+        await Promise.all(styles.map(async (style) => {
+            // Get post UUIDs for this style
+            const { data: styleFilteredPosts, error: styleError } = await supabase
+                .from('post_styles')
+                .select('post_uuid')
+                .eq('style_id', style.id)
+                .limit(limit);
 
-        if (error) throw error;
+            if (styleError) throw styleError;
 
-        // Process the posts and format them
-        const formattedPosts = await Promise.all((data || []).map(async (post) => {
-            return formatPost(post);
+            if (!styleFilteredPosts || styleFilteredPosts.length === 0) {
+                postsByStyle[style.id] = [];
+                return;
+            }
+
+            // Get unique post UUIDs
+            const postUuids = [...new Set(styleFilteredPosts.map(post => post.post_uuid))];
+
+            // Fetch the actual posts
+            const { data: posts, error: postsError } = await supabase
+                .from('posts')
+                .select(POST_SELECT_QUERY)
+                .in('uuid', postUuids)
+                .order('created_at', { ascending: false })
+                .limit(limit);
+
+            if (postsError) throw postsError;
+
+            // Format the posts
+            const formattedPosts = await Promise.all((posts || []).map(async (post) => {
+                return formatPost(post);
+            }));
+
+            // Store the formatted posts
+            postsByStyle[style.id] = formattedPosts;
         }));
 
-        return { posts: formattedPosts };
+        return postsByStyle;
     };
 
     // Use the React Query hook
     return useQuery({
-        queryKey: ['stylePosts', styleId, limit],
-        queryFn: fetchPostsByStyle,
-        enabled: isTabFocused && styleId !== undefined,
+        queryKey: ['allStylePosts', limit],
+        queryFn: fetchAllStylePosts,
+        enabled: isTabFocused,
         staleTime: 30 * 1000,     // 30 seconds
         gcTime: 5 * 60 * 1000,    // 5 minutes
         refetchOnMount: true,

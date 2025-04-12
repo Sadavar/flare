@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { NavigationProp, RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,6 +18,25 @@ export const Search = React.memo(() => {
     const [inputValue, setInputValue] = useState('');
     const initialFilter = route.params?.initialFilter || 'brands';
     const [searchMode, setSearchMode] = useState<'users' | 'brands' | 'styles'>(initialFilter);
+
+    const inputRef = useRef<TextInput | null>(null);
+
+    // Add a useEffect to focus the input when the component mounts
+    useEffect(() => {
+        // Short timeout to ensure component is fully rendered
+        const timer = setTimeout(() => {
+            if (inputRef.current) {
+                inputRef.current.focus();
+            }
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Handler for back button
+    const handleBackPress = () => {
+        navigation.goBack();
+    };
 
     useEffect(() => {
         setSearchMode(initialFilter);
@@ -54,20 +73,27 @@ export const Search = React.memo(() => {
         [stylesData, searchQuery]
     );
 
-    // Memoize handlers
+    // Update your handleSearch function to focus the input
     const handleSearch = useCallback((type: 'users' | 'brands' | 'styles') => {
         setSearchMode(type);
+
+        // Focus the input when changing filter
+        setTimeout(() => {
+            if (inputRef.current) {
+                inputRef.current.focus();
+            }
+        }, 100);
     }, []);
 
     const handleUserPress = useCallback((username: string) => {
-        navigation.navigate('Friends', {
+        navigation.navigate('Discover', {
             screen: 'UserProfile',
             params: { username },
         });
     }, [navigation]);
 
     const handleBrandPress = useCallback((brandId: number, brandName: string) => {
-        navigation.navigate('Brands', {
+        navigation.navigate('Discover', {
             screen: 'BrandDetails',
             params: { brandId, brandName },
         });
@@ -80,32 +106,46 @@ export const Search = React.memo(() => {
         []
     );
 
-    // Memoize UI components
+    // Memoize UI components with back button
     const SearchInput = useMemo(() => (
-        <View style={[styles.searchContainer, {
-            backgroundColor: theme.colors.light_background_1,
-            borderColor: theme.colors.border
-        }]}>
-            <MaterialIcons name="search" size={24} color={theme.colors.subtext} style={styles.searchIcon} />
-            <TextInput
-                style={[styles.input, { color: theme.colors.text }]}
-                placeholder={`Search ${searchMode}...`}
-                placeholderTextColor={theme.colors.subtext}
-                value={inputValue}
-                onChangeText={(text) => {
-                    setInputValue(text);
-                    debouncedSetSearchQuery(text);
-                }}
-                autoCapitalize="none"
-            />
-            {inputValue.length > 0 && (
-                <TouchableOpacity onPress={() => {
-                    setInputValue('');
-                    setSearchQuery('');
-                }}>
-                    <MaterialIcons name="close" size={24} color={theme.colors.subtext} />
-                </TouchableOpacity>
-            )}
+        <View style={styles.searchRow}>
+            <TouchableOpacity
+                onPress={handleBackPress}
+                style={styles.backButton}
+            >
+                <MaterialIcons
+                    name="chevron-left"
+                    size={30}
+                    color={theme.colors.text}
+                />
+            </TouchableOpacity>
+
+            <View style={[styles.searchContainer, {
+                backgroundColor: theme.colors.light_background_1,
+                borderColor: theme.colors.border
+            }]}>
+                <MaterialIcons name="search" size={24} color={theme.colors.subtext} style={styles.searchIcon} />
+                <TextInput
+                    style={[styles.input, { color: theme.colors.text }]}
+                    placeholder={`Search ${searchMode}...`}
+                    placeholderTextColor={theme.colors.subtext}
+                    value={inputValue}
+                    onChangeText={(text) => {
+                        setInputValue(text);
+                        debouncedSetSearchQuery(text);
+                    }}
+                    autoCapitalize="none"
+                    ref={inputRef}
+                />
+                {inputValue.length > 0 && (
+                    <TouchableOpacity onPress={() => {
+                        setInputValue('');
+                        setSearchQuery('');
+                    }}>
+                        <MaterialIcons name="close" size={24} color={theme.colors.subtext} />
+                    </TouchableOpacity>
+                )}
+            </View>
         </View>
     ), [inputValue, searchMode, theme.colors]);
 
@@ -224,11 +264,11 @@ export const Search = React.memo(() => {
     return (
         <Layout>
             <View style={styles.container}>
-                <View style={styles.fixedHeader}>
+                {/* <View style={styles.fixedHeader}>
                     <CustomText style={styles.mainTitle}>
                         Search
                     </CustomText>
-                </View>
+                </View> */}
 
                 {SearchInput}
 
@@ -319,14 +359,22 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         alignSelf: 'center',
     },
+    searchRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        marginVertical: 12,
+    },
+    backButton: {
+        paddingHorizontal: 4,
+    },
     searchContainer: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 0.5,
         borderRadius: 20,
         paddingHorizontal: 10,
-        marginHorizontal: 16,
-        marginVertical: 12,
         height: 44,
     },
     searchIcon: {

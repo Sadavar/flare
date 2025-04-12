@@ -361,6 +361,57 @@ export function useColors() {
     });
 }
 
+export function usePostsByStyle(styleId: number, limit = 10) {
+    const isTabFocused = useIsTabFocused('Discover'); // Adjust this to the tab name
+
+    // Function to fetch posts for a specific style
+    const fetchPostsByStyle = async () => {
+        // First, get the post UUIDs for the given style
+        const { data: styleFilteredPosts, error: styleError } = await supabase
+            .from('post_styles')
+            .select('post_uuid')
+            .eq('style_id', styleId)
+            .limit(limit);
+
+        if (styleError) throw styleError;
+
+        // If no posts found for this style, return empty array
+        if (styleFilteredPosts.length === 0) {
+            return { posts: [] };
+        }
+
+        // Get unique post UUIDs
+        const postUuids = [...new Set(styleFilteredPosts.map(post => post.post_uuid))];
+
+        // Fetch the actual posts
+        const { data, error } = await supabase
+            .from('posts')
+            .select(POST_SELECT_QUERY)
+            .in('uuid', postUuids)
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        if (error) throw error;
+
+        // Process the posts and format them
+        const formattedPosts = await Promise.all((data || []).map(async (post) => {
+            return formatPost(post);
+        }));
+
+        return { posts: formattedPosts };
+    };
+
+    // Use the React Query hook
+    return useQuery({
+        queryKey: ['stylePosts', styleId, limit],
+        queryFn: fetchPostsByStyle,
+        enabled: isTabFocused && styleId !== undefined,
+        staleTime: 30 * 1000,     // 30 seconds
+        gcTime: 5 * 60 * 1000,    // 5 minutes
+        refetchOnMount: true,
+    });
+}
+
 // Moved from BrandsScreen - Function to fetch filtered posts by page
 export function useFilteredPostsByStyles(selectedStyles: number[], pageSize = 10) {
     const isTabFocused = useIsTabFocused('Brands');

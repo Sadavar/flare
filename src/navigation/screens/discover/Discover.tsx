@@ -10,6 +10,7 @@ import { theme } from '@/context/ThemeContext';
 import { CustomText } from '@/components/CustomText';
 import { UserProfile } from '../global/UserProfile';
 import { Layout } from '@/components/Layout';
+import { Search } from '../search/Search';
 
 const Stack = createNativeStackNavigator<BrandsStackParamList>();
 
@@ -31,14 +32,16 @@ export const Discover = React.memo(() => {
             backgroundColor: theme.colors.background
         },
         headerLeft: () => (
-            <BackButton navigation={navigation} title="Brands" />
+            <BackButton navigation={navigation} title="" />
         ),
     }), []);
 
     return (
         <Layout>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="DiscoverScreen" component={DiscoverScreen} />
+                <Stack.Screen
+                    name="DiscoverScreen"
+                    component={DiscoverScreen} />
                 <Stack.Screen
                     name="UserProfile"
                     component={UserProfile}
@@ -49,7 +52,12 @@ export const Discover = React.memo(() => {
                     component={BrandDetails}
                     options={screenOptions}
                 />
-                <Stack.Screen name="PostDetails" component={PostDetails} />
+                <Stack.Screen
+                    name="PostDetails"
+                    component={PostDetails} />
+                <Stack.Screen
+                    name="Search"
+                    component={Search} />
             </Stack.Navigator>
         </Layout>
     );

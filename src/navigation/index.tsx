@@ -196,7 +196,10 @@ function MainTabs() {
           component={Notis}
           options={{
             tabBarIcon: ({ color }) => (
-              customTabIcon(require('@/assets/icons/Brands.png'), color)
+              // customTabIcon(require('@/assets/icons/Notis.png'), color)
+              <View style={{ paddingTop: 20, justifyContent: 'center', alignItems: 'center' }}>
+                <Image source={require('@/assets/icons/Notis.png')} style={{ width: 55, height: 55, tintColor: color }} />
+              </View>
             ),
           }}
         />

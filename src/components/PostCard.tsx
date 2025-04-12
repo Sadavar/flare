@@ -1,6 +1,6 @@
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { ThemeContext, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { Post } from '@/types';
 import { Image } from 'expo-image';
 import { useSavePost } from '@/hooks/usePostQueries';
@@ -27,7 +27,6 @@ export default function PostCard({ post }: { post: Post }) {
         if (post && post.saved != undefined && post.saved != null)
             setIsSaved(post.saved)
     }, [post])
-
 
     const handleSave = () => {
         // Add haptic feedback when saving/unsaving
@@ -66,43 +65,12 @@ export default function PostCard({ post }: { post: Post }) {
                     transition={500}
                 />
             </TouchableOpacity>
-            <View style={styles.postDetails}>
-                <View style={styles.actionsRow}>
-                    {/* Colors on the left */}
-                    <View style={styles.colorDotsContainer}>
-                        {post.colors && post.colors.length > 0 && (
-                            <View style={styles.colorDotsContainer}>
-                                {
-                                    post.colors.slice(0, 3).map((color) => (
-                                        <View
-                                            key={color.id}
-                                            style={[
-                                                styles.colorDot,
-                                                { backgroundColor: color.hex_value }
-                                            ]}
-                                        />
-                                    ))
-                                }
-                            </View>
-                        )}
-                    </View>
 
-                    {/* Save icon on the right */}
-                    <TouchableOpacity
-                        style={styles.saveButton}
-                        onPress={handleSave}
-                    >
-                        <MaterialIcons
-                            name={isSaved ? "bookmark" : "bookmark-border"}
-                            size={25}
-                            color={theme.colors.light_background_2}
-                        />
-                    </TouchableOpacity>
-                </View>
-
-                {/* Brands below */}
-                {post.brands && post.brands.length > 0 && (
-                    <View style={styles.brandsContainer}>
+            {/* Brands and Save button container */}
+            <View style={styles.actionsContainer}>
+                {/* Brands on the left */}
+                <View style={styles.brandsContainer}>
+                    {post.brands && post.brands.length > 0 ? (
                         <View style={styles.brandsList}>
                             {post.brands.slice(0, 2).map((brand) => (
                                 <TouchableOpacity
@@ -122,64 +90,51 @@ export default function PostCard({ post }: { post: Post }) {
                                 </View>
                             )}
                         </View>
-                    </View>
-                )}
+                    ) : null}
+                </View>
+
+                {/* Save icon on the right */}
+                <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={handleSave}
+                >
+                    <MaterialIcons
+                        name={isSaved ? "bookmark" : "bookmark-border"}
+                        size={23}
+                        color={isSaved ? theme.colors.primary : theme.colors.primary}
+                    />
+                </TouchableOpacity>
             </View>
         </View>
     )
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    fixedHeader: {
-        paddingTop: 10,
-        backgroundColor: '#fff',
-        zIndex: 1,
-    },
-    mainTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        alignSelf: 'center',
-    },
-    listContent: {
-        paddingHorizontal: 8,
-        paddingTop: 8,
-        paddingBottom: 20,
-    },
     postContainer: {
         flex: 1,
         margin: 6,
         borderRadius: 12,
         shadowColor: 'black',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.9,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 2,
-        backgroundColor: theme.colors.light_background_1
-        // overflow: 'hidden',
     },
     postImage: {
         width: '100%',
         aspectRatio: 0.75, // 3:4 aspect ratio (width:height)
         backgroundColor: 'white',
-        borderRadius: 12,
-        borderBottomStartRadius: 0,
-        borderBottomEndRadius: 0
+        borderRadius: 8,
     },
-    postDetails: {
-        width: '100%',
-        paddingHorizontal: 3,
-        paddingTop: 1,
+    actionsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between', // This keeps the save button on the right
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        paddingVertical: 8,
     },
     brandsContainer: {
-        paddingBottom: 10,
-    },
-    brandsLabel: {
-        fontSize: 11,
-        fontWeight: '500',
-        marginBottom: 4,
+        flex: 1, // This takes up available space on the left
     },
     brandsList: {
         flexDirection: 'row',
@@ -196,71 +151,7 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: 'white',
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-    },
-    loadingText: {
-        marginTop: 12,
-        fontSize: 16,
-        color: '#666',
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        padding: 20,
-    },
-    errorText: {
-        fontSize: 16,
-        color: '#e53935',
-        textAlign: 'center',
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#666',
-    },
-    footerLoader: {
-        padding: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    footerText: {
-        marginTop: 8,
-        fontSize: 14,
-        color: '#666',
-    },
-    colorDotsContainer: {
-        flexDirection: 'row',
-        gap: 4,
-    },
-    colorDot: {
-        width: 14,
-        height: 14,
-        borderRadius: 4,
-        shadowColor: 'black',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 2,
-    },
-    actionsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingBottom: 5,
-        paddingTop: 5
-    },
     saveButton: {
-        padding: 0,
+        padding: 4,
     },
 });

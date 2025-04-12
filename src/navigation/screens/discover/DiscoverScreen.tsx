@@ -30,7 +30,7 @@ const TrendingItem = memo(({ item, onPress }: { item: Brand, onPress: () => void
         style={styles.trendingCard}
         onPress={onPress}
     >
-        <CustomText style={styles.brandIcon}>{item.name.charAt(0)}</CustomText>
+        {/* <CustomText style={styles.brandIcon}>{item.name.charAt(0)}</CustomText> */}
         <CustomText style={styles.brandName}>{item.name}</CustomText>
     </TouchableOpacity>
 ));
@@ -48,6 +48,20 @@ const FilterChip = memo(({ label, isSelected, onPress }: { label: string, isSele
             styles.chipText,
             isSelected && styles.chipTextSelected
         ]}>{label}</CustomText>
+    </TouchableOpacity>
+));
+
+// Grid image item component
+const GridImage = memo(({ post, onPress, size }: { post: Post, onPress: () => void, size: { width: number, height: number } }) => (
+    <TouchableOpacity
+        style={[styles.gridItem, { width: size.width, height: size.height }]}
+        onPress={onPress}
+    >
+        <Image
+            source={{ uri: post.image_url }}
+            style={styles.postImage}
+            contentFit="cover"
+        />
     </TouchableOpacity>
 ));
 
@@ -75,9 +89,10 @@ const Header = memo(({
     return (
         <View style={styles.fixedHeader}>
             <CustomText style={styles.mainTitle}>Discover Brands</CustomText>
+            {/* <Text style={{ fontFamily: 'BebasNnue-Regular' }}>Bebas Nnue</Text> */}
             <SearchButton type={'brands'} />
 
-            <CustomText style={styles.trendingTitle}>Trending Brands</CustomText>
+            <CustomText style={styles.trendingTitle}>Trending Now</CustomText>
             <FlatList
                 horizontal
                 data={trendingBrands}
@@ -178,13 +193,6 @@ export function DiscoverScreen() {
         />
     ), [brands, stylesData, selectedStyles, handleStylePress, handleAllStylesPress, navigation]);
 
-    if (stylesLoading) {
-        return (
-            <View style={styles.container}>
-                <CustomText>Loading styles...</CustomText>
-            </View>
-        );
-    }
 
     return (
         <ScrollView>
@@ -213,7 +221,9 @@ export function DiscoverScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        marginTop: 0
+        paddingLeft: 5,
+        paddingRight: 5,
+        backgroundColor: 'red'
     },
     fixedHeader: {
         paddingTop: 15,
@@ -223,6 +233,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         alignSelf: 'center',
+        fontFamily: 'BebasNnue-Regular'
     },
     searchContainer: {
         flexDirection: 'row',
@@ -244,20 +255,21 @@ const styles = StyleSheet.create({
     trendingTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        marginLeft: 20,
+        marginLeft: 10,
         marginTop: 10,
     },
     carouselContainer: {
         marginTop: 10,
         marginBottom: 25,
+        marginLeft: 5
     },
     trendingCard: {
-        width: 130,
-        height: 130,
-        backgroundColor: theme.colors.light_background_1,
-        borderRadius: 10,
-        marginHorizontal: 10,
+        backgroundColor: theme.colors.primary,
         padding: 10,
+        paddingTop: 5,
+        // borderRadius: 10,
+        marginHorizontal: 5,
+        // padding: 10,
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: 'black',

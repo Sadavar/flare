@@ -1,14 +1,30 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { DiscoverTabParamList } from '@/types';
 import { useUserSearch } from '@/hooks/useUserSearch';
-import { useBrands, useStyles } from '@/hooks/usePostQueries';
+import { useBrandSearch } from '@/hooks/useBrandSearch';
+import { useStyleSearch } from '@/hooks/useStyleSearch';
 import { CustomText } from '@/components/CustomText';
 import { theme, useTheme } from '@/context/ThemeContext';
 import debounce from 'lodash/debounce';
 import { Layout } from '@/components/Layout';
+
+interface User {
+    id: string;
+    username: string;
+}
+
+interface Brand {
+    id: number;
+    name: string;
+}
+
+interface Style {
+    id: number;
+    name: string;
+}
 
 export const Search = React.memo(() => {
     const navigation = useNavigation<NavigationProp<DiscoverTabParamList>>();
@@ -37,42 +53,44 @@ export const Search = React.memo(() => {
 
     // Fetch data with optimized queries
     const {
-        data: userResults = [],
-        isLoading: isUserLoading
+        data: userResults,
+        isLoading: isUserLoading,
+        fetchNextPage: fetchNextUsers,
+        hasNextPage: hasNextUsers,
+        isFetchingNextPage: isFetchingNextUsers
     } = useUserSearch(searchQuery);
 
     const {
-        data: brandsData = [],
-        isLoading: isBrandsLoading
-    } = useBrands();
+        data: brandResults,
+        isLoading: isBrandsLoading,
+        fetchNextPage: fetchNextBrands,
+        hasNextPage: hasNextBrands,
+        isFetchingNextPage: isFetchingNextBrands
+    } = useBrandSearch(searchQuery);
 
     const {
-        data: stylesData = [],
-        isLoading: isStylesLoading
-    } = useStyles();
+        data: styleResults,
+        isLoading: isStylesLoading,
+        fetchNextPage: fetchNextStyles,
+        hasNextPage: hasNextStyles,
+        isFetchingNextPage: isFetchingNextStyles
+    } = useStyleSearch(searchQuery);
 
     // Memoize filtered results with performance optimizations
+    const filteredUsers = useMemo(() => {
+        if (searchMode !== 'all' && searchMode !== 'users') return [];
+        return userResults?.pages.flatMap(page => page.data) || [];
+    }, [userResults, searchMode]);
+
     const filteredBrands = useMemo(() => {
         if (searchMode !== 'all' && searchMode !== 'brands') return [];
-
-        return brandsData
-            .filter(brand => brand.name.toLowerCase().includes(searchQuery.toLowerCase()))
-            .slice(0, 5); // Limit to 5 results
-    }, [brandsData, searchQuery, searchMode]);
+        return brandResults?.pages.flatMap(page => page.data) || [];
+    }, [brandResults, searchMode]);
 
     const filteredStyles = useMemo(() => {
         if (searchMode !== 'all' && searchMode !== 'styles') return [];
-
-        return stylesData
-            .filter(style => style.name.toLowerCase().includes(searchQuery.toLowerCase()))
-            .slice(0, 5); // Limit to 5 results
-    }, [stylesData, searchQuery, searchMode]);
-
-    const filteredUsers = useMemo(() => {
-        if (searchMode !== 'all' && searchMode !== 'users') return [];
-
-        return userResults.slice(0, 5); // Limit to 5 results
-    }, [userResults, searchMode]);
+        return styleResults?.pages.flatMap(page => page.data) || [];
+    }, [styleResults, searchMode]);
 
     // Update search mode
     const handleSearch = useCallback((type: 'all' | 'users' | 'brands' | 'styles') => {
@@ -186,6 +204,49 @@ export const Search = React.memo(() => {
             (isUserLoading || isBrandsLoading || isStylesLoading);
     }, [searchMode, isUserLoading, isBrandsLoading, isStylesLoading]);
 
+    // Render list items
+    const renderUserItem = useCallback(({ item }: { item: User }) => (
+        <TouchableOpacity
+            style={styles.resultItem}
+            onPress={() => handleUserPress(item.username)}
+        >
+            <View style={styles.userIconContainer}>
+                <MaterialIcons name="person" size={24} color={theme.colors.text} />
+            </View>
+            <View style={styles.resultTextContainer}>
+                <CustomText style={styles.resultMainText}>@{item.username}</CustomText>
+            </View>
+        </TouchableOpacity>
+    ), [handleUserPress, theme.colors.text]);
+
+    const renderBrandItem = useCallback(({ item }: { item: Brand }) => (
+        <TouchableOpacity
+            style={styles.resultItem}
+            onPress={() => handleBrandPress(item.id, item.name)}
+        >
+            <View style={[styles.userIconContainer, styles.brandIcon]}>
+                <CustomText style={styles.brandIconText}>{item.name.charAt(0)}</CustomText>
+            </View>
+            <View style={styles.resultTextContainer}>
+                <CustomText style={styles.resultMainText}>{item.name}</CustomText>
+            </View>
+        </TouchableOpacity>
+    ), [handleBrandPress, theme.colors.background]);
+
+    const renderStyleItem = useCallback(({ item }: { item: Style }) => (
+        <TouchableOpacity
+            style={styles.resultItem}
+            onPress={() => handleStylePress(item.id)}
+        >
+            <View style={[styles.userIconContainer, { backgroundColor: theme.colors.light_background_2 }]}>
+                <MaterialIcons name="style" size={24} color={theme.colors.text} />
+            </View>
+            <View style={styles.resultTextContainer}>
+                <CustomText style={styles.resultMainText}>{item.name}</CustomText>
+            </View>
+        </TouchableOpacity>
+    ), [handleStylePress, theme.colors]);
+
     // Render search results based on mode
     const renderSearchResults = () => {
         // Show loading indicator when fetching results
@@ -230,170 +291,102 @@ export const Search = React.memo(() => {
             }
 
             return (
-                <ScrollView style={styles.resultsContainer}>
-                    {/* Users Section */}
-                    {visibleCategories.includes('users') && (
-                        <>
-                            <View style={styles.sectionHeader}>
-                                <CustomText style={styles.sectionHeaderText}>USERS</CustomText>
-                                {/* {userResults.length > 5 && (
-                                    <TouchableOpacity onPress={() => handleSearch('users')}>
-                                        <CustomText style={styles.seeAllText}>See all</CustomText>
-                                    </TouchableOpacity>
-                                )} */}
-                            </View>
-
-                            {filteredUsers.map(user => (
-                                <TouchableOpacity
-                                    key={`user-${user.id}`}
-                                    style={styles.resultItem}
-                                    onPress={() => handleUserPress(user.username)}
-                                >
-                                    <View style={styles.userIconContainer}>
-                                        <MaterialIcons name="person" size={24} color={theme.colors.text} />
-                                    </View>
-                                    <View style={styles.resultTextContainer}>
-                                        <CustomText style={styles.resultMainText}>@{user.username}</CustomText>
-                                    </View>
-                                    {/* <MaterialIcons name="chevron-right" size={24} color={theme.colors.subtext} /> */}
-                                </TouchableOpacity>
-                            ))}
-                        </>
-                    )}
-
-                    {/* Brands Section */}
-                    {visibleCategories.includes('brands') && (
-                        <>
-                            <View style={styles.sectionHeader}>
-                                <CustomText style={styles.sectionHeaderText}>BRANDS</CustomText>
-                                {/* {filteredBrands.length < brandsData.filter(brand =>
-                                    brand.name.toLowerCase().includes(searchQuery.toLowerCase())
-                                ).length && (
-                                        <TouchableOpacity onPress={() => handleSearch('brands')}>
-                                            <CustomText style={styles.seeAllText}>See all</CustomText>
-                                        </TouchableOpacity>
-                                    )} */}
-                            </View>
-
-                            {filteredBrands.map(brand => (
-                                <TouchableOpacity
-                                    key={`brand-${brand.id}`}
-                                    style={styles.resultItem}
-                                    onPress={() => handleBrandPress(brand.id, brand.name)}
-                                >
-                                    <View style={[styles.userIconContainer, styles.brandIcon]}>
-                                        <CustomText style={styles.brandIconText}>{brand.name.charAt(0)}</CustomText>
-                                    </View>
-                                    <View style={styles.resultTextContainer}>
-                                        <CustomText style={styles.resultMainText}>{brand.name}</CustomText>
-                                    </View>
-                                    {/* <MaterialIcons name="chevron-right" size={24} color={theme.colors.subtext} /> */}
-                                </TouchableOpacity>
-                            ))}
-                        </>
-                    )}
-
-                    {/* Styles Section */}
-                    {visibleCategories.includes('styles') && (
-                        <>
-                            <View style={styles.sectionHeader}>
-                                <CustomText style={styles.sectionHeaderText}>STYLES</CustomText>
-                                {/* {filteredStyles.length < stylesData.filter(style =>
-                                    style.name.toLowerCase().includes(searchQuery.toLowerCase())
-                                ).length && (
-                                        <TouchableOpacity onPress={() => handleSearch('styles')}>
-                                            <CustomText style={styles.seeAllText}>See all</CustomText>
-                                        </TouchableOpacity>
-                                    )} */}
-                            </View>
-
-                            {filteredStyles.map(style => (
-                                <TouchableOpacity
-                                    key={`style-${style.id}`}
-                                    style={styles.resultItem}
-                                    onPress={() => handleStylePress(style.id)}
-                                >
-                                    <View style={[styles.userIconContainer, { backgroundColor: theme.colors.light_background_2 }]}>
-                                        <MaterialIcons name="style" size={24} color={theme.colors.text} />
-                                    </View>
-                                    <View style={styles.resultTextContainer}>
-                                        <CustomText style={styles.resultMainText}>{style.name}</CustomText>
-                                    </View>
-                                    {/* <MaterialIcons name="chevron-right" size={24} color={theme.colors.subtext} /> */}
-                                </TouchableOpacity>
-                            ))}
-                        </>
-                    )}
-                </ScrollView>
+                <FlatList
+                    style={styles.resultsContainer}
+                    data={visibleCategories}
+                    keyExtractor={(item) => item}
+                    renderItem={({ item }) => {
+                        switch (item) {
+                            case 'users':
+                                return (
+                                    <>
+                                        <View style={styles.sectionHeader}>
+                                            <CustomText style={styles.sectionHeaderText}>USERS</CustomText>
+                                        </View>
+                                        <FlatList
+                                            data={filteredUsers}
+                                            renderItem={renderUserItem}
+                                            keyExtractor={(user) => `user-${user.id}`}
+                                            onEndReached={() => hasNextUsers && fetchNextUsers()}
+                                            onEndReachedThreshold={0.5}
+                                            ListFooterComponent={() => isFetchingNextUsers ? (
+                                                <ActivityIndicator size="small" color={theme.colors.primary} />
+                                            ) : null}
+                                        />
+                                    </>
+                                );
+                            case 'brands':
+                                return (
+                                    <>
+                                        <View style={styles.sectionHeader}>
+                                            <CustomText style={styles.sectionHeaderText}>BRANDS</CustomText>
+                                        </View>
+                                        <FlatList
+                                            data={filteredBrands}
+                                            renderItem={renderBrandItem}
+                                            keyExtractor={(brand) => `brand-${brand.id}`}
+                                        />
+                                    </>
+                                );
+                            case 'styles':
+                                return (
+                                    <>
+                                        <View style={styles.sectionHeader}>
+                                            <CustomText style={styles.sectionHeaderText}>STYLES</CustomText>
+                                        </View>
+                                        <FlatList
+                                            data={filteredStyles}
+                                            renderItem={renderStyleItem}
+                                            keyExtractor={(style) => `style-${style.id}`}
+                                        />
+                                    </>
+                                );
+                            default:
+                                return null;
+                        }
+                    }}
+                />
             );
         }
 
         // User results
         if (searchMode === 'users') {
             return (
-                <ScrollView style={styles.resultsContainer}>
-                    {filteredUsers.map(user => (
-                        <TouchableOpacity
-                            key={user.id}
-                            style={styles.resultItem}
-                            onPress={() => handleUserPress(user.username)}
-                        >
-                            <View style={styles.userIconContainer}>
-                                <MaterialIcons name="person" size={24} color={theme.colors.text} />
-                            </View>
-                            <View style={styles.resultTextContainer}>
-                                <CustomText style={styles.resultMainText}>@{user.username}</CustomText>
-                            </View>
-                            <MaterialIcons name="chevron-right" size={24} color={theme.colors.subtext} />
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
+                <FlatList
+                    style={styles.resultsContainer}
+                    data={filteredUsers}
+                    renderItem={renderUserItem}
+                    keyExtractor={(user) => `user-${user.id}`}
+                    onEndReached={() => hasNextUsers && fetchNextUsers()}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={() => isFetchingNextUsers ? (
+                        <ActivityIndicator size="small" color={theme.colors.primary} />
+                    ) : null}
+                />
             );
         }
 
         // Brand results
         if (searchMode === 'brands') {
             return (
-                <ScrollView style={styles.resultsContainer}>
-                    {filteredBrands.map(brand => (
-                        <TouchableOpacity
-                            key={brand.id}
-                            style={styles.resultItem}
-                            onPress={() => handleBrandPress(brand.id, brand.name)}
-                        >
-                            <View style={[styles.userIconContainer, styles.brandIcon]}>
-                                <CustomText style={styles.brandIconText}>{brand.name.charAt(0)}</CustomText>
-                            </View>
-                            <View style={styles.resultTextContainer}>
-                                <CustomText style={styles.resultMainText}>{brand.name}</CustomText>
-                            </View>
-                            <MaterialIcons name="chevron-right" size={24} color={theme.colors.subtext} />
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
+                <FlatList
+                    style={styles.resultsContainer}
+                    data={filteredBrands}
+                    renderItem={renderBrandItem}
+                    keyExtractor={(brand) => `brand-${brand.id}`}
+                />
             );
         }
 
         // Style results
         if (searchMode === 'styles') {
             return (
-                <ScrollView style={styles.resultsContainer}>
-                    {filteredStyles.map(style => (
-                        <TouchableOpacity
-                            key={style.id}
-                            style={styles.resultItem}
-                            onPress={() => handleStylePress(style.id)}
-                        >
-                            <View style={[styles.userIconContainer, { backgroundColor: theme.colors.light_background_2 }]}>
-                                <MaterialIcons name="style" size={24} color={theme.colors.text} />
-                            </View>
-                            <View style={styles.resultTextContainer}>
-                                <CustomText style={styles.resultMainText}>{style.name}</CustomText>
-                            </View>
-                            <MaterialIcons name="chevron-right" size={24} color={theme.colors.subtext} />
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
+                <FlatList
+                    style={styles.resultsContainer}
+                    data={filteredStyles}
+                    renderItem={renderStyleItem}
+                    keyExtractor={(style) => `style-${style.id}`}
+                />
             );
         }
 

@@ -1,35 +1,35 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
-interface User {
-    id: string;
-    username: string;
+interface Style {
+    id: number;
+    name: string;
 }
 
-interface UserSearchResponse {
-    data: User[];
+interface StyleSearchResponse {
+    data: Style[];
     nextPage: number | null;
     totalCount: number;
 }
 
-interface UserSearchInfiniteResponse {
-    pages: UserSearchResponse[];
+interface StyleSearchInfiniteResponse {
+    pages: StyleSearchResponse[];
     pageParams: number[];
 }
 
-export function useUserSearch(searchQuery: string, pageSize = 10) {
-    return useInfiniteQuery<UserSearchResponse, Error, UserSearchInfiniteResponse, string[], number>({
-        queryKey: ['userSearch', searchQuery],
+export function useStyleSearch(searchQuery: string, pageSize = 10) {
+    return useInfiniteQuery<StyleSearchResponse, Error, StyleSearchInfiniteResponse, string[], number>({
+        queryKey: ['styleSearch', searchQuery],
         initialPageParam: 0,
         queryFn: async ({ pageParam }) => {
             if (!searchQuery.trim()) return { data: [], nextPage: null, totalCount: 0 };
 
             const { data, error, count } = await supabase
-                .from('profiles')
-                .select('id, username', { count: 'exact' })
-                .ilike('username', `%${searchQuery}%`)
+                .from('styles')
+                .select('id, name', { count: 'exact' })
+                .ilike('name', `%${searchQuery}%`)
                 .range(pageParam * pageSize, (pageParam + 1) * pageSize - 1)
-                .order('username', { ascending: true });
+                .order('name', { ascending: true });
 
             if (error) throw error;
 

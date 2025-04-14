@@ -4,7 +4,7 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { View, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSession } from '@/context/SessionContext';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRef } from 'react';
 import { Modalize } from 'react-native-modalize';
@@ -25,12 +25,14 @@ import { Search } from './screens/search/Search';
 import { Layout } from '@/components/Layout';
 import { UserProfile } from './screens/global/UserProfile';
 import { ProfileMain } from './screens/profile/ProfileMain';
-import { PostDetails } from './screens/profile/PostDetails';
+import { PostDetails } from './screens/PostDetails';
+import { BrandDetails } from './screens/BrandDetails';
 import { PostEdit } from './screens/profile/PostEdit';
 import { FollowList } from './screens/profile/FollowList';
 import { AllPosts } from './screens/profile/AllPosts';
 import { UserAllPosts } from './screens/global/UserAllPosts';
 import Notis from './screens/notis/Notis';
+import { BackButton } from '@/components/BackButton';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const BottomTab = createBottomTabNavigator<MainTabParamList>();
@@ -220,7 +222,7 @@ function MainTabs() {
             ),
           }}
         />
-      </BottomTab.Navigator >
+      </BottomTab.Navigator>
       <Modalize
         ref={postModalRef}
         adjustToContentHeight
@@ -232,12 +234,25 @@ function MainTabs() {
   );
 }
 
+
+
 function ProfileNavigator() {
+  const screenOptions = useCallback(({ navigation }) => ({
+    headerShown: true,
+    headerTitle: '',
+    headerStyle: {
+      backgroundColor: theme.colors.background
+    },
+    headerLeft: () => (
+      <BackButton navigation={navigation} title="" />
+    ),
+  }), []);
+
   return (
     <Layout>
       <ProfileStack.Navigator
         screenOptions={{
-          headerShown: true,
+          headerShown: false,
           headerStyle: {
             backgroundColor: theme.colors.background,
           },
@@ -252,7 +267,7 @@ function ProfileNavigator() {
         <ProfileStack.Screen
           name="PostDetails"
           component={PostDetails}
-          options={{ title: 'Post Details' }}
+        // options={screenOptions}
         />
         <ProfileStack.Screen
           name="PostEdit"
@@ -270,6 +285,11 @@ function ProfileNavigator() {
           options={({ route }) => ({
             title: route.params?.type === 'saved' ? 'Saved Posts' : 'All Posts'
           })}
+        />
+        <Stack.Screen
+          name="BrandDetails"
+          component={BrandDetails}
+          options={screenOptions}
         />
       </ProfileStack.Navigator>
     </Layout>

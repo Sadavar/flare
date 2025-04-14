@@ -6,7 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { FriendsStackParamList } from '@/types';
 import { FriendsFeed } from './FriendsFeed';
 import { UserProfile } from '../UserProfile';
-import { PostDetails } from '../PostDetails';
+import { PostDetails } from '@/navigation/screens/PostDetails';
 import { MaterialIcons } from '@expo/vector-icons';
 import { theme } from '@/context/ThemeContext';
 import { CustomText } from '@/components/CustomText';

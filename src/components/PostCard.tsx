@@ -76,10 +76,10 @@ export default function PostCard({ post }: { post: Post }) {
                                 <TouchableOpacity
                                     key={brand.id}
                                     style={styles.brandButton}
-                                    onPress={() => navigation.navigate('Brands', {
-                                        screen: 'BrandDetails',
-                                        params: { brandId: brand.id, brandName: brand.name }
-                                    })}
+                                    onPress={() => {
+                                        console.log("navigating to brand details")
+                                        navigation.navigate('BrandDetails', { brandId: brand.id, brandName: brand.name })
+                                    }}
                                 >
                                     <Text style={styles.brandText}>{brand.name}</Text>
                                 </TouchableOpacity>

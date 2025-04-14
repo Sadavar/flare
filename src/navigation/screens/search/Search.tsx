@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { NavigationProp, RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { DiscoverTabParamList } from '@/types';
 import { useUserSearch } from '@/hooks/useUserSearch';
@@ -11,19 +11,16 @@ import debounce from 'lodash/debounce';
 import { Layout } from '@/components/Layout';
 
 export const Search = React.memo(() => {
-    const route = useRoute<RouteProp<DiscoverTabParamList, 'Search'>>();
     const navigation = useNavigation<NavigationProp<DiscoverTabParamList>>();
     const { theme } = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
     const [inputValue, setInputValue] = useState('');
-    const initialFilter = route.params?.initialFilter || 'brands';
-    const [searchMode, setSearchMode] = useState<'users' | 'brands' | 'styles'>(initialFilter);
+    const [searchMode, setSearchMode] = useState<'all' | 'users' | 'brands' | 'styles'>('all');
 
     const inputRef = useRef<TextInput | null>(null);
 
-    // Add a useEffect to focus the input when the component mounts
+    // Focus the input when component mounts
     useEffect(() => {
-        // Short timeout to ensure component is fully rendered
         const timer = setTimeout(() => {
             if (inputRef.current) {
                 inputRef.current.focus();
@@ -38,15 +35,11 @@ export const Search = React.memo(() => {
         navigation.goBack();
     };
 
-    useEffect(() => {
-        setSearchMode(initialFilter);
-    }, [initialFilter]);
-
-    // Memoize search results
+    // Fetch data with optimized queries
     const {
         data: userResults = [],
         isLoading: isUserLoading
-    } = useUserSearch(searchMode === 'users' ? searchQuery : '');
+    } = useUserSearch(searchQuery);
 
     const {
         data: brandsData = [],
@@ -58,23 +51,31 @@ export const Search = React.memo(() => {
         isLoading: isStylesLoading
     } = useStyles();
 
-    // Memoize filtered results
-    const filteredBrands = useMemo(() =>
-        brandsData.filter(brand =>
-            brand.name.toLowerCase().includes(searchQuery.toLowerCase())
-        ),
-        [brandsData, searchQuery]
-    );
+    // Memoize filtered results with performance optimizations
+    const filteredBrands = useMemo(() => {
+        if (searchMode !== 'all' && searchMode !== 'brands') return [];
 
-    const filteredStyles = useMemo(() =>
-        stylesData.filter(style =>
-            style.name.toLowerCase().includes(searchQuery.toLowerCase())
-        ),
-        [stylesData, searchQuery]
-    );
+        return brandsData
+            .filter(brand => brand.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            .slice(0, 5); // Limit to 5 results
+    }, [brandsData, searchQuery, searchMode]);
 
-    // Update your handleSearch function to focus the input
-    const handleSearch = useCallback((type: 'users' | 'brands' | 'styles') => {
+    const filteredStyles = useMemo(() => {
+        if (searchMode !== 'all' && searchMode !== 'styles') return [];
+
+        return stylesData
+            .filter(style => style.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            .slice(0, 5); // Limit to 5 results
+    }, [stylesData, searchQuery, searchMode]);
+
+    const filteredUsers = useMemo(() => {
+        if (searchMode !== 'all' && searchMode !== 'users') return [];
+
+        return userResults.slice(0, 5); // Limit to 5 results
+    }, [userResults, searchMode]);
+
+    // Update search mode
+    const handleSearch = useCallback((type: 'all' | 'users' | 'brands' | 'styles') => {
         setSearchMode(type);
 
         // Focus the input when changing filter
@@ -85,6 +86,7 @@ export const Search = React.memo(() => {
         }, 100);
     }, []);
 
+    // Navigation handlers
     const handleUserPress = useCallback((username: string) => {
         navigation.navigate('Discover', {
             screen: 'UserProfile',
@@ -99,6 +101,14 @@ export const Search = React.memo(() => {
         });
     }, [navigation]);
 
+    const handleStylePress = useCallback((styleId: number) => {
+        navigation.navigate('Brands', {
+            screen: 'BrandsScreen',
+            params: { selectedStyle: styleId },
+        });
+    }, [navigation]);
+
+    // Debounced search to reduce API calls
     const debouncedSetSearchQuery = useMemo(
         () => debounce((text: string) => {
             setSearchQuery(text);
@@ -106,7 +116,7 @@ export const Search = React.memo(() => {
         []
     );
 
-    // Memoize UI components with back button
+    // Memoize search input component
     const SearchInput = useMemo(() => (
         <View style={styles.searchRow}>
             <TouchableOpacity
@@ -127,7 +137,7 @@ export const Search = React.memo(() => {
                 <MaterialIcons name="search" size={24} color={theme.colors.subtext} style={styles.searchIcon} />
                 <TextInput
                     style={[styles.input, { color: theme.colors.text }]}
-                    placeholder={`Search ${searchMode}...`}
+                    placeholder="Search brands, users, styles..."
                     placeholderTextColor={theme.colors.subtext}
                     value={inputValue}
                     onChangeText={(text) => {
@@ -147,15 +157,7 @@ export const Search = React.memo(() => {
                 )}
             </View>
         </View>
-    ), [inputValue, searchMode, theme.colors]);
-
-    // Navigation handlers
-    const handleStylePress = (styleId: number) => {
-        navigation.navigate('Brands', {
-            screen: 'BrandsScreen',
-            params: { selectedStyle: styleId },
-        });
-    };
+    ), [inputValue, theme.colors, handleBackPress]);
 
     // Render loading indicator
     const renderLoading = () => (
@@ -164,28 +166,165 @@ export const Search = React.memo(() => {
         </View>
     );
 
+    // Get an array of visible categories for the "all" mode
+    const visibleCategories = useMemo(() => {
+        if (searchMode !== 'all') return [];
+
+        const categories = [];
+
+        // Prioritize users first
+        if (filteredUsers.length > 0) categories.push('users');
+        if (filteredBrands.length > 0) categories.push('brands');
+        if (filteredStyles.length > 0) categories.push('styles');
+
+        return categories;
+    }, [searchMode, filteredUsers.length, filteredBrands.length, filteredStyles.length]);
+
+    // Check if we're in a loading state for all mode
+    const isAllLoading = useMemo(() => {
+        return searchMode === 'all' &&
+            (isUserLoading || isBrandsLoading || isStylesLoading);
+    }, [searchMode, isUserLoading, isBrandsLoading, isStylesLoading]);
+
     // Render search results based on mode
     const renderSearchResults = () => {
         // Show loading indicator when fetching results
         if (
             (searchMode === 'users' && isUserLoading) ||
             (searchMode === 'brands' && isBrandsLoading) ||
-            (searchMode === 'styles' && isStylesLoading)
+            (searchMode === 'styles' && isStylesLoading) ||
+            isAllLoading
         ) {
             return renderLoading();
         }
 
         // No results found
         if (
-            (searchMode === 'users' && searchQuery && userResults.length === 0) ||
-            (searchMode === 'brands' && searchQuery && filteredBrands.length === 0) ||
-            (searchMode === 'styles' && searchQuery && filteredStyles.length === 0)
+            searchQuery && ((
+                searchMode === 'all' &&
+                filteredUsers.length === 0 &&
+                filteredBrands.length === 0 &&
+                filteredStyles.length === 0
+            ) ||
+                (searchMode === 'users' && filteredUsers.length === 0) ||
+                (searchMode === 'brands' && filteredBrands.length === 0) ||
+                (searchMode === 'styles' && filteredStyles.length === 0))
         ) {
             return (
                 <View style={styles.emptyContainer}>
                     <MaterialIcons name="search-off" size={48} color={theme.colors.subtext} />
-                    <CustomText style={styles.emptyText}>No {searchMode} found</CustomText>
+                    <CustomText style={styles.emptyText}>No results found</CustomText>
                 </View>
+            );
+        }
+
+        // All results view (combined categories)
+        if (searchMode === 'all') {
+            if (visibleCategories.length === 0 && searchQuery) {
+                return (
+                    <View style={styles.emptyContainer}>
+                        <MaterialIcons name="search-off" size={48} color={theme.colors.subtext} />
+                        <CustomText style={styles.emptyText}>No results found</CustomText>
+                    </View>
+                );
+            }
+
+            return (
+                <ScrollView style={styles.resultsContainer}>
+                    {/* Users Section */}
+                    {visibleCategories.includes('users') && (
+                        <>
+                            <View style={styles.sectionHeader}>
+                                <CustomText style={styles.sectionHeaderText}>USERS</CustomText>
+                                {/* {userResults.length > 5 && (
+                                    <TouchableOpacity onPress={() => handleSearch('users')}>
+                                        <CustomText style={styles.seeAllText}>See all</CustomText>
+                                    </TouchableOpacity>
+                                )} */}
+                            </View>
+
+                            {filteredUsers.map(user => (
+                                <TouchableOpacity
+                                    key={`user-${user.id}`}
+                                    style={styles.resultItem}
+                                    onPress={() => handleUserPress(user.username)}
+                                >
+                                    <View style={styles.userIconContainer}>
+                                        <MaterialIcons name="person" size={24} color={theme.colors.text} />
+                                    </View>
+                                    <View style={styles.resultTextContainer}>
+                                        <CustomText style={styles.resultMainText}>@{user.username}</CustomText>
+                                    </View>
+                                    {/* <MaterialIcons name="chevron-right" size={24} color={theme.colors.subtext} /> */}
+                                </TouchableOpacity>
+                            ))}
+                        </>
+                    )}
+
+                    {/* Brands Section */}
+                    {visibleCategories.includes('brands') && (
+                        <>
+                            <View style={styles.sectionHeader}>
+                                <CustomText style={styles.sectionHeaderText}>BRANDS</CustomText>
+                                {/* {filteredBrands.length < brandsData.filter(brand =>
+                                    brand.name.toLowerCase().includes(searchQuery.toLowerCase())
+                                ).length && (
+                                        <TouchableOpacity onPress={() => handleSearch('brands')}>
+                                            <CustomText style={styles.seeAllText}>See all</CustomText>
+                                        </TouchableOpacity>
+                                    )} */}
+                            </View>
+
+                            {filteredBrands.map(brand => (
+                                <TouchableOpacity
+                                    key={`brand-${brand.id}`}
+                                    style={styles.resultItem}
+                                    onPress={() => handleBrandPress(brand.id, brand.name)}
+                                >
+                                    <View style={[styles.userIconContainer, styles.brandIcon]}>
+                                        <CustomText style={styles.brandIconText}>{brand.name.charAt(0)}</CustomText>
+                                    </View>
+                                    <View style={styles.resultTextContainer}>
+                                        <CustomText style={styles.resultMainText}>{brand.name}</CustomText>
+                                    </View>
+                                    {/* <MaterialIcons name="chevron-right" size={24} color={theme.colors.subtext} /> */}
+                                </TouchableOpacity>
+                            ))}
+                        </>
+                    )}
+
+                    {/* Styles Section */}
+                    {visibleCategories.includes('styles') && (
+                        <>
+                            <View style={styles.sectionHeader}>
+                                <CustomText style={styles.sectionHeaderText}>STYLES</CustomText>
+                                {/* {filteredStyles.length < stylesData.filter(style =>
+                                    style.name.toLowerCase().includes(searchQuery.toLowerCase())
+                                ).length && (
+                                        <TouchableOpacity onPress={() => handleSearch('styles')}>
+                                            <CustomText style={styles.seeAllText}>See all</CustomText>
+                                        </TouchableOpacity>
+                                    )} */}
+                            </View>
+
+                            {filteredStyles.map(style => (
+                                <TouchableOpacity
+                                    key={`style-${style.id}`}
+                                    style={styles.resultItem}
+                                    onPress={() => handleStylePress(style.id)}
+                                >
+                                    <View style={[styles.userIconContainer, { backgroundColor: theme.colors.light_background_2 }]}>
+                                        <MaterialIcons name="style" size={24} color={theme.colors.text} />
+                                    </View>
+                                    <View style={styles.resultTextContainer}>
+                                        <CustomText style={styles.resultMainText}>{style.name}</CustomText>
+                                    </View>
+                                    {/* <MaterialIcons name="chevron-right" size={24} color={theme.colors.subtext} /> */}
+                                </TouchableOpacity>
+                            ))}
+                        </>
+                    )}
+                </ScrollView>
             );
         }
 
@@ -193,7 +332,7 @@ export const Search = React.memo(() => {
         if (searchMode === 'users') {
             return (
                 <ScrollView style={styles.resultsContainer}>
-                    {userResults.map(user => (
+                    {filteredUsers.map(user => (
                         <TouchableOpacity
                             key={user.id}
                             style={styles.resultItem}
@@ -264,34 +403,28 @@ export const Search = React.memo(() => {
     return (
         <Layout>
             <View style={styles.container}>
-                {/* <View style={styles.fixedHeader}>
-                    <CustomText style={styles.mainTitle}>
-                        Search
-                    </CustomText>
-                </View> */}
-
                 {SearchInput}
 
                 <View style={styles.filterContainer}>
                     <TouchableOpacity
-                        onPress={() => handleSearch('brands')}
+                        onPress={() => handleSearch('all')}
                         style={[
                             styles.filter,
-                            searchMode === 'brands' ?
+                            searchMode === 'all' ?
                                 { backgroundColor: theme.colors.primary } :
                                 { backgroundColor: theme.colors.light_background_1 }
                         ]}
                     >
                         <MaterialIcons
-                            name="local-mall"
+                            name="search"
                             size={20}
-                            color={searchMode === 'brands' ? '#fff' : theme.colors.text}
+                            color={searchMode === 'all' ? '#fff' : theme.colors.text}
                         />
                         <CustomText style={[
                             styles.filterText,
-                            { color: searchMode === 'brands' ? '#fff' : theme.colors.text }
+                            { color: searchMode === 'all' ? '#fff' : theme.colors.text }
                         ]}>
-                            Brands
+                            All
                         </CustomText>
                     </TouchableOpacity>
 
@@ -314,6 +447,28 @@ export const Search = React.memo(() => {
                             { color: searchMode === 'users' ? '#fff' : theme.colors.text }
                         ]}>
                             Users
+                        </CustomText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={() => handleSearch('brands')}
+                        style={[
+                            styles.filter,
+                            searchMode === 'brands' ?
+                                { backgroundColor: theme.colors.primary } :
+                                { backgroundColor: theme.colors.light_background_1 }
+                        ]}
+                    >
+                        <MaterialIcons
+                            name="local-mall"
+                            size={20}
+                            color={searchMode === 'brands' ? '#fff' : theme.colors.text}
+                        />
+                        <CustomText style={[
+                            styles.filterText,
+                            { color: searchMode === 'brands' ? '#fff' : theme.colors.text }
+                        ]}>
+                            Brands
                         </CustomText>
                     </TouchableOpacity>
 
@@ -349,15 +504,6 @@ export const Search = React.memo(() => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    fixedHeader: {
-        paddingTop: 10,
-        zIndex: 1,
-    },
-    mainTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        alignSelf: 'center',
     },
     searchRow: {
         flexDirection: 'row',
@@ -410,10 +556,8 @@ const styles = StyleSheet.create({
     resultItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
+        paddingVertical: 10,
         paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.light_background_1,
     },
     userIconContainer: {
         width: 40,
@@ -436,13 +580,8 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     resultMainText: {
-        fontSize: 16,
-        fontWeight: '500',
-    },
-    resultSubText: {
         fontSize: 14,
-        color: '#666',
-        marginTop: 2,
+        fontWeight: '500',
     },
     loadingContainer: {
         flex: 1,
@@ -460,5 +599,20 @@ const styles = StyleSheet.create({
         color: '#666',
         marginTop: 12,
         textAlign: 'center',
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+    },
+    sectionHeaderText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    seeAllText: {
+        fontSize: 14,
+        color: theme.colors.primary,
     }
 });

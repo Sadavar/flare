@@ -44,7 +44,7 @@ function MiniPostCard({ post }: { post: Post }) {
         // If we're already in a user's profile view
         if (route.name === 'ProfileMain') {
             // Stay in the current stack and just navigate to PostDetails
-            navigation.navigate('PostDetails', { post });
+            navigation.navigate('PostDetails', { post: post, viewType: 'StandardView' });
         } else if (post.username === username) {
             // If it's the user's own post, navigate to Profile tab
             navigation.navigate('Main', {
@@ -70,16 +70,7 @@ function MiniPostCard({ post }: { post: Post }) {
     };
 
     const handleBrandPress = (brandId: number, brandName: string) => {
-        navigation.navigate('Main', {
-            screen: 'Discover',
-            params: {
-                screen: 'Brands',
-                params: {
-                    screen: 'BrandDetails',
-                    params: { brandId, brandName }
-                }
-            }
-        });
+        navigation.navigate('BrandDetails', { brandId, brandName })
     };
 
     return (

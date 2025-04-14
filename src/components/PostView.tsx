@@ -151,10 +151,7 @@ export function PostView({ post, viewType }: PostViewProps) {
     };
 
     const handleBrandPress = (brandId: number, brandName: string) => {
-        navigation.navigate('Brands', {
-            screen: 'BrandDetails',
-            params: { brandId, brandName },
-        });
+        navigation.navigate('BrandDetails', { brandId, brandName })
     };
 
     const toggleTagsVisibility = () => {

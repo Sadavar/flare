@@ -17,7 +17,7 @@ interface UserSearchInfiniteResponse {
     pageParams: number[];
 }
 
-export function useUserSearch(searchQuery: string, pageSize = 10) {
+export function useUserSearch(searchQuery: string, pageSize = 5) {
     return useInfiniteQuery<UserSearchResponse, Error, UserSearchInfiniteResponse, string[], number>({
         queryKey: ['userSearch', searchQuery],
         initialPageParam: 0,

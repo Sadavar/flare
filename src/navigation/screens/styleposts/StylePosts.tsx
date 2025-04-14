@@ -19,15 +19,16 @@ const MemoizedPostCard = React.memo(PostCard);
 export function StylePosts() {
     const route = useRoute();
     const navigation = useNavigation();
-    const { styleId, styleName } = route.params as { styleId: number, styleName: string };
+    const { styleId, styleName } = route.params as { styleId?: number, styleName?: string };
+    console.log(styleId, styleName)
 
     // Set up the page title with the style name
     React.useLayoutEffect(() => {
         navigation.setOptions({
-            headerTitle: styleName.toUpperCase(),
+            headerTitle: styleName?.toUpperCase(),
             headerTitleStyle: {
                 fontFamily: 'BebasNnue-Regular',
-                fontSize: 20,
+                fontSize: '20',
                 color: '#fff',
             },
             headerLeft: () => (

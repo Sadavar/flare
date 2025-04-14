@@ -17,7 +17,7 @@ interface BrandSearchInfiniteResponse {
     pageParams: number[];
 }
 
-export function useBrandSearch(searchQuery: string, pageSize = 10) {
+export function useBrandSearch(searchQuery: string, pageSize = 5) {
     return useInfiniteQuery<BrandSearchResponse, Error, BrandSearchInfiniteResponse, string[], number>({
         queryKey: ['brandSearch', searchQuery],
         initialPageParam: 0,

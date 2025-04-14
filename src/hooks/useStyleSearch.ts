@@ -17,7 +17,7 @@ interface StyleSearchInfiniteResponse {
     pageParams: number[];
 }
 
-export function useStyleSearch(searchQuery: string, pageSize = 10) {
+export function useStyleSearch(searchQuery: string, pageSize = 5) {
     return useInfiniteQuery<StyleSearchResponse, Error, StyleSearchInfiniteResponse, string[], number>({
         queryKey: ['styleSearch', searchQuery],
         initialPageParam: 0,

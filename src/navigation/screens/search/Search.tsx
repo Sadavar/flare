@@ -119,11 +119,10 @@ export const Search = React.memo(() => {
         });
     }, [navigation]);
 
-    const handleStylePress = useCallback((styleId: number) => {
-        navigation.navigate('Brands', {
-            screen: 'BrandsScreen',
-            params: { selectedStyle: styleId },
-        });
+    const handleStylePress = useCallback((style: Style) => {
+        console.log(style)
+        navigation.navigate('StylePosts', { styleId: style.id, styleName: style.name },
+        );
     }, [navigation]);
 
     // Debounced search to reduce API calls
@@ -236,7 +235,7 @@ export const Search = React.memo(() => {
     const renderStyleItem = useCallback(({ item }: { item: Style }) => (
         <TouchableOpacity
             style={styles.resultItem}
-            onPress={() => handleStylePress(item.id)}
+            onPress={() => handleStylePress(item)}
         >
             <View style={[styles.userIconContainer, { backgroundColor: theme.colors.light_background_2 }]}>
                 <MaterialIcons name="style" size={24} color={theme.colors.text} />

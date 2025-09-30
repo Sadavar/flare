@@ -1,48 +1,46 @@
+// app.config.js
 module.exports = ({ config }) => {
-    return {
-        ...config,
-        name: 'Flare',
-        slug: 'flare',
-        version: '1.0.1',
-        orientation: 'portrait',
-        icon: './assets/icon.png',
-        userInterfaceStyle: 'dark',
+return {
+    ...config,
+    name: 'Flare',
+    slug: 'flare',
+    version: '1.0.1',
+    orientation: 'portrait',
+    icon: './assets/icon.png',
+    userInterfaceStyle: 'dark',
+    scheme: 'flare',
+
+    extra: {
+        eas: {
+            projectId: 'a66c90a5-d8d6-4f05-bf5c-aac464c99646'
+        }
+    },
+
+    ios: {
+        supportsTablet: true,
         newArchEnabled: true,
-        scheme: 'flare',
-        extra: {
-            supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-            supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-            eas: {
-                projectId: 'a839f72d-c218-4c78-8bd7-4198fc41c884'
-            }
-        },
-        ios: {
-            supportsTablet: true,
-            newArchEnabled: true,
-            bundleIdentifier: 'com.flareapp.flare',
-            icon: "./assets/icon.png"
-        },
-        android: {
-            package: 'com.flareapp.flare',
-            adaptiveIcon: {
-                foregroundImage: "./assets/icon.png",
-                backgroundColor: "#131418",
-                bundleIdentifier: "com.flareapp.flare"
-            },
-        },
-        web: {
-            favicon: "./assets/icon.png"
-        },
-        plugins: [
-            [
-                "expo-splash-screen",
-                {
-                    backgroundColor: "#131418",
-                    image: "./assets/icon.png",
-                    imageWidth: 200
-                }
-            ],
-            "react-native-edge-to-edge"
-        ]
-    };
+        bundleIdentifier: 'com.flareapp.flare',
+        icon: './assets/icon.png'
+    },
+    android: {
+        package: 'com.flareapp.flare',
+        adaptiveIcon: {
+            foregroundImage: './assets/icon.png',
+            backgroundColor: '#131418'
+        }
+    },
+    web: {
+        favicon: './assets/icon.png'
+    },
+
+    plugins: [
+    'expo-dev-client',
+    [
+        'expo-splash-screen',
+        { backgroundColor: '#131418', image: './assets/icon.png', imageWidth: 200 }
+    ],
+    'react-native-edge-to-edge'
+    ]
 };
+};
+

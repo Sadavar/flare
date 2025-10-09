@@ -41,3 +41,6 @@ app-example
 db_types.txt
 
 app.config.js
+
+eas.json
+package-lock.json

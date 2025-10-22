@@ -27,15 +27,24 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         });
 
         return () => {
-            authListener.subscription.unsubscribe();
+            try {
+                // authListener may be undefined in some environments
+                // and subscription may not exist; guard against that to avoid crashes
+                // when cleaning up the listener.
+                (authListener as any)?.subscription?.unsubscribe?.();
+            } catch (e) {
+                console.warn('Error unsubscribing auth listener', e);
+            }
         };
     }, []);
 
     const checkUser = async () => {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            setUser(user);
+        try {
+            const res = await supabase.auth.getUser();
+            const user = res?.data?.user ?? null;
+            if (user) {
+                setUser(user);
             const { data: profile } = await supabase
                 .from('profiles')
                 .select('username')
@@ -46,7 +55,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             setUsername(null);
         }
-        setLoading(false);
+        } catch (error) {
+            console.warn('Error checking user session', error);
+            setUser(null);
+            setUsername(null);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const signOut = async () => {

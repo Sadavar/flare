@@ -19,6 +19,7 @@ export function Username() {
 
     const setUserUsername = async () => {
         if (!username) return Alert.alert('Please enter a username');
+        if (!user) return Alert.alert('Session not ready', 'Please wait a moment and try again.');
         setLoading(true);
 
         try {
@@ -29,7 +30,9 @@ export function Username() {
                 .eq('username', username)
                 .single();
 
-            if (checkError && checkError.code !== 'PGRST116') throw checkError;
+            // PostgREST returns 406 or similar codes when no rows are found depending on config,
+            // so only throw if it's a real error
+            if (checkError && (checkError as any).code !== 'PGRST116') throw checkError;
             if (existingUser) {
                 Alert.alert('Username already taken');
                 return;
@@ -52,7 +55,7 @@ export function Username() {
             });
 
         } catch (error: any) {
-            Alert.alert(error.message);
+            Alert.alert(error?.message || 'An error occurred');
         } finally {
             setLoading(false);
         }
@@ -61,23 +64,32 @@ export function Username() {
     return (
         <Layout>
             <View style={styles.container}>
-                <CustomText style={styles.title}>Choose a Username</CustomText>
-                <CustomText style={styles.subtitle}>This will be your unique identifier in the app</CustomText>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Username"
-                    value={username}
-                    onChangeText={setUsername}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                />
-                <TouchableOpacity
-                    style={styles.button}
-                    onPress={setUserUsername}
-                    disabled={loading}
-                >
-                    <CustomText style={styles.buttonText}>Continue</CustomText>
-                </TouchableOpacity>
+                {!user ? (
+                    <>
+                        <CustomText style={styles.title}>Setting up...</CustomText>
+                        <CustomText style={styles.subtitle}>Waiting for your session to be available. This may take a moment.</CustomText>
+                    </>
+                ) : (
+                    <>
+                        <CustomText style={styles.title}>Choose a Username</CustomText>
+                        <CustomText style={styles.subtitle}>This will be your unique identifier in the app</CustomText>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Username"
+                            value={username}
+                            onChangeText={setUsername}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                        />
+                        <TouchableOpacity
+                            style={styles.button}
+                            onPress={setUserUsername}
+                            disabled={loading}
+                        >
+                            <CustomText style={styles.buttonText}>Continue</CustomText>
+                        </TouchableOpacity>
+                    </>
+                )}
             </View>
         </Layout>
     );
@@ -123,4 +135,4 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
     },
-}); 
+});

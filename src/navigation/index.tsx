@@ -1,7 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSession } from '@/context/SessionContext';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -43,10 +43,11 @@ function TopTabNavigator() {
   return (
     <Layout>
       <ErrorBoundary>
+        {/* Custom top tab bar so the active underline moves correctly */}
         <TopTab.Navigator
           initialRouteName="ForYou"
+          tabBar={(props) => <CustomTopTabBar {...props} />}
           screenOptions={{
-            tabBarIndicatorStyle: { backgroundColor: theme.colors.light_background_1 },
             tabBarPressColor: 'transparent',
             swipeEnabled: true,
             tabBarStyle: {
@@ -73,27 +74,59 @@ function TopTabNavigator() {
             name="ForYou"
             component={ForYou}
             options={{
-              tabBarLabel: 'For You',
-              tabBarLabelStyle: {
-                fontSize: 14,
-                fontWeight: 'bold'
-              }
+              tabBarLabel: ({ focused }: { focused: boolean }) => (
+                <Text style={{
+                  fontSize: 14,
+                  fontWeight: 'bold',
+                  color: focused ? theme.colors.primary : theme.colors.tabBarInactive
+                }}>For You</Text>
+              ),
             }}
           />
           <TopTab.Screen
             name="Friends"
             component={Friends}
             options={{
-              tabBarLabel: 'Friends',
-              tabBarLabelStyle: {
-                fontSize: 14,
-                fontWeight: 'bold'
-              }
+              tabBarLabel: ({ focused }: { focused: boolean }) => (
+                <Text style={{
+                  fontSize: 14,
+                  fontWeight: 'bold',
+                  color: focused ? theme.colors.primary : theme.colors.tabBarInactive
+                }}>Friends</Text>
+              ),
             }}
           />
         </TopTab.Navigator>
       </ErrorBoundary>
     </Layout>
+  );
+}
+
+function CustomTopTabBar({ state, navigation }: any) {
+  const routes = state?.routes || [];
+  const active = state?.index ?? 0;
+  const count = routes.length || 1;
+  const tabWidth = `${100 / count}%`;
+
+  return (
+    <View style={{ width: '50%', alignSelf: 'center', height: 50, justifyContent: 'center', position: 'relative', backgroundColor: theme.colors.background }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        {routes.map((route: any, idx: number) => {
+          const focused = idx === active;
+          const label = route.name === 'ForYou' ? 'For You' : route.name;
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={() => navigation.navigate(route.name)}
+              style={{ width: tabWidth, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: focused ? theme.colors.primary : theme.colors.tabBarInactive }}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+  <View style={{ position: 'absolute', bottom: 0, left: `${(active * 100) / count}%`, width: tabWidth, height: 3, backgroundColor: theme.colors.primary, borderRadius: 2 } as any} />
+    </View>
   );
 }
 
